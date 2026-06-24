@@ -5,10 +5,12 @@
 //
 // Usage: cc-marketspec [root] [--check] [--help] [--version]   (root defaults to cwd)
 
-import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { writeFileSync, readFileSync, realpathSync, mkdirSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateManifest } from './generate.ts';
+import { planInit } from './init.ts';
+import { NodeFileSource } from './fs-source.ts';
 
 const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
 
@@ -44,6 +46,19 @@ export function cli(argv: string[]): number {
 		console.log(version());
 		return 0;
 	}
+	if (args[0] === 'init') {
+		const root = resolve(args.find((a, i) => i > 0 && !a.startsWith('-')) ?? process.cwd());
+		const { actions, writes, ciSnippet } = planInit(new NodeFileSource(root));
+		for (const [rel, content] of Object.entries(writes)) {
+			const abs = join(root, rel);
+			mkdirSync(dirname(abs), { recursive: true });
+			writeFileSync(abs, content);
+		}
+		for (const a of actions) console.log(`${a.status === 'created' ? 'CREATE' : 'SKIP  '} ${a.path}${a.reason ? ` (${a.reason})` : ''}`);
+		console.log('\n' + ciSnippet);
+		return 0;
+	}
+
 	const check = args.includes('--check');
 	const strict = args.includes('--strict-coverage');
 	const root = resolve(args.find((a) => !a.startsWith('-')) ?? process.cwd());
