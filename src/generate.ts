@@ -13,6 +13,7 @@ import { Entry } from './entry.ts';
 import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
+import { analyzeCoverage, type CoverageConfig } from './coverage.ts';
 
 const DEFAULT_SCHEMA_VERSION = '1.0';
 const PLUGINS = 'plugins';
@@ -38,7 +39,7 @@ export function generateManifest(input: FileSource | string): GenerateResult {
 		return o;
 	};
 
-	function buildPlugin(id: string, marketEntry: Record<string, unknown>, groupIds: Set<string>) {
+	function buildPlugin(id: string, marketEntry: Record<string, unknown>, groupIds: Set<string>, coverageCfg: CoverageConfig = {}) {
 		const dir = join(PLUGINS, id);
 		const pj = readJSON(source, join(dir, '.claude-plugin', 'plugin.json'));
 		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != directory "${id}"`);
@@ -97,7 +98,6 @@ export function generateManifest(input: FileSource | string): GenerateResult {
 		const mcp = nMcp.map((n) => {
 			const o = eMcp.get(n.name);
 			for (const e of o?.env ?? []) if (!n.envKeys.includes(e.key)) err(`${id}/${n.name}: env "${e.key}" not in .mcp.json`);
-			for (const k of n.envKeys) if (!(o?.env ?? []).find((e) => e.key === k)) warn(`${id}/${n.name}: env "${k}" has no description`);
 			return prune({
 				name: n.name,
 				type: n.type,
@@ -120,6 +120,10 @@ export function generateManifest(input: FileSource | string): GenerateResult {
 			if (!nHooks.find((h) => hookMatches(e, h)))
 				err(`${id}: entry hook "${e.event}${e.matcher ? `/${e.matcher}` : ''}" not found in hooks.json`);
 		const hooks = nHooks.map((h) => prune({ ...h, why: eHooks.find((e) => hookMatches(e, h))?.why }));
+
+		const facts = { plugin: pj, skills: nSkills, commands: nCmds, agents: nAgents, mcp: nMcp, hooks: nHooks };
+		const cov = analyzeCoverage(facts, entry, coverageCfg, id);
+		for (const f of cov.findings) (f.severity === 'error' ? err : warn)(f.message);
 
 		const author = pj.author
 			? typeof pj.author === 'string'
@@ -175,13 +179,14 @@ export function generateManifest(input: FileSource | string): GenerateResult {
 		return p.data;
 	})();
 	const groupIds = new Set((catalog?.groups ?? []).map((g) => g.id));
+	const coverageCfg: CoverageConfig = (catalog?.coverage ?? {}) as CoverageConfig;
 
 	const plugins = ((market.plugins as Record<string, unknown>[]) ?? [])
 		.map((e) => {
 			const id = (typeof e.source === 'string' ? basename(e.source as string) : (e.name as string)) as string;
 			if (!source.exists(join(PLUGINS, id, '.claude-plugin', 'plugin.json'))) return null;
 			try {
-				return buildPlugin(id, e, groupIds);
+				return buildPlugin(id, e, groupIds, coverageCfg);
 			} catch (ex) {
 				err(`${id}: failed to process — ${ex instanceof Error ? ex.message : String(ex)}`);
 				return null;
