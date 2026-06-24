@@ -63,4 +63,9 @@ jobs:
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # setup-node's registry-url writes a .npmrc with `_authToken=${NODE_AUTH_TOKEN}`
+          # and points NPM_CONFIG_USERCONFIG at it; without NODE_AUTH_TOKEN that placeholder
+          # resolves to a dummy value and npm whoami 401s. NPM_TOKEN is what @semantic-release/npm
+          # reads itself — provide both so neither auth path sees an empty token.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
