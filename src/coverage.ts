@@ -5,6 +5,7 @@
 
 import type { NativeFacts } from './native.ts';
 import type { Entry } from './entry.ts';
+import { coverageTargets } from './entry.ts';
 
 export type Severity = 'error' | 'warn' | 'off';
 
@@ -32,18 +33,51 @@ interface Rule {
 	scan(facts: NativeFacts, entry: Entry | null): string[];
 }
 
-// Task 1 ships one explicit rule; Task 2 replaces this array with one reflected
-// from the entry schema markers. Keeping it explicit here locks the data flow.
-const RULES: Rule[] = [
-	{
-		id: 'skill.trigger',
-		defaultSeverity: 'warn',
-		scan(facts, entry) {
-			const authored = new Map((entry?.skills ?? []).map((s) => [s.name, s]));
-			return facts.skills.filter((s) => !authored.get(s.name)?.trigger).map((s) => s.name);
-		}
-	}
-];
+// Per-rule scan functions keyed by "<component>.<field>".
+// Each returns the list of unsatisfied component instances (by display name).
+const SCANNERS: Record<string, (facts: NativeFacts, entry: Entry | null) => string[]> = {
+	'skill.trigger': (f, e) => {
+		const a = new Map((e?.skills ?? []).map((s) => [s.name, s]));
+		return f.skills.filter((s) => !a.get(s.name)?.trigger).map((s) => s.name);
+	},
+	'skill.examples': (f, e) => {
+		const a = new Map((e?.skills ?? []).map((s) => [s.name, s]));
+		return f.skills.filter((s) => !(a.get(s.name)?.examples?.length)).map((s) => s.name);
+	},
+	'command.description': (f, e) => {
+		const a = new Map((e?.commands ?? []).map((c) => [c.name, c]));
+		return f.commands.filter((c) => !a.get(c.name)?.description).map((c) => c.name);
+	},
+	'agent.summary': (f, e) => {
+		const a = new Map((e?.agents ?? []).map((x) => [x.name, x]));
+		return f.agents.filter((x) => !x.summary && !a.get(x.name)?.description).map((x) => x.name);
+	},
+	'mcp.env': (f, e) => {
+		const a = new Map((e?.mcp ?? []).map((m) => [m.name, m]));
+		return f.mcp
+			.filter((m) => m.envKeys.length > 0)
+			.filter((m) => {
+				const described = new Set((a.get(m.name)?.env ?? []).map((x) => x.key));
+				return m.envKeys.some((k) => !described.has(k));
+			})
+			.map((m) => m.name);
+	},
+	'mcp.provides': (f, e) => {
+		const a = new Map((e?.mcp ?? []).map((m) => [m.name, m]));
+		return f.mcp.filter((m) => !(a.get(m.name)?.provides?.length)).map((m) => m.name);
+	},
+	'plugin.tagline': (f, e) => (!e?.tagline && !f.plugin.description ? ['plugin'] : []),
+	'plugin.group': (_f, e) => (!e?.group ? ['plugin'] : [])
+};
+
+// Build RULES by reflecting coverage markers from the Entry schema.
+// The entry schema fields carry .meta({ coverage }) markers; coverageTargets()
+// walks the schema and returns { component, field, defaultSeverity } for each.
+const RULES: Rule[] = coverageTargets().map((t) => ({
+	id: `${t.component}.${t.field}`,
+	defaultSeverity: t.defaultSeverity,
+	scan: SCANNERS[`${t.component}.${t.field}`] ?? (() => [])
+}));
 
 function resolve(ruleId: string, def: Severity, config: CoverageConfig): Severity {
 	return config[ruleId] ?? config['*'] ?? def;

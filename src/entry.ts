@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { examples, note, slug, envKey, hookEvent } from './common.ts';
+import type { Severity } from './coverage.ts';
 
 // Per-plugin presentation overlay (entry.yaml). EVERY field is optional: the
 // generator derives missing values from the native plugin (plugin.json,
@@ -17,8 +18,8 @@ const skill = z
 			.max(600)
 			.describe('Curated human copy; falls back to native SKILL.md description.')
 			.optional(),
-		trigger: z.string().min(1).max(280).describe("Human 'when to reach for it'.").optional(),
-		examples: examples.optional(),
+		trigger: z.string().min(1).max(280).describe("Human 'when to reach for it'.").meta({ coverage: 'warn' }).optional(),
+		examples: examples.meta({ coverage: 'off' }).optional(),
 		href: z.string().optional(),
 		label: z.string().max(120).optional()
 	})
@@ -27,7 +28,7 @@ const skill = z
 const command = z
 	.object({
 		name: slug,
-		description: z.string().min(1).max(600).describe('Curated long copy; falls back to native.').optional(),
+		description: z.string().min(1).max(600).describe('Curated long copy; falls back to native.').meta({ coverage: 'off' }).optional(),
 		examples: examples.optional()
 	})
 	.strict();
@@ -37,7 +38,7 @@ const agent = z
 		name: slug,
 		returns: z.string().min(1).max(280).describe('What the agent reports back.').optional(),
 		not: z.string().min(1).max(280).describe('Boundaries / what it will not do.').optional(),
-		description: z.string().min(1).max(600).describe('Curated copy; falls back to native.').optional(),
+		description: z.string().min(1).max(600).describe('Curated copy; falls back to native.').meta({ coverage: { component: 'agent', field: 'summary', severity: 'warn' } }).optional(),
 		examples: examples.optional()
 	})
 	.strict();
@@ -70,6 +71,7 @@ const mcp = z
 		env: z
 			.array(mcpEnv)
 			.describe('Descriptions for env vars; keys must exist in .mcp.json (phantom = error).')
+			.meta({ coverage: 'warn' })
 			.optional(),
 		setup: z.array(mcpSetup).optional(),
 		description: z.string().min(1).max(600).optional(),
@@ -77,6 +79,7 @@ const mcp = z
 			.array(z.string().min(1))
 			.min(1)
 			.describe('Tool names. AUTHORED, best-effort: not statically validatable (runtime-discovered).')
+			.meta({ coverage: 'off' })
 			.optional(),
 		config: z.array(mcpConfig).optional()
 	})
@@ -106,12 +109,14 @@ export const Entry = z
 			.string()
 			.max(64)
 			.describe('id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.')
+			.meta({ coverage: { component: 'plugin', field: 'group', severity: 'off' } })
 			.optional(),
 		tagline: z
 			.string()
 			.min(1)
 			.max(120)
 			.describe('One-line summary for cards/meta; falls back to native description.')
+			.meta({ coverage: { component: 'plugin', field: 'tagline', severity: 'warn' } })
 			.optional(),
 		intro: z
 			.string()
@@ -136,3 +141,48 @@ export const Entry = z
 	.strict();
 
 export type Entry = z.infer<typeof Entry>;
+
+// Walk the Entry schema's fields (and the per-component array element shapes),
+// collecting fields tagged with a `coverage` marker. A marker is either a bare
+// severity (component inferred from the array key, field from the property name)
+// or an explicit { component, field, severity } for synthetic targets.
+//
+// Implementation note: in Zod 4, chaining .meta().optional() stores the metadata
+// on the inner type. Since the shape's field is ZodOptional, we must unwrap it
+// (via def.innerType) before calling .meta() to retrieve the metadata.
+export function coverageTargets(): { component: string; field: string; defaultSeverity: Severity }[] {
+	const out: { component: string; field: string; defaultSeverity: Severity }[] = [];
+
+	// Unwrap a ZodOptional to access the inner type's metadata.
+	const unwrap = (schema: any): any => (schema?.type === 'optional' ? schema.def?.innerType : schema);
+
+	const push = (component: string, field: string, meta: unknown) => {
+		if (meta && typeof meta === 'object' && 'component' in meta) {
+			const m = meta as { component: string; field: string; severity: Severity };
+			out.push({ component: m.component, field: m.field, defaultSeverity: m.severity });
+		} else if (typeof meta === 'string') {
+			out.push({ component, field, defaultSeverity: meta as Severity });
+		}
+	};
+
+	const shape = (Entry as unknown as { shape: Record<string, any> }).shape;
+	for (const [key, schema] of Object.entries(shape)) {
+		const inner = unwrap(schema);
+		const topMeta = inner?.meta?.()?.coverage;
+		if (topMeta) push('plugin', key, topMeta);
+
+		// array-of-object component fields: skills/commands/agents/mcp/hooks
+		if (inner?.type === 'array') {
+			const el = inner.element;
+			const elShape = el?.shape;
+			if (elShape) {
+				const component = key.replace(/s$/, ''); // skills -> skill, commands -> command, etc.
+				for (const [field, fs] of Object.entries(elShape as Record<string, any>)) {
+					const m = unwrap(fs)?.meta?.()?.coverage;
+					if (m) push(component, field, m);
+				}
+			}
+		}
+	}
+	return out;
+}
