@@ -52,6 +52,8 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --test test/*.test.ts",
+    "worker:dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "release": "semantic-release",
     "prepublishOnly": "npm run build:schemas && npm run build && npm test"
   },
@@ -72,6 +74,7 @@
     "semantic-release": "^24.0.0",
     "tsup": "^8",
     "typescript": "^5",
-    "typescript-eslint": "^8.62.0"
+    "typescript-eslint": "^8.62.0",
+    "wrangler": "^4.104.0"
   }
 }
