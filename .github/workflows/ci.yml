@@ -23,12 +23,13 @@ jobs:
         run: npm run lint
       - name: Test
         run: npm test
-      # schemas/*.schema.json are generated from the Zod source of truth; fail if
-      # the committed copies drifted (published contract must == runtime validator).
+      # schemas/*.schema.json AND src/schemas.generated.ts are generated from the
+      # Zod source of truth by build:schemas; fail if any committed copy drifted
+      # (published contract == runtime validator == build-inlined Worker schemas).
       - name: Schema drift
         run: |
           npm run build:schemas
-          git diff --exit-code -- schemas/ || { echo "schemas/ are stale — run 'npm run build:schemas' and commit"; exit 1; }
+          git diff --exit-code -- schemas/ src/schemas.generated.ts || { echo "generated schemas are stale — run 'npm run build:schemas' and commit"; exit 1; }
       - name: Build
         run: npm run build
       - name: Verify build outputs
