@@ -89,3 +89,24 @@ test('a malformed plugin.json is reported per-plugin, not a crash', () => {
 	});
 	assert.ok(errors.some((e) => /sample/.test(e)), `expected a per-plugin error, got: ${JSON.stringify(errors)}`);
 });
+
+// ---- coverage integration ----------------------------------------------------
+
+test('coverage: warns on a skill with no trigger', () => {
+	const { warnings } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'p', source: './plugins/p' }),
+		'plugins/p/.claude-plugin/plugin.json': plugin({ name: 'p', version: '1.0.0' }),
+		'plugins/p/skills/greet/SKILL.md': '---\nname: greet\ndescription: hi\n---\n'
+	});
+	assert.ok(warnings.some((w) => w.includes('skill.trigger')));
+});
+
+test('coverage: catalog can promote skill.trigger to a build error', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'p', source: './plugins/p' }),
+		'catalog.yaml': 'schemaVersion: "1.0"\ncoverage:\n  skill.trigger: error\n',
+		'plugins/p/.claude-plugin/plugin.json': plugin({ name: 'p', version: '1.0.0' }),
+		'plugins/p/skills/greet/SKILL.md': '---\nname: greet\ndescription: hi\n---\n'
+	});
+	assert.ok(errors.some((e) => e.includes('skill.trigger')));
+});

@@ -26,6 +26,21 @@ test('catalog: full with groups', () =>
 test('catalog: bad schemaVersion (needs MAJOR.MINOR)', () => bad(Catalog, { schemaVersion: '1.0.0' }, 'semver-ish rejected'));
 test('catalog: group id pattern', () => bad(Catalog, { schemaVersion: '1.0', groups: [{ id: 'Bad ID', label: 'x' }] }, 'bad id'));
 
+test('catalog: valid coverage block parses', () => {
+	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.trigger': 'error', '*': 'off' } });
+	assert.equal(r.success, true);
+});
+
+test('catalog: unknown coverage rule path rejected', () => {
+	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.bogus': 'warn' } });
+	assert.equal(r.success, false);
+});
+
+test('catalog: bad severity rejected', () => {
+	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.trigger': 'loud' } });
+	assert.equal(r.success, false);
+});
+
 // ---- entry: maximal (exercise EVERY in-scope branch) ------------------------
 
 const maximalEntry = {

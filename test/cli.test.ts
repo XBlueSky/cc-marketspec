@@ -86,3 +86,19 @@ test('errors exit 1 and write nothing', () => {
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+test('--strict-coverage turns a missing trigger into exit 1', () => {
+	const root = makeMarket({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'p', plugins: [{ name: 'p', source: './plugins/p' }] }),
+		'plugins/p/.claude-plugin/plugin.json': JSON.stringify({ name: 'p', version: '1.0.0' }),
+		'plugins/p/skills/greet/SKILL.md': '---\nname: greet\ndescription: Greets the user.\n---\n\nGreet body.'
+	});
+	try {
+		// Without the flag the same fixture is only a warning → exit 0 …
+		assert.equal(capture(['node', 'cli', root, '--check']).code, 0);
+		// … and --strict-coverage promotes that warning to an error → exit 1.
+		assert.equal(capture(['node', 'cli', root, '--check', '--strict-coverage']).code, 1);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});

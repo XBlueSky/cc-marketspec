@@ -5,21 +5,31 @@
 //
 // Usage: cc-marketspec [root] [--check] [--help] [--version]   (root defaults to cwd)
 
-import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { writeFileSync, readFileSync, realpathSync, mkdirSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateManifest } from './generate.ts';
+import { planInit } from './init.ts';
+import { NodeFileSource } from './fs-source.ts';
+import { startMcpServer } from './mcp.ts';
 
 const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
 
 Usage:
   cc-marketspec [root] [options]
+  cc-marketspec init [root]
+  cc-marketspec mcp
 
 Arguments:
   root              Marketplace repo root (defaults to the current directory).
 
+Commands:
+  init [root]       Scaffold a new marketplace repo (creates catalog.yaml, plugin dirs, etc.).
+  mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
+
 Options:
   --check           Validate only; report errors/warnings but do not write manifest.json.
+  --strict-coverage Promote all coverage warnings to errors for this run (stricter release gate).
   -h, --help        Show this help and exit.
   -v, --version     Print the version and exit.`;
 
@@ -43,10 +53,28 @@ export function cli(argv: string[]): number {
 		console.log(version());
 		return 0;
 	}
+	if (args[0] === 'init') {
+		const root = resolve(args.find((a, i) => i > 0 && !a.startsWith('-')) ?? process.cwd());
+		const { actions, writes, ciSnippet } = planInit(new NodeFileSource(root));
+		for (const [rel, content] of Object.entries(writes)) {
+			const abs = join(root, rel);
+			mkdirSync(dirname(abs), { recursive: true });
+			writeFileSync(abs, content);
+		}
+		for (const a of actions) console.log(`${a.status === 'created' ? 'CREATE' : 'SKIP  '} ${a.path}${a.reason ? ` (${a.reason})` : ''}`);
+		console.log('\n' + ciSnippet);
+		return 0;
+	}
+	if (args[0] === 'mcp') {
+		void startMcpServer();
+		return 0; // server keeps the process alive on stdio
+	}
+
 	const check = args.includes('--check');
+	const strict = args.includes('--strict-coverage');
 	const root = resolve(args.find((a) => !a.startsWith('-')) ?? process.cwd());
 
-	const { manifest, errors, warnings } = generateManifest(root);
+	const { manifest, errors, warnings } = generateManifest(root, { strictCoverage: strict });
 
 	for (const w of warnings) console.warn('WARN ' + w);
 	if (errors.length) {

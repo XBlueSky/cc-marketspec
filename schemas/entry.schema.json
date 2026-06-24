@@ -5,13 +5,23 @@
     "group": {
       "type": "string",
       "maxLength": 64,
-      "description": "id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category."
+      "description": "id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.",
+      "coverage": {
+        "component": "plugin",
+        "field": "group",
+        "severity": "off"
+      }
     },
     "tagline": {
       "type": "string",
       "minLength": 1,
       "maxLength": 120,
-      "description": "One-line summary for cards/meta; falls back to native description."
+      "description": "One-line summary for cards/meta; falls back to native description.",
+      "coverage": {
+        "component": "plugin",
+        "field": "tagline",
+        "severity": "warn"
+      }
     },
     "intro": {
       "type": "string",
@@ -44,7 +54,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 280,
-            "description": "Human 'when to reach for it'."
+            "description": "Human 'when to reach for it'.",
+            "coverage": "warn"
           },
           "examples": {
             "maxItems": 5,
@@ -53,7 +64,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 120
-            }
+            },
+            "coverage": "off"
           },
           "href": {
             "type": "string"
@@ -83,7 +95,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 600,
-            "description": "Curated long copy; falls back to native."
+            "description": "Curated long copy; falls back to native.",
+            "coverage": "off"
           },
           "examples": {
             "maxItems": 5,
@@ -127,7 +140,12 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 600,
-            "description": "Curated copy; falls back to native."
+            "description": "Curated copy; falls back to native.",
+            "coverage": {
+              "component": "agent",
+              "field": "summary",
+              "severity": "warn"
+            }
           },
           "examples": {
             "maxItems": 5,
@@ -196,7 +214,8 @@
               ],
               "additionalProperties": false
             },
-            "description": "Descriptions for env vars; keys must exist in .mcp.json (phantom = error)."
+            "description": "Descriptions for env vars; keys must exist in .mcp.json (phantom = error).",
+            "coverage": "warn"
           },
           "setup": {
             "type": "array",
@@ -237,7 +256,8 @@
               "type": "string",
               "minLength": 1
             },
-            "description": "Tool names. AUTHORED, best-effort: not statically validatable (runtime-discovered)."
+            "description": "Tool names. AUTHORED, best-effort: not statically validatable (runtime-discovered).",
+            "coverage": "off"
           },
           "config": {
             "type": "array",
