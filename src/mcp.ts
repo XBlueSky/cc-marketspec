@@ -1,8 +1,6 @@
 // MCP server for cc-marketspec. Tool handlers are plain functions (transport-free,
 // unit-testable). Repo-aware tools take file CONTENT (a path→content map) so the
 // same handlers serve local stdio and a future hosted HTTP transport.
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -11,16 +9,10 @@ import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
 import { analyzeCoverage, type CoverageReport } from './coverage.ts';
 import { describeField } from './entry.ts';
+import { SCHEMAS, VERSION as _VERSION } from './schemas.generated.ts';
 
-const SCHEMA_FILES = {
-	entry: 'entry.schema.json',
-	catalog: 'catalog.schema.json',
-	manifest: 'manifest.schema.json'
-} as const;
-
-export function getSchema(which: keyof typeof SCHEMA_FILES): object {
-	const p = fileURLToPath(new URL(`../schemas/${SCHEMA_FILES[which]}`, import.meta.url));
-	return JSON.parse(readFileSync(p, 'utf8'));
+export function getSchema(which: keyof typeof SCHEMAS): object {
+	return SCHEMAS[which];
 }
 
 export function explainField(path: string): { path: string; description?: string } {
@@ -63,7 +55,7 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 	try {
 		switch (name) {
 			case 'get_schema':
-				return text(getSchema(args.which as keyof typeof SCHEMA_FILES));
+				return text(getSchema(args.which as keyof typeof SCHEMAS));
 			case 'explain_field':
 				return text(explainField(args.path as string));
 			case 'check_coverage':

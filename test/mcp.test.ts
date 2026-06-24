@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { getSchema, checkCoverage, scaffoldEntry, explainField, callTool } from '../src/mcp.ts';
+import { SCHEMAS, VERSION } from '../src/schemas.generated.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
 	const s = getSchema('entry') as { $schema?: string; properties?: object };
@@ -74,4 +77,13 @@ test('callTool wraps a thrown handler error (malformed entry.yaml) as a structur
 	const payload = JSON.parse(res.content[0].text) as { error?: string };
 	assert.equal(typeof payload.error, 'string');
 	assert.ok((payload.error as string).length > 0);
+});
+
+test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => {
+	for (const name of ['entry', 'catalog', 'manifest'] as const) {
+		const onDisk = JSON.parse(readFileSync(fileURLToPath(new URL(`../schemas/${name}.schema.json`, import.meta.url)), 'utf8'));
+		assert.deepEqual(getSchema(name), onDisk);
+		assert.deepEqual(SCHEMAS[name], onDisk);
+	}
+	assert.match(VERSION, /^\d+\.\d+\.\d+/);
 });
