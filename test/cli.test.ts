@@ -94,8 +94,10 @@ test('--strict-coverage turns a missing trigger into exit 1', () => {
 		'plugins/p/skills/greet/SKILL.md': '---\nname: greet\ndescription: Greets the user.\n---\n\nGreet body.'
 	});
 	try {
-		const { code } = capture(['node', 'cli', root, '--check', '--strict-coverage']);
-		assert.equal(code, 1);
+		// Without the flag the same fixture is only a warning → exit 0 …
+		assert.equal(capture(['node', 'cli', root, '--check']).code, 0);
+		// … and --strict-coverage promotes that warning to an error → exit 1.
+		assert.equal(capture(['node', 'cli', root, '--check', '--strict-coverage']).code, 1);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}

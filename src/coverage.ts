@@ -79,7 +79,7 @@ const RULES: Rule[] = coverageTargets().map((t) => ({
 	scan: SCANNERS[`${t.component}.${t.field}`] ?? (() => [])
 }));
 
-function resolve(ruleId: string, def: Severity, config: CoverageConfig): Severity {
+export function resolve(ruleId: string, def: Severity, config: CoverageConfig): Severity {
 	return config[ruleId] ?? config['*'] ?? def;
 }
 

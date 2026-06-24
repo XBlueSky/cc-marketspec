@@ -13,7 +13,7 @@ import { Entry, coverageTargets } from './entry.ts';
 import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
-import { analyzeCoverage, type CoverageConfig } from './coverage.ts';
+import { analyzeCoverage, resolve as resolveCoverage, type CoverageConfig } from './coverage.ts';
 
 const DEFAULT_SCHEMA_VERSION = '1.0';
 const PLUGINS = 'plugins';
@@ -184,7 +184,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		const strict: CoverageConfig = {};
 		for (const t of coverageTargets()) {
 			const id = `${t.component}.${t.field}`;
-			const eff = coverageCfg[id] ?? coverageCfg['*'] ?? t.defaultSeverity;
+			const eff = resolveCoverage(id, t.defaultSeverity, coverageCfg);
 			strict[id] = eff === 'warn' ? 'error' : eff;
 		}
 		coverageCfg = strict;
