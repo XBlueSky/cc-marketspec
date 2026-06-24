@@ -105,6 +105,95 @@ declarative schema can:
 
 Any error fails the build (all errors are reported, not just the first).
 
+## Coverage gate
+
+The coverage gate checks that plugins have authored enough presentation data.
+Rules are addressed by `<component>.<field>` dot-paths (e.g. `skill.trigger`,
+`plugin.tagline`). Each rule has a built-in default severity:
+
+| Rule | Default |
+|------|---------|
+| `skill.trigger` | `warn` |
+| `skill.examples` | `off` |
+| `command.description` | `off` |
+| `agent.summary` | `warn` |
+| `mcp.env` | `warn` |
+| `mcp.provides` | `off` |
+| `plugin.tagline` | `warn` |
+| `plugin.group` | `off` |
+
+Override per-rule (or set `"*"` as a catch-all) in `catalog.yaml`:
+
+```yaml
+coverage:
+  skill.trigger: error   # promote to hard failure
+  plugin.group: warn     # promote from off
+  "*": warn              # default fallback for all other rules
+```
+
+`--check` exits non-zero if any `error`-severity finding exists.
+`--strict-coverage` additionally exits non-zero when there are any `warn`
+findings — use this as a stricter release gate.
+
+## Getting started: `npx cc-marketspec init`
+
+Scaffolds the files you need to begin authoring presentation data. It is
+**non-destructive**: any file that already exists is reported as `skipped`.
+
+```bash
+npx @xbluesky/cc-marketspec init
+```
+
+Creates:
+- `catalog.yaml` — marketplace-level metadata and group taxonomy (with a
+  commented-out `coverage:` block ready to tune).
+- `plugins/<id>/entry.yaml` — per-plugin overlay stub, for each plugin found in
+  `.claude-plugin/marketplace.json` that has a `plugin.json` on disk.
+
+## CI
+
+The `--check` flag validates without writing anything — use it on PRs.
+
+**GitHub Actions** (`.github/workflows/manifest.yml`):
+```yaml
+on: [pull_request, push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npx @xbluesky/cc-marketspec --check
+```
+
+**GitLab CI** (`.gitlab-ci.yml`):
+```yaml
+check:manifest:
+  image: node:22
+  script:
+    - npx @xbluesky/cc-marketspec --check
+```
+
+Add `--strict-coverage` for a stricter release gate that fails on warnings too.
+The generated `manifest.json` can be committed to the repo or uploaded as a
+CI artifact — that choice is yours.
+
+## MCP
+
+```bash
+npx @xbluesky/cc-marketspec mcp
+```
+
+Starts a stdio MCP server. Four tools:
+
+| Tool | What it does |
+|------|-------------|
+| `get_schema` | Returns the JSON Schema for `entry`, `catalog`, or `manifest` |
+| `explain_field` | Explains a field in the entry or catalog schema |
+| `check_coverage` | Runs the coverage gate against a plugin directory |
+| `scaffold_entry` | Generates an `entry.yaml` stub for a given plugin |
+
 ## Versioning
 
 The standard is semver; the manifest carries `schemaVersion` (`MAJOR.MINOR`).
