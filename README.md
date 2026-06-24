@@ -194,6 +194,37 @@ Starts a stdio MCP server. Four tools:
 | `check_coverage` | Runs the coverage gate against a plugin directory |
 | `scaffold_entry` | Generates an `entry.yaml` stub for a given plugin |
 
+## Hosted MCP server
+
+The same four MCP tools (`get_schema`, `explain_field`, `check_coverage`,
+`scaffold_entry`) are available over HTTP so contributors can query the schema
+and be guided without installing anything. The handler is a platform-neutral
+web-standard `fetch(Request) → Response` (`handleHttpRequest`, exported from the
+package); Cloudflare Workers is the reference deployment but not a requirement.
+
+### Use it (contributors)
+
+Add the endpoint to any Streamable-HTTP-capable MCP client:
+
+```
+https://<your-worker>.workers.dev
+```
+
+No credentials — the endpoint is intentionally open and read-only.
+
+### Self-host (owners)
+
+```bash
+npm install
+npm run worker:dev          # local: serves the handler via `wrangler dev`
+wrangler login              # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
+npm run deploy              # publishes the Worker; prints the public URL
+```
+
+The open/no-auth posture is deliberate (read-only tools, no secrets, file
+contents are passed as parameters). If you later need abuse protection, add a
+Cloudflare Rate Limiting rule — no code change required.
+
 ## Versioning
 
 The standard is semver; the manifest carries `schemaVersion` (`MAJOR.MINOR`).

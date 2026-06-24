@@ -48,6 +48,13 @@ generator output, regenerate it and commit the result:
 node dist/cli.js examples/marketplace
 ```
 
+## Hosted MCP
+
+Prefer not to install anything? The marketplace exposes the cc-marketspec MCP
+tools at a hosted HTTP endpoint — add `https://<your-worker>.workers.dev` to your
+MCP client to query the schema and check coverage live. See the README's
+"Hosted MCP server" section.
+
 ## Commits & releases
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) — `feat:` /
