@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "marketplace": {
+    "name": "example-marketplace",
+    "lang": "en",
+    "owner": {
+      "name": "Example Org"
+    }
+  },
+  "groups": [
+    {
+      "id": "examples",
+      "label": "Examples",
+      "note": "Illustrative plugins"
+    }
+  ],
+  "plugins": [
+    {
+      "id": "hello-plugin",
+      "name": "hello-plugin",
+      "version": "1.2.0",
+      "description": "A tiny demo plugin that greets you.",
+      "author": {
+        "name": "Example Org"
+      },
+      "license": "MIT",
+      "keywords": [
+        "demo",
+        "hello"
+      ],
+      "category": "demo",
+      "group": "examples",
+      "tagline": "Say hello, the headless way",
+      "intro": "A minimal plugin used to demonstrate how entry.yaml enriches native data.",
+      "skills": [
+        {
+          "name": "greet",
+          "description": "Greets the user warmly. Use when someone says hello or wants a greeting.",
+          "trigger": "When you want a friendly greeting in a demo.",
+          "examples": [
+            "say hi to me"
+          ],
+          "autoload": false
+        }
+      ],
+      "tips": [
+        {
+          "text": "This whole plugin exists only to illustrate the manifest shape."
+        }
+      ]
+    }
+  ]
+}

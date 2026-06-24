@@ -1,0 +1,76 @@
+{
+  "name": "cc-marketspec",
+  "version": "0.1.0",
+  "description": "Headless data standard + generator for Claude Code plugin marketplace presentation. Describe a marketplace as data (entry.yaml / catalog.yaml); emit one manifest.json any site renders.",
+  "type": "module",
+  "license": "MIT",
+  "author": "XBlueSky",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XBlueSky/cc-marketspec.git"
+  },
+  "homepage": "https://github.com/XBlueSky/cc-marketspec#readme",
+  "bugs": {
+    "url": "https://github.com/XBlueSky/cc-marketspec/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "marketplace",
+    "manifest",
+    "schema",
+    "json-schema",
+    "headless",
+    "zod"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "cc-marketspec": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas/entry": "./schemas/entry.schema.json",
+    "./schemas/catalog": "./schemas/catalog.schema.json",
+    "./schemas/manifest": "./schemas/manifest.schema.json"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts --format esm --dts --clean",
+    "build:schemas": "node src/build.ts",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --test test/*.test.ts",
+    "release": "semantic-release",
+    "prepublishOnly": "npm run build:schemas && npm run build && npm test"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.0",
+    "@semantic-release/npm": "^12.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22",
+    "eslint": "^9.39.4",
+    "semantic-release": "^24.0.0",
+    "tsup": "^8",
+    "typescript": "^5",
+    "typescript-eslint": "^8.62.0"
+  }
+}

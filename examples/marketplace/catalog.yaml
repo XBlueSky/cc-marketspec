@@ -1,0 +1,8 @@
+# Marketplace-level presentation data. Native metadata (name/owner) lives in
+# .claude-plugin/marketplace.json and is NOT restated here.
+schemaVersion: "1.0"
+lang: en
+groups:
+  - id: examples
+    label: Examples
+    note: Illustrative plugins

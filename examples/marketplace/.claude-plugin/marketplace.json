@@ -1,0 +1,11 @@
+{
+  "name": "example-marketplace",
+  "owner": { "name": "Example Org" },
+  "plugins": [
+    {
+      "name": "hello-plugin",
+      "source": "./plugins/hello-plugin",
+      "category": "demo"
+    }
+  ]
+}

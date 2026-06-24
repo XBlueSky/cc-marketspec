@@ -1,0 +1,417 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category."
+    },
+    "tagline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "One-line summary for cards/meta; falls back to native description."
+    },
+    "intro": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600,
+      "description": "Full lede; falls back to native description."
+    },
+    "ccVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Minimum Claude Code version. No native source."
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600,
+            "description": "Curated human copy; falls back to native SKILL.md description."
+          },
+          "trigger": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "Human 'when to reach for it'."
+          },
+          "examples": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          "href": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600,
+            "description": "Curated long copy; falls back to native."
+          },
+          "examples": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "returns": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "What the agent reports back."
+          },
+          "not": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "Boundaries / what it will not do."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600,
+            "description": "Curated copy; falls back to native."
+          },
+          "examples": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "mcp": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Server name; must match a server in .mcp.json."
+          },
+          "install": {
+            "type": "boolean",
+            "description": "Whether the user must install it themselves."
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "none",
+              "token",
+              "oauth"
+            ]
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Human description of the variable."
+                },
+                "secret": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Descriptions for env vars; keys must exist in .mcp.json (phantom = error)."
+          },
+          "setup": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "cmd": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "href": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "provides": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tool names. AUTHORED, best-effort: not statically validatable (runtime-discovered)."
+          },
+          "config": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "PreToolUse",
+              "PostToolUse",
+              "PostToolUseFailure",
+              "PermissionRequest",
+              "UserPromptSubmit",
+              "Notification",
+              "Stop",
+              "SubagentStart",
+              "SubagentStop",
+              "SessionStart",
+              "SessionEnd",
+              "PreCompact"
+            ]
+          },
+          "matcher": {
+            "type": "string",
+            "description": "Disambiguates when an event has multiple hooks."
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "What this hook does / why it exists."
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "configuration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "boolean",
+              "number",
+              "array"
+            ]
+          },
+          "default": {},
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "description"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tips": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280
+          },
+          {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280
+              },
+              "href": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Positive power-moves."
+    },
+    "traps": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280
+          },
+          {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280
+              },
+              "href": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Negative gotchas / pitfalls."
+    }
+  },
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/XBlueSky/cc-marketspec/main/schemas/entry.schema.json",
+  "title": "Marketplace plugin entry (presentation descriptor)"
+}

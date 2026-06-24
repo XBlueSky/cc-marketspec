@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "MAJOR.MINOR of the standard this catalog targets. Consumers gate on MAJOR."
+    },
+    "lang": {
+      "type": "string",
+      "description": "BCP-47 primary language of all authored text (e.g. zh-TW). Defaults to en."
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Short sub-label / description."
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Group taxonomy; array order is the canonical display order."
+    }
+  },
+  "required": [
+    "schemaVersion"
+  ],
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/XBlueSky/cc-marketspec/main/schemas/catalog.schema.json",
+  "title": "Marketplace catalog (presentation)"
+}

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npm run type-check
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+      # schemas/*.schema.json are generated from the Zod source of truth; fail if
+      # the committed copies drifted (published contract must == runtime validator).
+      - name: Schema drift
+        run: |
+          npm run build:schemas
+          git diff --exit-code -- schemas/ || { echo "schemas/ are stale — run 'npm run build:schemas' and commit"; exit 1; }
+      - name: Build
+        run: npm run build
+      - name: Verify build outputs
+        run: |
+          test -f dist/index.js
+          test -f dist/cli.js
+          test -f dist/index.d.ts
+
+  release:
+    needs: validate
+    # Only release from the default branch (not PRs or tags). semantic-release
+    # creates the tags itself; its [skip ci] bump commit won't re-trigger CI.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # tags, the version-bump commit, GitHub releases
+      issues: write
+      pull-requests: write
+      id-token: write        # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # semantic-release walks history from the last tag
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
