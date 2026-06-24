@@ -11,14 +11,21 @@ import { fileURLToPath } from 'node:url';
 import { generateManifest } from './generate.ts';
 import { planInit } from './init.ts';
 import { NodeFileSource } from './fs-source.ts';
+import { startMcpServer } from './mcp.ts';
 
 const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
 
 Usage:
   cc-marketspec [root] [options]
+  cc-marketspec init [root]
+  cc-marketspec mcp
 
 Arguments:
   root              Marketplace repo root (defaults to the current directory).
+
+Commands:
+  init [root]       Scaffold a new marketplace repo (creates catalog.yaml, plugin dirs, etc.).
+  mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
 
 Options:
   --check           Validate only; report errors/warnings but do not write manifest.json.
@@ -57,6 +64,10 @@ export function cli(argv: string[]): number {
 		for (const a of actions) console.log(`${a.status === 'created' ? 'CREATE' : 'SKIP  '} ${a.path}${a.reason ? ` (${a.reason})` : ''}`);
 		console.log('\n' + ciSnippet);
 		return 0;
+	}
+	if (args[0] === 'mcp') {
+		void startMcpServer();
+		return 0; // server keeps the process alive on stdio
 	}
 
 	const check = args.includes('--check');
