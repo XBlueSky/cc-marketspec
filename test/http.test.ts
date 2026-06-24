@@ -61,3 +61,9 @@ test('GET (no SSE stream in stateless mode) is rejected cleanly with CORS', asyn
 	assert.ok(res.status >= 400);
 	assert.equal(res.headers.get('access-control-allow-origin'), '*');
 });
+
+test('DELETE (no session termination in stateless mode) is rejected cleanly with CORS', async () => {
+	const res = await handleHttpRequest(new Request('https://mcp.test/', { method: 'DELETE' }));
+	assert.equal(res.status, 405);
+	assert.equal(res.headers.get('access-control-allow-origin'), '*');
+});

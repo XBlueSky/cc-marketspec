@@ -22,9 +22,17 @@ function withCors(res: Response): Response {
 
 export async function handleHttpRequest(req: Request): Promise<Response> {
 	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-	// Stateless JSON-only mode: SSE streams (GET) are not supported.
+	// Stateless JSON-only mode: SSE streams (GET) and session termination (DELETE)
+	// are not supported (spec §9). Reject both at the handler so the SDK never
+	// opens an SSE stream or manages a session.
 	if (req.method === 'GET') {
-		return new Response(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'SSE not supported in stateless mode' }, id: null }), {
+		return new Response(JSON.stringify({ jsonrpc: '2.0', error: { code: -32601, message: 'SSE (GET) not supported in stateless mode' }, id: null }), {
+			status: 405,
+			headers: { 'Content-Type': 'application/json', ...CORS }
+		});
+	}
+	if (req.method === 'DELETE') {
+		return new Response(JSON.stringify({ jsonrpc: '2.0', error: { code: -32601, message: 'session termination (DELETE) not supported in stateless mode' }, id: null }), {
 			status: 405,
 			headers: { 'Content-Type': 'application/json', ...CORS }
 		});
