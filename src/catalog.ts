@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { slug } from './common.ts';
+import { coverageTargets } from './entry.ts';
 
 // Marketplace-level presentation data (catalog.yaml). DATA only — no site design
 // (theme/hero/nav/layout are the consumer's). Native marketplace metadata
@@ -14,6 +15,16 @@ const group = z
 	})
 	.strict();
 
+const severity = z.enum(['error', 'warn', 'off']);
+const validKeys = new Set(['*', ...coverageTargets().map((t) => `${t.component}.${t.field}`)]);
+
+const coverage = z
+	.record(z.string(), severity)
+	.refine((o) => Object.keys(o).every((k) => validKeys.has(k)), {
+		message: 'unknown coverage rule path (use <component>.<field> or "*")'
+	})
+	.describe('Per-rule severity overrides for the coverage gate.');
+
 export const Catalog = z
 	.object({
 		schemaVersion: z
@@ -27,7 +38,8 @@ export const Catalog = z
 		groups: z
 			.array(group)
 			.describe('Group taxonomy; array order is the canonical display order.')
-			.optional()
+			.optional(),
+		coverage: coverage.optional()
 	})
 	.strict();
 
