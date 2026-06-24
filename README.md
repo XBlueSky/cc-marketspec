@@ -35,22 +35,22 @@ manifest via fallbacks (e.g. `intro`/`tagline` → native description, skill
 ## Install
 
 ```bash
-npm install -D cc-marketspec
+npm install -D @xbluesky/cc-marketspec
 # or run it without installing:
-npx cc-marketspec
+npx @xbluesky/cc-marketspec
 ```
 
 ## Usage
 
 ```bash
 # In a marketplace repo (defaults to cwd):
-npx cc-marketspec
+npx @xbluesky/cc-marketspec
 # -> writes ./manifest.json
 
 # Validate only (CI gate) — report errors/warnings, write nothing:
-npx cc-marketspec --check
+npx @xbluesky/cc-marketspec --check
 
-cc-marketspec --help        # full flag list
+cc-marketspec --help        # full flag list (after install, the bin is `cc-marketspec`)
 cc-marketspec --version
 ```
 
@@ -61,7 +61,7 @@ fixture the test suite regenerates and diffs.
 Programmatic:
 
 ```ts
-import { generateManifest, Manifest, Entry } from 'cc-marketspec';
+import { generateManifest, Manifest, Entry } from '@xbluesky/cc-marketspec';
 
 const { manifest, errors, warnings } = generateManifest(process.cwd());
 // Entry / Catalog / Manifest are Zod schemas; their z.infer types are exported too.
