@@ -9,7 +9,7 @@
 
 import { join, basename } from 'node:path';
 import { Manifest } from './manifest.ts';
-import { Entry } from './entry.ts';
+import { Entry, coverageTargets } from './entry.ts';
 import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
@@ -24,7 +24,7 @@ export interface GenerateResult {
 	warnings: string[];
 }
 
-export function generateManifest(input: FileSource | string): GenerateResult {
+export function generateManifest(input: FileSource | string, opts: { strictCoverage?: boolean } = {}): GenerateResult {
 	const source: FileSource = typeof input === 'string' ? new NodeFileSource(input) : input;
 	const errors: string[] = [];
 	const warns: string[] = [];
@@ -179,7 +179,16 @@ export function generateManifest(input: FileSource | string): GenerateResult {
 		return p.data;
 	})();
 	const groupIds = new Set((catalog?.groups ?? []).map((g) => g.id));
-	const coverageCfg: CoverageConfig = (catalog?.coverage ?? {}) as CoverageConfig;
+	let coverageCfg: CoverageConfig = (catalog?.coverage ?? {}) as CoverageConfig;
+	if (opts.strictCoverage) {
+		const strict: CoverageConfig = {};
+		for (const t of coverageTargets()) {
+			const id = `${t.component}.${t.field}`;
+			const eff = coverageCfg[id] ?? coverageCfg['*'] ?? t.defaultSeverity;
+			strict[id] = eff === 'warn' ? 'error' : eff;
+		}
+		coverageCfg = strict;
+	}
 
 	const plugins = ((market.plugins as Record<string, unknown>[]) ?? [])
 		.map((e) => {

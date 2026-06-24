@@ -20,6 +20,7 @@ Arguments:
 
 Options:
   --check           Validate only; report errors/warnings but do not write manifest.json.
+  --strict-coverage Promote all coverage warnings to errors for this run (stricter release gate).
   -h, --help        Show this help and exit.
   -v, --version     Print the version and exit.`;
 
@@ -44,9 +45,10 @@ export function cli(argv: string[]): number {
 		return 0;
 	}
 	const check = args.includes('--check');
+	const strict = args.includes('--strict-coverage');
 	const root = resolve(args.find((a) => !a.startsWith('-')) ?? process.cwd());
 
-	const { manifest, errors, warnings } = generateManifest(root);
+	const { manifest, errors, warnings } = generateManifest(root, { strictCoverage: strict });
 
 	for (const w of warnings) console.warn('WARN ' + w);
 	if (errors.length) {
