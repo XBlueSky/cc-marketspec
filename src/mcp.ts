@@ -9,7 +9,7 @@ import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
 import { analyzeCoverage, type CoverageReport } from './coverage.ts';
 import { describeField } from './entry.ts';
-import { SCHEMAS, VERSION as _VERSION } from './schemas.generated.ts';
+import { SCHEMAS, VERSION } from './schemas.generated.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];
@@ -70,16 +70,22 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 	}
 }
 
-export async function startMcpServer(): Promise<void> {
-	const server = new Server({ name: 'cc-marketspec', version: '0.1.1' }, { capabilities: { tools: {} } });
-	server.setRequestHandler(ListToolsRequestSchema, () => ({
-		tools: [
-			{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
-			{ name: 'explain_field', description: 'Explain an entry field by <component>.<field> path', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
-			{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
-			{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
-		]
-	}));
+export const TOOLS = [
+	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
+	{ name: 'explain_field', description: 'Explain an entry field by <component>.<field> path', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
+	{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
+];
+
+/** Build the MCP server with the shared tool table. Transport-agnostic — the
+ *  stdio entry and the HTTP handler both call this so the tool set never drifts. */
+export function createMcpServer(): Server {
+	const server = new Server({ name: 'cc-marketspec', version: VERSION }, { capabilities: { tools: {} } });
+	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: TOOLS }));
 	server.setRequestHandler(CallToolRequestSchema, (req) => callTool(req.params.name, (req.params.arguments ?? {}) as Record<string, unknown>));
-	await server.connect(new StdioServerTransport());
+	return server;
+}
+
+export async function startMcpServer(): Promise<void> {
+	await createMcpServer().connect(new StdioServerTransport());
 }

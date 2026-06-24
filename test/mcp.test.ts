@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getSchema, checkCoverage, scaffoldEntry, explainField, callTool } from '../src/mcp.ts';
+import { getSchema, checkCoverage, scaffoldEntry, explainField, callTool, TOOLS, createMcpServer } from '../src/mcp.ts';
 import { SCHEMAS, VERSION } from '../src/schemas.generated.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
@@ -77,6 +77,17 @@ test('callTool wraps a thrown handler error (malformed entry.yaml) as a structur
 	const payload = JSON.parse(res.content[0].text) as { error?: string };
 	assert.equal(typeof payload.error, 'string');
 	assert.ok((payload.error as string).length > 0);
+});
+
+test('TOOLS is the single tool table with the four tools', () => {
+	const names = TOOLS.map((t) => t.name).sort();
+	assert.deepEqual(names, ['check_coverage', 'explain_field', 'get_schema', 'scaffold_entry']);
+});
+
+test('createMcpServer builds a server without needing a transport', () => {
+	const server = createMcpServer();
+	assert.ok(server);
+	assert.equal(typeof server.connect, 'function');
 });
 
 test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => {
