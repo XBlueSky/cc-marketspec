@@ -59,29 +59,6 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm ci
-      - name: Debug npm auth (temporary)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          echo "::group::userconfig path"
-          echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG"
-          echo "::endgroup::"
-          echo "::group::setup-node .npmrc (token line redacted, placeholder kept visible)"
-          sed -E 's#(_authToken=).*#\1<REDACTED-OR-PLACEHOLDER-SHOWN-BELOW>#' "$NPM_CONFIG_USERCONFIG" || echo "no userconfig file"
-          echo "--- does it contain a literal \${NODE_AUTH_TOKEN} placeholder? ---"
-          grep -c 'NODE_AUTH_TOKEN' "$NPM_CONFIG_USERCONFIG" || true
-          echo "::endgroup::"
-          echo "::group::token shape (no value leaked)"
-          echo "NODE_AUTH_TOKEN len=${#NODE_AUTH_TOKEN} prefix=${NODE_AUTH_TOKEN:0:4}"
-          echo "NPM_TOKEN len=${#NPM_TOKEN} prefix=${NPM_TOKEN:0:4}"
-          echo "::endgroup::"
-          echo "::group::raw curl whoami (token straight to registry, bypassing npm config)"
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" -H "Authorization: Bearer $NODE_AUTH_TOKEN" https://registry.npmjs.org/-/whoami
-          echo "::endgroup::"
-          echo "::group::npm whoami (same path semantic-release uses)"
-          npm whoami --registry=https://registry.npmjs.org/ || echo "npm whoami failed"
-          echo "::endgroup::"
       - name: Release
         run: npx semantic-release
         env:
