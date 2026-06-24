@@ -225,6 +225,22 @@ The open/no-auth posture is deliberate (read-only tools, no secrets, file
 contents are passed as parameters). If you later need abuse protection, add a
 Cloudflare Rate Limiting rule — no code change required.
 
+### Auto-deploy from CI
+
+`.github/workflows/ci.yml` deploys the Worker on every push to `main` (once the
+`validate` job is green), via `cloudflare/wrangler-action`. To enable it, add two
+GitHub repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|--------|-------|
+| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token scoped to **Workers Scripts: Edit** |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (Workers dashboard → Account ID) |
+
+The `deploy-worker` job runs in parallel with the npm `release` job — the Worker
+going live does not wait on the npm publish, and a failed publish won't block the
+deploy. Until both secrets are set the job fails loudly (never a silent skip), so
+a missing secret is visible in the Actions tab.
+
 ## Versioning
 
 The standard is semver; the manifest carries `schemaVersion` (`MAJOR.MINOR`).

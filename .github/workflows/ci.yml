@@ -38,6 +38,29 @@ jobs:
           test -f dist/cli.js
           test -f dist/index.d.ts
 
+  # Deploy the hosted MCP Worker on every push to main, once validate is green.
+  # Runs in parallel with `release` (npm publish) — the Worker going live does
+  # not wait on the npm release, and a failed npm publish won't block the deploy.
+  # Requires two repo secrets: CLOUDFLARE_API_TOKEN (a Workers-edit-scoped API
+  # token) and CLOUDFLARE_ACCOUNT_ID. Without them the job fails loudly — it is
+  # never silently skipped — so a missing secret is visible, not a no-op.
+  deploy-worker:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   release:
     needs: validate
     # Only release from the default branch (not PRs or tags). semantic-release
