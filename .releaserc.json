@@ -5,11 +5,18 @@
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
     "@semantic-release/npm",
+    [
+      "@semantic-release/exec",
+      {
+        "//": "After npm bumps package.json, regenerate the build-inlined schemas so VERSION tracks the new release — otherwise src/schemas.generated.ts stays stale and the schema-drift gate fails on the next PR.",
+        "prepareCmd": "npm run build:schemas"
+      }
+    ],
     "@semantic-release/github",
     [
       "@semantic-release/git",
       {
-        "assets": ["package.json", "package-lock.json", "CHANGELOG.md"],
+        "assets": ["package.json", "package-lock.json", "CHANGELOG.md", "src/schemas.generated.ts", "schemas/*.schema.json"],
         "message": "chore(release): bump version to ${nextRelease.version}\n\n[skip ci]"
       }
     ]
