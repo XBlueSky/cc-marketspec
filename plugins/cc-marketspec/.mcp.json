@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cc-marketspec": {
+      "type": "http",
+      "url": "https://cc-marketspec-mcp.xbluesky.workers.dev"
+    }
+  }
+}

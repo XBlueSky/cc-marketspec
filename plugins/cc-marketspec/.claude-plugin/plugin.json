@@ -1,0 +1,8 @@
+{
+  "name": "cc-marketspec",
+  "version": "0.1.0",
+  "description": "Scaffold, validate, and generate a Claude Code plugin marketplace presentation manifest.",
+  "author": "XBlueSky",
+  "license": "MIT",
+  "keywords": ["claude-code", "marketplace", "manifest", "schema"]
+}
