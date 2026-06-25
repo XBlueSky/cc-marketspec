@@ -1,4 +1,8 @@
-# cc-marketspec
+<div align="center">
+  <img src="cc-marketplace.png" width="140" alt="cc-marketspec logo" />
+
+  # cc-marketspec
+</div>
 
 A **headless data standard + generator** for the *presentation* of a Claude Code
 plugin marketplace.
