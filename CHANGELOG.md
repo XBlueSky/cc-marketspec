@@ -1,3 +1,12 @@
+# [0.3.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.2.1...v0.3.0) (2026-06-25)
+
+
+### Features
+
+* **marketplace:** add plugin entry.yaml and generate dogfooded manifest ([e297299](https://github.com/XBlueSky/cc-marketspec/commit/e297299ba18066a88ac87f93c407151502fc2baa))
+* **marketplace:** make the repo a marketplace with a tools catalog ([2a8ea69](https://github.com/XBlueSky/cc-marketspec/commit/2a8ea69956e5a914a763128e1f133c3fb4249872))
+* **plugin:** add cc-marketspec plugin manifest, MCP wiring, and commands ([6156f9d](https://github.com/XBlueSky/cc-marketspec/commit/6156f9de6f389a37e40973ed9060b580a671c85e))
+
 ## [0.2.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.2.0...v0.2.1) (2026-06-25)
 
 
