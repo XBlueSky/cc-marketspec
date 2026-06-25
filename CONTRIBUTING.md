@@ -18,6 +18,12 @@ The Zod schemas in `src/{entry,catalog,manifest}.ts` are the single source of
 truth. The published JSON Schemas in `schemas/*.schema.json` are **generated**
 from them — never hand-edit `schemas/`.
 
+The public API surface is `src/index.ts`. It re-exports:
+- schemas: `Entry`, `Catalog`, `Manifest`
+- generator: `generateManifest`, `extractNativeFacts`
+- coverage: `analyzeCoverage`, `coverageTargets`, types `CoverageReport` / `CoverageFinding` / `CoverageConfig` / `Severity`
+- init: `planInit`, type `InitAction`
+
 ```bash
 npm run build:schemas   # regenerate schemas/ from the Zod source
 ```
@@ -41,6 +47,13 @@ generator output, regenerate it and commit the result:
 ```bash
 node dist/cli.js examples/marketplace
 ```
+
+## Hosted MCP
+
+Prefer not to install anything? The marketplace exposes the cc-marketspec MCP
+tools at a hosted HTTP endpoint — add `https://cc-marketspec-mcp.tony84822.workers.dev` to your
+MCP client to query the schema and check coverage live. See the README's
+"Hosted MCP server" section.
 
 ## Commits & releases
 

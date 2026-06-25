@@ -1,0 +1,4 @@
+name = "cc-marketspec-mcp"
+main = "worker/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]

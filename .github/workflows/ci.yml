@@ -9,26 +9,35 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # No registry-url here: validate only installs public packages. Setting
+      # registry-url makes setup-node write a .npmrc with an _authToken bound to
+      # NODE_AUTH_TOKEN, which is unset in this job — so npm cold-fetches with a
+      # blank auth token and hangs on the registry handshake. Anonymous fetch of
+      # public packages needs no auth. (release keeps registry-url; it publishes.)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
+      # Pin the public registry explicitly: the lockfile must only ever resolve
+      # from registry.npmjs.org. (An earlier lockfile was generated behind a
+      # private mirror and pinned 85 tarballs to an internal host the runner
+      # can't reach — npm ci then hung for 10min on UNABLE_TO_GET_ISSUER_CERT.)
+      - run: npm ci --registry=https://registry.npmjs.org
       - name: Type check
         run: npm run type-check
       - name: Lint
         run: npm run lint
       - name: Test
         run: npm test
-      # schemas/*.schema.json are generated from the Zod source of truth; fail if
-      # the committed copies drifted (published contract must == runtime validator).
+      # schemas/*.schema.json AND src/schemas.generated.ts are generated from the
+      # Zod source of truth by build:schemas; fail if any committed copy drifted
+      # (published contract == runtime validator == build-inlined Worker schemas).
       - name: Schema drift
         run: |
           npm run build:schemas
-          git diff --exit-code -- schemas/ || { echo "schemas/ are stale — run 'npm run build:schemas' and commit"; exit 1; }
+          git diff --exit-code -- schemas/ src/schemas.generated.ts || { echo "generated schemas are stale — run 'npm run build:schemas' and commit"; exit 1; }
       - name: Build
         run: npm run build
       - name: Verify build outputs
@@ -37,12 +46,39 @@ jobs:
           test -f dist/cli.js
           test -f dist/index.d.ts
 
+  # Deploy the hosted MCP Worker on every push to main, once validate is green.
+  # Runs in parallel with `release` (npm publish) — the Worker going live does
+  # not wait on the npm release, and a failed npm publish won't block the deploy.
+  # Requires two repo secrets: CLOUDFLARE_API_TOKEN (a Workers-edit-scoped API
+  # token) and CLOUDFLARE_ACCOUNT_ID. Without them the job fails loudly — it is
+  # never silently skipped — so a missing secret is visible, not a no-op.
+  deploy-worker:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # wrangler-action brings its own wrangler; npm ci installs our deps so the
+      # action's esbuild can resolve worker/index.ts's @modelcontextprotocol/sdk
+      # import. wrangler is no longer a devDep. Pin the public registry — see validate.
+      - run: npm ci --registry=https://registry.npmjs.org
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   release:
     needs: validate
     # Only release from the default branch (not PRs or tags). semantic-release
     # creates the tags itself; its [skip ci] bump commit won't re-trigger CI.
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write       # tags, the version-bump commit, GitHub releases
       issues: write
@@ -57,8 +93,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
+      - run: npm ci --registry=https://registry.npmjs.org
       - name: Release
         run: npx semantic-release
         env:

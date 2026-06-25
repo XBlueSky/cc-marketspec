@@ -105,6 +105,145 @@ declarative schema can:
 
 Any error fails the build (all errors are reported, not just the first).
 
+## Coverage gate
+
+The coverage gate checks that plugins have authored enough presentation data.
+Rules are addressed by `<component>.<field>` dot-paths (e.g. `skill.trigger`,
+`plugin.tagline`). Each rule has a built-in default severity:
+
+| Rule | Default |
+|------|---------|
+| `skill.trigger` | `warn` |
+| `skill.examples` | `off` |
+| `command.description` | `off` |
+| `agent.summary` | `warn` |
+| `mcp.env` | `warn` |
+| `mcp.provides` | `off` |
+| `plugin.tagline` | `warn` |
+| `plugin.group` | `off` |
+
+Override per-rule (or set `"*"` as a catch-all) in `catalog.yaml`:
+
+```yaml
+coverage:
+  skill.trigger: error   # promote to hard failure
+  plugin.group: warn     # promote from off
+  "*": warn              # default fallback for all other rules
+```
+
+`--check` exits non-zero if any `error`-severity finding exists.
+`--strict-coverage` additionally exits non-zero when there are any `warn`
+findings — use this as a stricter release gate.
+
+## Getting started: `npx cc-marketspec init`
+
+Scaffolds the files you need to begin authoring presentation data. It is
+**non-destructive**: any file that already exists is reported as `skipped`.
+
+```bash
+npx @xbluesky/cc-marketspec init
+```
+
+Creates:
+- `catalog.yaml` — marketplace-level metadata and group taxonomy (with a
+  commented-out `coverage:` block ready to tune).
+- `plugins/<id>/entry.yaml` — per-plugin overlay stub, for each plugin found in
+  `.claude-plugin/marketplace.json` that has a `plugin.json` on disk.
+
+## CI
+
+The `--check` flag validates without writing anything — use it on PRs.
+
+**GitHub Actions** (`.github/workflows/manifest.yml`):
+```yaml
+on: [pull_request, push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npx @xbluesky/cc-marketspec --check
+```
+
+**GitLab CI** (`.gitlab-ci.yml`):
+```yaml
+check:manifest:
+  image: node:22
+  script:
+    - npx @xbluesky/cc-marketspec --check
+```
+
+Add `--strict-coverage` for a stricter release gate that fails on warnings too.
+The generated `manifest.json` can be committed to the repo or uploaded as a
+CI artifact — that choice is yours.
+
+## MCP
+
+```bash
+npx @xbluesky/cc-marketspec mcp
+```
+
+Starts a stdio MCP server. Four tools:
+
+| Tool | What it does |
+|------|-------------|
+| `get_schema` | Returns the JSON Schema for `entry`, `catalog`, or `manifest` |
+| `explain_field` | Explains a field in the entry or catalog schema |
+| `check_coverage` | Runs the coverage gate against a plugin directory |
+| `scaffold_entry` | Generates an `entry.yaml` stub for a given plugin |
+
+## Hosted MCP server
+
+The same four MCP tools (`get_schema`, `explain_field`, `check_coverage`,
+`scaffold_entry`) are available over HTTP so contributors can query the schema
+and be guided without installing anything. The handler is a platform-neutral
+web-standard `fetch(Request) → Response` (`handleHttpRequest`, exported from the
+package); Cloudflare Workers is the reference deployment but not a requirement.
+
+### Use it (contributors)
+
+Add the endpoint to any Streamable-HTTP-capable MCP client:
+
+```
+https://cc-marketspec-mcp.tony84822.workers.dev
+```
+
+No credentials — the endpoint is intentionally open and read-only.
+
+### Self-host (owners)
+
+```bash
+npm install
+npm run worker:dev          # local: serves the handler (npx wrangler dev)
+npx wrangler login          # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
+npm run deploy              # publishes the Worker; prints the public URL
+```
+
+Wrangler is **not** a dependency — `worker:dev` / `deploy` invoke it via `npx`, so
+it stays out of the install tree (its platform binaries otherwise bloat `npm ci`).
+
+The open/no-auth posture is deliberate (read-only tools, no secrets, file
+contents are passed as parameters). If you later need abuse protection, add a
+Cloudflare Rate Limiting rule — no code change required.
+
+### Auto-deploy from CI
+
+`.github/workflows/ci.yml` deploys the Worker on every push to `main` (once the
+`validate` job is green), via `cloudflare/wrangler-action`. To enable it, add two
+GitHub repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|--------|-------|
+| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token scoped to **Workers Scripts: Edit** |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (Workers dashboard → Account ID) |
+
+The `deploy-worker` job runs in parallel with the npm `release` job — the Worker
+going live does not wait on the npm publish, and a failed publish won't block the
+deploy. Until both secrets are set the job fails loudly (never a silent skip), so
+a missing secret is visible in the Actions tab.
+
 ## Versioning
 
 The standard is semver; the manifest carries `schemaVersion` (`MAJOR.MINOR`).

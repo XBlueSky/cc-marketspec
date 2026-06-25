@@ -40,6 +40,21 @@
         "additionalProperties": false
       },
       "description": "Group taxonomy; array order is the canonical display order."
+    },
+    "coverage": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "error",
+          "warn",
+          "off"
+        ]
+      },
+      "description": "Per-rule severity overrides for the coverage gate."
     }
   },
   "required": [

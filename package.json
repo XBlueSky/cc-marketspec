@@ -52,10 +52,13 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --test test/*.test.ts",
+    "worker:dev": "npx --yes wrangler@4 dev",
+    "deploy": "npx --yes wrangler@4 deploy",
     "release": "semantic-release",
     "prepublishOnly": "npm run build:schemas && npm run build && npm test"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "js-yaml": "^4.1.0",
     "zod": "^4.4.3"
   },
