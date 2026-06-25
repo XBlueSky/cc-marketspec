@@ -211,7 +211,7 @@ package); Cloudflare Workers is the reference deployment but not a requirement.
 Add the endpoint to any Streamable-HTTP-capable MCP client:
 
 ```
-https://cc-marketspec-mcp.tony84822.workers.dev
+https://cc-marketspec-mcp.xbluesky.workers.dev
 ```
 
 No credentials — the endpoint is intentionally open and read-only.
