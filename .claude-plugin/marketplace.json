@@ -1,0 +1,7 @@
+{
+  "name": "cc-marketspec",
+  "owner": { "name": "XBlueSky", "url": "https://github.com/XBlueSky" },
+  "plugins": [
+    { "name": "cc-marketspec", "source": "./plugins/cc-marketspec" }
+  ]
+}

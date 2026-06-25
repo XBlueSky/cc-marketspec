@@ -1,0 +1,26 @@
+# Presentation overlay for the cc-marketspec plugin. Native data (plugin.json,
+# commands/*.md, .mcp.json) already yields a valid manifest; this enriches it.
+# yaml-language-server: $schema=../../schemas/entry.schema.json
+group: tools
+tagline: Headless data standard + generator for a Claude Code marketplace's presentation
+intro: >
+  Describe your marketplace as data; cc-marketspec joins it with the native plugin
+  manifests, validates, and emits a single render-agnostic manifest.json. Ships
+  data, not design.
+commands:
+  - name: cc-generate
+    description: Generate manifest.json from your marketplace data.
+  - name: cc-check
+    description: Validate the marketplace without writing; explains any errors.
+  - name: cc-init
+    description: Scaffold catalog.yaml and entry.yaml templates from existing plugins.
+mcp:
+  - name: cc-marketspec
+    description: Hosted, read-only MCP tools for schema lookup and coverage checks.
+    provides:
+      - get_schema
+      - explain_field
+      - check_coverage
+      - scaffold_entry
+tips:
+  - This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.
