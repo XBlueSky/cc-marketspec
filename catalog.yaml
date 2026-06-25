@@ -1,0 +1,9 @@
+# Marketplace-level presentation. Native metadata (name/owner) lives in
+# .claude-plugin/marketplace.json and is NOT restated here.
+# yaml-language-server: $schema=./schemas/catalog.schema.json
+schemaVersion: "1.0"
+lang: en
+groups:
+  - id: tools
+    label: Tools
+    note: Tooling for building Claude Code plugin marketplaces
