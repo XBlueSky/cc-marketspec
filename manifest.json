@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0",
+  "marketplace": {
+    "name": "cc-marketspec",
+    "lang": "en",
+    "owner": {
+      "name": "XBlueSky",
+      "url": "https://github.com/XBlueSky"
+    }
+  },
+  "groups": [
+    {
+      "id": "tools",
+      "label": "Tools",
+      "note": "Tooling for building Claude Code plugin marketplaces"
+    }
+  ],
+  "plugins": [
+    {
+      "id": "cc-marketspec",
+      "name": "cc-marketspec",
+      "version": "0.1.0",
+      "description": "Scaffold, validate, and generate a Claude Code plugin marketplace presentation manifest.",
+      "author": {
+        "name": "XBlueSky"
+      },
+      "license": "MIT",
+      "keywords": [
+        "claude-code",
+        "marketplace",
+        "manifest",
+        "schema"
+      ],
+      "group": "tools",
+      "tagline": "Headless data standard + generator for a Claude Code marketplace's presentation",
+      "intro": "Describe your marketplace as data; cc-marketspec joins it with the native plugin manifests, validates, and emits a single render-agnostic manifest.json. Ships data, not design.\n",
+      "commands": [
+        {
+          "name": "cc-check",
+          "summary": "Validate the marketplace without writing manifest.json; explain any errors.",
+          "description": "Validate the marketplace without writing; explains any errors."
+        },
+        {
+          "name": "cc-generate",
+          "summary": "Generate manifest.json for the marketplace in the current directory.",
+          "description": "Generate manifest.json from your marketplace data."
+        },
+        {
+          "name": "cc-init",
+          "summary": "Scaffold catalog.yaml and per-plugin entry.yaml templates from existing plugins.",
+          "description": "Scaffold catalog.yaml and entry.yaml templates from existing plugins."
+        }
+      ],
+      "mcp": [
+        {
+          "name": "cc-marketspec",
+          "type": "http",
+          "description": "Hosted, read-only MCP tools for schema lookup and coverage checks.",
+          "provides": [
+            "get_schema",
+            "explain_field",
+            "check_coverage",
+            "scaffold_entry"
+          ]
+        }
+      ],
+      "tips": [
+        {
+          "text": "This repo is itself a cc-marketspec marketplace — it dogfoods its own framework."
+        }
+      ]
+    }
+  ]
+}
