@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.2.0...v0.2.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* **release:** regenerate inlined schemas on version bump ([c580d2b](https://github.com/XBlueSky/cc-marketspec/commit/c580d2be5b606538abc539d3da94f003c5fb7c93))
+
 # [0.2.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.1.1...v0.2.0) (2026-06-25)
 
 
