@@ -9,14 +9,22 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # No registry-url here: validate only installs public packages. Setting
+      # registry-url makes setup-node write a .npmrc with an _authToken bound to
+      # NODE_AUTH_TOKEN, which is unset in this job — so npm cold-fetches with a
+      # blank auth token and hangs on the registry handshake. Anonymous fetch of
+      # public packages needs no auth. (release keeps registry-url; it publishes.)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
+      # Pin the public registry explicitly: the lockfile must only ever resolve
+      # from registry.npmjs.org. (An earlier lockfile was generated behind a
+      # private mirror and pinned 85 tarballs to an internal host the runner
+      # can't reach — npm ci then hung for 10min on UNABLE_TO_GET_ISSUER_CERT.)
+      - run: npm ci --registry=https://registry.npmjs.org
       - name: Type check
         run: npm run type-check
       - name: Lint
@@ -48,13 +56,16 @@ jobs:
     needs: validate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+      # wrangler-action brings its own wrangler; npm ci installs our deps so the
+      # action's esbuild can resolve worker/index.ts's @modelcontextprotocol/sdk
+      # import. wrangler is no longer a devDep. Pin the public registry — see validate.
+      - run: npm ci --registry=https://registry.npmjs.org
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
@@ -67,6 +78,7 @@ jobs:
     # creates the tags itself; its [skip ci] bump commit won't re-trigger CI.
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write       # tags, the version-bump commit, GitHub releases
       issues: write
@@ -81,8 +93,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
+      - run: npm ci --registry=https://registry.npmjs.org
       - name: Release
         run: npx semantic-release
         env:

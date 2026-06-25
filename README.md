@@ -216,10 +216,13 @@ No credentials — the endpoint is intentionally open and read-only.
 
 ```bash
 npm install
-npm run worker:dev          # local: serves the handler via `wrangler dev`
-wrangler login              # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
+npm run worker:dev          # local: serves the handler (npx wrangler dev)
+npx wrangler login          # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
 npm run deploy              # publishes the Worker; prints the public URL
 ```
+
+Wrangler is **not** a dependency — `worker:dev` / `deploy` invoke it via `npx`, so
+it stays out of the install tree (its platform binaries otherwise bloat `npm ci`).
 
 The open/no-auth posture is deliberate (read-only tools, no secrets, file
 contents are passed as parameters). If you later need abuse protection, add a
