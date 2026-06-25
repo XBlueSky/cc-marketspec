@@ -3,3 +3,8 @@ dist/
 *.tgz
 docs/superpowers/
 .superpowers/
+
+# Claude Code local files (machine-specific, never commit)
+.claude.local.json
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
