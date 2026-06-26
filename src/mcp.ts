@@ -8,23 +8,21 @@ import yaml from 'js-yaml';
 import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
 import { analyzeCoverage, type CoverageReport } from './coverage.ts';
-import { describeField } from './entry.ts';
+import { AUTHORING } from './authoring.generated.ts';
 import { SCHEMAS, VERSION } from './schemas.generated.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];
 }
 
-export function explainField(path: string): { path: string; description?: string } {
-	// path is "<component>.<field>" — e.g. skill.trigger, mcp.env, plugin.tagline.
-	// Resolve the field's authored .describe() text from the live Entry schema via
-	// describeField (single-sourced with the coverage schema-walk in entry.ts).
-	// Unknown / malformed paths return description: undefined (never throw).
-	const dot = path.indexOf('.');
-	if (dot <= 0 || dot === path.length - 1) return { path, description: undefined };
-	const component = path.slice(0, dot);
-	const field = path.slice(dot + 1);
-	return { path, description: describeField(component, field) };
+export function listAuthoringSections(): { id: string; title: string; when: string }[] {
+	return AUTHORING.map(({ id, title, when }) => ({ id, title, when }));
+}
+
+export function getAuthoringGuide(section: string): { section: string; title?: string; body?: string; error?: string; available?: string[] } {
+	const found = AUTHORING.find((s) => s.id === section);
+	if (!found) return { section, error: `unknown section "${section}"`, available: AUTHORING.map((s) => s.id) };
+	return { section, title: found.title, body: found.body };
 }
 
 export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport {
@@ -56,8 +54,10 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 		switch (name) {
 			case 'get_schema':
 				return text(getSchema(args.which as keyof typeof SCHEMAS));
-			case 'explain_field':
-				return text(explainField(args.path as string));
+			case 'list_authoring_sections':
+				return text(listAuthoringSections());
+			case 'get_authoring_guide':
+				return text(getAuthoringGuide(args.section as string));
 			case 'check_coverage':
 				return text(checkCoverage(args as { files: Record<string, string>; pluginId: string }));
 			case 'scaffold_entry':
@@ -72,7 +72,8 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 
 export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
-	{ name: 'explain_field', description: 'Explain an entry field by <component>.<field> path', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
+	{ name: 'list_authoring_sections', description: 'List entry.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
+	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
 	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
 	{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
 ];

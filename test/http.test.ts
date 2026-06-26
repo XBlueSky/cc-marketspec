@@ -32,12 +32,12 @@ test('initialize returns 200 JSON with cc-marketspec server info and CORS', asyn
 	assert.ok(body.result.protocolVersion);
 });
 
-test('tools/list returns exactly the four tools', async () => {
+test('tools/list returns exactly the five tools', async () => {
 	const res = await handleHttpRequest(rpc('tools/list'));
 	assert.equal(res.status, 200);
 	const body = await res.json() as { result: { tools: { name: string }[] } };
 	const names = body.result.tools.map((t: { name: string }) => t.name).sort();
-	assert.deepEqual(names, ['check_coverage', 'explain_field', 'get_schema', 'scaffold_entry']);
+	assert.deepEqual(names, ['check_coverage', 'get_authoring_guide', 'get_schema', 'list_authoring_sections', 'scaffold_entry']);
 });
 
 test('tools/call get_schema returns the entry schema as JSON text', async () => {
