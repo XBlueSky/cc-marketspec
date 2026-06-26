@@ -13,14 +13,21 @@ export const PluginJson = z.looseObject({
 	version: z.string().optional(),
 	description: z.string().optional(),
 	author: z
-		.union([
-			z.string(),
-			z.looseObject({ name: z.string().optional(), email: z.string().optional(), url: z.string().optional() }),
-		])
+		.union(
+			[
+				z.string(),
+				z.looseObject({ name: z.string().optional(), email: z.string().optional(), url: z.string().optional() }),
+			],
+			{ error: 'author must be a string or an object {name, url?, email?}' },
+		)
 		.optional(),
 	license: z.string().optional(),
 	homepage: z.string().optional(),
-	repository: z.union([z.string(), z.looseObject({ url: z.string().optional() })]).optional(),
+	repository: z
+		.union([z.string(), z.looseObject({ url: z.string().optional() })], {
+			error: 'repository must be a string or an object {url?}',
+		})
+		.optional(),
 	keywords: z.array(z.string()).optional(),
-	dependencies: z.record(z.string(), z.string()).optional(),
+	dependencies: z.array(z.string()).optional(),
 });

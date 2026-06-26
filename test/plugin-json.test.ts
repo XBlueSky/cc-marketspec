@@ -34,3 +34,21 @@ test('unknown keys pass through (looseObject)', () => {
 	const r = PluginJson.safeParse({ name: 'x', futureField: true });
 	assert.equal(r.success, true);
 });
+
+// Finding #1 guard: dependencies must be array of strings (aligned with manifest)
+test('dependencies as string array is valid', () => {
+	assert.equal(PluginJson.safeParse({ dependencies: ['foo', 'bar'] }).success, true);
+});
+
+test('dependencies as object map fails (manifest expects array, not record)', () => {
+	const r = PluginJson.safeParse({ dependencies: { foo: '^1.0.0' } });
+	assert.equal(r.success, false);
+});
+
+// Finding #2 guard: union fields produce actionable error messages for non-string non-object
+test('author as number fails with actionable union message', () => {
+	const r = PluginJson.safeParse({ author: 42 });
+	assert.equal(r.success, false);
+	const msg = r.error?.issues[0]?.message ?? '';
+	assert.ok(msg.includes('must be a string or an object'), `expected union hint in: ${msg}`);
+});
