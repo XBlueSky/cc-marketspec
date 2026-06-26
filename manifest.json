@@ -34,6 +34,18 @@
       "group": "tools",
       "tagline": "Headless data standard + generator for a Claude Code marketplace's presentation",
       "intro": "Describe your marketplace as data; cc-marketspec joins it with the native plugin manifests, validates, and emits a single render-agnostic manifest.json. Ships data, not design.\n",
+      "skills": [
+        {
+          "name": "marketplace-flow",
+          "description": "This skill should be used when the user asks to \"turn this repo into a Claude Code plugin marketplace\", \"set up a marketplace\", \"add presentation data to my plugins\", \"generate the marketplace manifest\", \"automate the manifest in CI\", or mentions catalog.yaml / entry.yaml / manifest.json in a marketplace context. It walks the user end to end through scaffolding, filling presentation data, validating, generating, and wiring CI.",
+          "autoload": false,
+          "resources": {
+            "scripts": 0,
+            "references": 0,
+            "assets": 2
+          }
+        }
+      ],
       "commands": [
         {
           "name": "cc-check",
