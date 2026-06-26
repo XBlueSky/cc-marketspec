@@ -1,0 +1,40 @@
+# Regenerate manifest.json on every push to main, then persist it.
+# The skill keeps EITHER the "git path" step OR the "artifact path" step
+# below, based on your answer to "commit manifest to git, or keep it as a
+# build artifact?" Delete the block you do not use.
+name: Manifest
+
+on:
+  push:
+    branches: [main]
+
+# Needed only for the git path (committing the regenerated manifest back).
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Produce: regenerate manifest.json from catalog.yaml + entry.yaml + native data.
+      - run: npx @xbluesky/cc-marketspec
+
+      # --- git path: commit the regenerated manifest back to the repo ---
+      - name: Commit manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git diff --staged --quiet || git commit -m "chore: regenerate manifest [skip ci]"
+          git push
+
+      # --- artifact path: upload the manifest for a downstream site job ---
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #     name: manifest
+      #     path: manifest.json
