@@ -19,7 +19,7 @@
     {
       "id": "cc-marketspec",
       "name": "cc-marketspec",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Scaffold, validate, and generate a Claude Code plugin marketplace presentation manifest.",
       "author": {
         "name": "XBlueSky"
@@ -43,7 +43,7 @@
           "resources": {
             "scripts": 0,
             "references": 0,
-            "assets": 2
+            "assets": 3
           }
         }
       ],

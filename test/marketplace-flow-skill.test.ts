@@ -44,3 +44,32 @@ test('CI templates regenerate the manifest via the npx entrypoint', () => {
     assert.ok(body.includes('npx @xbluesky/cc-marketspec'), `${name} must call the cc-marketspec CLI`);
   }
 });
+
+test('starter marketplace.json asset exists and is valid JSON', () => {
+  const p = new URL('assets/marketplace.json.example', `file://${skillDir}`);
+  assert.ok(existsSync(p), 'marketplace.json.example must exist');
+  assert.doesNotThrow(() => JSON.parse(readFileSync(p, 'utf8')), 'must be valid JSON');
+});
+
+test('SKILL.md anchors all asset references with ${CLAUDE_SKILL_DIR}', () => {
+  const md = readFileSync(new URL('SKILL.md', `file://${skillDir}`), 'utf8');
+  // every `assets/` mention must be preceded by the skill-dir variable
+  const bare = md.split('\n').filter((l) => /assets\//.test(l) && !/CLAUDE_SKILL_DIR/.test(l));
+  assert.deepEqual(bare, [], 'every assets/ reference must use ${CLAUDE_SKILL_DIR}');
+});
+
+test('SKILL.md does not use ${CLAUDE_PLUGIN_ROOT} (wrong var for skill body)', () => {
+  const md = readFileSync(new URL('SKILL.md', `file://${skillDir}`), 'utf8');
+  assert.ok(!md.includes('CLAUDE_PLUGIN_ROOT'), 'skill body must use CLAUDE_SKILL_DIR, not CLAUDE_PLUGIN_ROOT');
+});
+
+test('plugin ships a README and LICENSE', () => {
+  const pluginDir = fileURLToPath(new URL('../plugins/cc-marketspec/', import.meta.url));
+  assert.ok(existsSync(new URL('README.md', `file://${pluginDir}`)), 'plugin README must exist');
+  assert.ok(existsSync(new URL('LICENSE', `file://${pluginDir}`)), 'plugin LICENSE must exist');
+});
+
+test('repo README $schema example uses the scoped package path', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
+});
