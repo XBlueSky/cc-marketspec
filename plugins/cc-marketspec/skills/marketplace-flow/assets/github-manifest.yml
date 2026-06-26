@@ -27,6 +27,9 @@ jobs:
       - run: npx @xbluesky/cc-marketspec
 
       # --- git path: commit the regenerated manifest back to the repo ---
+      # If main is a protected branch, the default GITHUB_TOKEN push may be
+      # rejected — allow the github-actions bot to bypass the ruleset, or use a
+      # PAT with contents:write here instead.
       - name: Commit manifest
         run: |
           git config user.name "github-actions[bot]"

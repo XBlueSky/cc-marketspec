@@ -21,7 +21,7 @@ Step headings under `## Step actions`:
 1. No `catalog.yaml` → presentation data not scaffolded.
 2. Any `entry.yaml` still all-comment (only `# ...` TODO lines) → not filled.
 3. `/cc-check` reports errors or warnings → not valid.
-4. No `manifest.json`, or it is older than `catalog.yaml`/`entry.yaml` → not generated.
+4. No `manifest.json`, or regenerating it would produce a `git diff` → not generated.
 5. No CI workflow that runs `cc-marketspec` (e.g. `.github/workflows/*.yml` or
    `.gitlab-ci.yml`) → CI not wired.
 6. All of the above satisfied → done; explain how the site consumes the manifest.
@@ -44,8 +44,9 @@ template. Then re-inspect and proceed to filling.
 
 ### Step 2 — fill entry.yaml (templates are all-comment TODO)
 
-Help fill each plugin's `entry.yaml`: uncomment and write `tagline`, `intro`,
-skill triggers, command/agent descriptions. Use the JSON Schema referenced in
+Help fill each plugin's `entry.yaml`: uncomment and write `tagline` and `intro`
+(the template scaffolds these as commented lines), and author skill triggers and
+command/agent descriptions from scratch where useful. Use the JSON Schema referenced in
 the file's `yaml-language-server` line for field meanings. Write what can be
 inferred from the plugin's own files; stop and ask the user only for values that
 require their judgment (the exact tagline wording, intro copy). Then re-inspect.
@@ -56,9 +57,9 @@ Run `/cc-check`. For each error or warning, interpret it against the schema and
 apply or propose a concrete fix in the right file — do not just echo raw output.
 Re-run until clean, then proceed.
 
-### Step 4 — generate manifest (--check is clean, manifest stale or missing)
+### Step 4 — generate manifest (--check is clean, manifest missing or out of date)
 
-Run `/cc-generate`. It writes `manifest.json` from the marketplace data. Report
+To tell whether the committed `manifest.json` is out of date, regenerate and check for a diff (do not compare file mtimes — git does not preserve them). Run `/cc-generate`. It writes `manifest.json` from the marketplace data. Report
 how many plugins were emitted and surface any warnings, then proceed to wiring CI
 so this regenerates automatically.
 
