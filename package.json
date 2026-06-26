@@ -1,6 +1,6 @@
 {
   "name": "@xbluesky/cc-marketspec",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Headless data standard + generator for Claude Code plugin marketplace presentation. Describe a marketplace as data (entry.yaml / catalog.yaml); emit one manifest.json any site renders.",
   "type": "module",
   "license": "MIT",

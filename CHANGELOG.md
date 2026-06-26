@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.4.0...v0.4.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **ci:** build from source in manifest workflow, not npx ([4a81837](https://github.com/XBlueSky/cc-marketspec/commit/4a818377e26d7bc2b6257fef0f8554dfd8bfd9be))
+
 # [0.4.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.3.0...v0.4.0) (2026-06-26)
 
 
