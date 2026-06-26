@@ -65,6 +65,15 @@ test('agent.summary warns when neither native summary nor entry description pres
 	assert.ok(r.findings.some((x) => x.ruleId === 'agent.summary' && x.component === 'rev'));
 });
 
+test('agent.summary message says "description:", not "summary:" (the real entry.yaml key)', () => {
+	const f = facts({ agents: [{ name: 'rev' }] }); // no summary
+	const r = analyzeCoverage(f, null, {}, 'myplugin');
+	const finding = r.findings.find((x) => x.ruleId === 'agent.summary');
+	assert.ok(finding, 'agent.summary finding exists');
+	assert.match(finding.message, /add "description:" under the agents entry/, 'message says description');
+	assert.doesNotMatch(finding.message, /add "summary:"/, 'message must not say summary');
+});
+
 test('mcp.env warns when an env key has no authored description', () => {
 	const f = facts({ mcp: [{ name: 'srv', type: 'stdio', envKeys: ['API_KEY'] }] });
 	const r = analyzeCoverage(f, null, {}, 'p');
@@ -75,4 +84,23 @@ test('plugin.tagline warns when no tagline and native description empty', () => 
 	const f = facts({ plugin: { name: 'p' } }); // no description
 	const r = analyzeCoverage(f, null, {}, 'p');
 	assert.ok(r.findings.some((x) => x.ruleId === 'plugin.tagline'));
+});
+
+test('message for an array component carries the entry.yaml path and how-to-fix', () => {
+	const f = facts({ skills: [{ name: 'greet', autoload: false }] });
+	const r = analyzeCoverage(f, null, {}, 'myplugin');
+	const m = r.findings[0].message;
+	assert.match(m, /plugins\/myplugin\/entry\.yaml/, 'has the file path');
+	assert.match(m, /skill\.trigger/, 'has the rule id');
+	assert.match(m, /add "trigger:" under the skills entry/, 'has actionable how-to with plural key');
+});
+
+test('message for a top-level plugin field says "at the top level", not "under the plugins entry"', () => {
+	// plugin.tagline fires when neither native description fallback nor entry tagline exists.
+	const f = facts({ plugin: { name: 'p' } });  // no description → tagline rule has nothing to fall back to
+	const r = analyzeCoverage(f, null, {}, 'myplugin');
+	const tagline = r.findings.find((x) => x.ruleId === 'plugin.tagline');
+	assert.ok(tagline, 'plugin.tagline finding exists');
+	assert.match(tagline.message, /add "tagline:" at the top level/, 'top-level wording');
+	assert.doesNotMatch(tagline.message, /under the plugins entry/, 'must not pluralize plugin');
 });

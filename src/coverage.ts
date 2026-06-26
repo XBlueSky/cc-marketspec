@@ -79,6 +79,21 @@ const RULES: Rule[] = coverageTargets().map((t) => ({
 	scan: SCANNERS[`${t.component}.${t.field}`] ?? (() => [])
 }));
 
+// agent.summary is the only rule whose id field ("summary", the native field it
+// maps to) differs from the entry.yaml key the user must author ("description").
+const FIELD_ALIASES: Record<string, string> = { 'agent.summary': 'description' };
+
+// Map a rule id ("<component>.<field>") to the entry.yaml key and an actionable
+// "how to fix" clause. Array components (skill/command/agent/mcp/hook) are
+// authored under a plural array key; `plugin.*` fields live at the top level.
+function howToFix(ruleId: string): string {
+	const [component, field] = ruleId.split('.');
+	if (component === 'plugin') return `add "${field}:" at the top level`;
+	const key = component === 'mcp' ? 'mcp' : `${component}s`;
+	const yamlKey = FIELD_ALIASES[ruleId] ?? field;
+	return `add "${yamlKey}:" under the ${key} entry`;
+}
+
 export function resolve(ruleId: string, def: Severity, config: CoverageConfig): Severity {
 	return config[ruleId] ?? config['*'] ?? def;
 }
@@ -105,7 +120,7 @@ export function analyzeCoverage(
 				severity,
 				pluginId,
 				component,
-				message: `${rule.id}: "${component}" has no authored value`
+				message: `plugins/${pluginId}/entry.yaml: ${rule.id} — "${component}" has no authored value (${howToFix(rule.id)})`
 			});
 			summary[severity] += 1;
 		}

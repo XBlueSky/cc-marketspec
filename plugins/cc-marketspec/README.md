@@ -3,6 +3,13 @@
 Scaffold, validate, and generate the presentation `manifest.json` for a Claude
 Code plugin marketplace — driven end to end by the `marketplace-flow` skill.
 
+## Install
+
+```bash
+claude plugin marketplace add XBlueSky/cc-marketspec
+claude plugin install cc-marketspec
+```
+
 ## Overview
 
 A Claude Code plugin marketplace is described by **native** files your plugins
