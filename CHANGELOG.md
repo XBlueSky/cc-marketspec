@@ -1,3 +1,16 @@
+# [0.6.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.2...v0.6.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **check:** align dependencies shape with manifest; actionable union messages ([ac74a32](https://github.com/XBlueSky/cc-marketspec/commit/ac74a325ba594e588f61d6cffa36a0c882a61949))
+
+
+### Features
+
+* add plugin.json shape schema (PluginJson) ([f005dbc](https://github.com/XBlueSky/cc-marketspec/commit/f005dbcbe241cd6cf420610a8429247d5aabea57))
+* **check:** validate plugin.json field shapes; reject string author ([f635731](https://github.com/XBlueSky/cc-marketspec/commit/f635731427d175165d64f7a89fbd329ce787a914))
+
 ## [0.5.2](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.1...v0.5.2) (2026-06-26)
 
 
