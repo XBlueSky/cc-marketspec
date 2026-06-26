@@ -2,11 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import yaml from 'js-yaml';
 
 const skillDir = fileURLToPath(
   new URL('../plugins/cc-marketspec/skills/marketplace-flow/', import.meta.url),
 );
+
+const SKILL_DIR = skillDir;
 
 function frontmatter(md: string): Record<string, unknown> {
   const m = md.match(/^---\n([\s\S]*?)\n---/);
@@ -72,4 +75,10 @@ test('plugin ships a README and LICENSE', () => {
 test('repo README $schema example uses the scoped package path', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
+});
+
+test('SKILL.md Step 2 points to the entry-authoring reference and the MCP authoring tools', () => {
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  assert.match(skill, /entry-authoring/);
+  assert.match(skill, /list_authoring_sections|get_authoring_guide/);
 });
