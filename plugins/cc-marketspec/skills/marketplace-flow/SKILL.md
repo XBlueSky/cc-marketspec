@@ -14,12 +14,14 @@ user's (which persist strategy; what a tagline should say).
 ## How to know which step the user is on
 
 This skill is stateless. Do not keep a settings file. Each time, inspect the
-repo's files and infer the current step:
+repo's files and infer the current step. The list below is numbered to match the
+Step headings under `## Step actions`:
 
-1. No `.claude-plugin/marketplace.json` → not a marketplace repo yet.
-2. No `catalog.yaml` → presentation data not scaffolded.
-3. Any `entry.yaml` still all-comment (only `# ...` TODO lines) → not filled.
-4. `npx @xbluesky/cc-marketspec --check` reports errors/warnings → not valid.
+0. No `.claude-plugin/marketplace.json` → not a marketplace repo yet.
+1. No `catalog.yaml` → presentation data not scaffolded.
+2. Any `entry.yaml` still all-comment (only `# ...` TODO lines) → not filled.
+3. `/cc-check` reports errors or warnings → not valid.
+4. No `manifest.json`, or it is older than `catalog.yaml`/`entry.yaml` → not generated.
 5. No CI workflow that runs `cc-marketspec` (e.g. `.github/workflows/*.yml` or
    `.gitlab-ci.yml`) → CI not wired.
 6. All of the above satisfied → done; explain how the site consumes the manifest.
@@ -54,7 +56,13 @@ Run `/cc-check`. For each error or warning, interpret it against the schema and
 apply or propose a concrete fix in the right file — do not just echo raw output.
 Re-run until clean, then proceed.
 
-### Step 4 — wire CI (no manifest workflow)
+### Step 4 — generate manifest (--check is clean, manifest stale or missing)
+
+Run `/cc-generate`. It writes `manifest.json` from the marketplace data. Report
+how many plugins were emitted and surface any warnings, then proceed to wiring CI
+so this regenerates automatically.
+
+### Step 5 — wire CI (no manifest workflow)
 
 This is the only step with no command — write the CI workflow directly.
 
@@ -77,7 +85,7 @@ Keep only the block (git path vs artifact path) for the chosen strategy; delete
 the other, per the comments in the template. Tell the user about any required
 secret (GitLab git path needs a `GIT_PUSH_TOKEN` project access token).
 
-### Step 5 — done
+### Step 6 — done
 
 Explain how the site consumes `manifest.json`: for the git path, fetch the
 committed file (raw URL / submodule / checkout); for the artifact path, a
@@ -90,5 +98,5 @@ user to add it to PR/MR CI if not present.
 This skill decides which step the user is on and drives it. The commands do the
 single-step work: `/cc-init` (scaffold), `/cc-check` (validate + explain),
 `/cc-generate` (write manifest). Do not re-implement their `npx` calls here —
-invoke the command. Writing the CI workflow in Step 4 is the one action no
+invoke the command. Writing the CI workflow in Step 5 is the one action no
 command covers, so do it directly from `assets/`.
