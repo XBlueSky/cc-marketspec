@@ -20,7 +20,8 @@ Step headings under `## Step actions`:
 0. No `.claude-plugin/marketplace.json` → not a marketplace repo yet.
 1. No `catalog.yaml` → presentation data not scaffolded.
 2. Any `entry.yaml` still all-comment (only `# ...` TODO lines) → not filled.
-3. `/cc-check` reports errors or warnings → not valid.
+3. `/cc-check` reports errors → not valid. (Warnings are advisory and do not
+   block — surface them, but do not get stuck here on warnings alone.)
 4. No `manifest.json`, or regenerating it would produce a `git diff` → not generated.
 5. No CI workflow that runs `cc-marketspec` (e.g. `.github/workflows/*.yml` or
    `.gitlab-ci.yml`) → CI not wired.
@@ -47,15 +48,20 @@ template. Then re-inspect and proceed to filling.
 Help fill each plugin's `entry.yaml`: uncomment and write `tagline` and `intro`
 (the template scaffolds these as commented lines), and author skill triggers and
 command/agent descriptions from scratch where useful. Use the JSON Schema referenced in
-the file's `yaml-language-server` line for field meanings. Write what can be
-inferred from the plugin's own files; stop and ask the user only for values that
-require their judgment (the exact tagline wording, intro copy). Then re-inspect.
+the file's `yaml-language-server` line for field meanings. If the plugin ships
+skills, add a `skills:` entry with a `trigger` for each — the coverage gate warns
+on skills with no authored trigger, so this is the common source of the warnings
+seen in Step 3. Write what can be inferred from the plugin's own files; stop and
+ask the user only for values that require their judgment (the exact tagline
+wording, intro copy). Then re-inspect.
 
 ### Step 3 — validate (--check is red)
 
-Run `/cc-check`. For each error or warning, interpret it against the schema and
-apply or propose a concrete fix in the right file — do not just echo raw output.
-Re-run until clean, then proceed.
+Run `/cc-check`. Errors block — interpret each against the schema and apply or
+propose a concrete fix in the right file (do not just echo raw output), then
+re-run until errors clear. Warnings are advisory (the coverage gate lets them
+through, exit 0): surface them and offer to address them, but do not block
+progress on warnings alone. Once there are no errors, proceed.
 
 ### Step 4 — generate manifest (--check is clean, manifest missing or out of date)
 

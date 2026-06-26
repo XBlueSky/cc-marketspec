@@ -7,6 +7,9 @@ intro: >
   Describe your marketplace as data; cc-marketspec joins it with the native plugin
   manifests, validates, and emits a single render-agnostic manifest.json. Ships
   data, not design.
+skills:
+  - name: marketplace-flow
+    trigger: When a user wants to turn a repo into a Claude Code plugin marketplace, fill presentation data, generate the manifest, or wire CI — the skill walks the whole flow.
 commands:
   - name: cc-generate
     description: Generate manifest.json from your marketplace data.
