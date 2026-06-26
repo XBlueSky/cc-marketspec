@@ -34,9 +34,13 @@ re-inspect and move to the next step.
 
 ### Step 0 — not a marketplace repo
 
-If `.claude-plugin/marketplace.json` is missing, explain the prerequisite: the
-repo must first declare a marketplace (`.claude-plugin/marketplace.json` listing
-its plugins). Do not force-scaffold past this. Stop and let the user set that up.
+If `.claude-plugin/marketplace.json` is missing, bootstrap it. Read the starter
+template at `${CLAUDE_SKILL_DIR}/assets/marketplace.json.example`, fill it from
+what you can see in the user's repo (the marketplace name, the owner, and a
+`plugins[]` entry per plugin directory found under `plugins/` — each with `name`
+and `source: ./plugins/<id>`), and write it to `.claude-plugin/marketplace.json`.
+Confirm the owner name/url with the user if not inferable. Then re-inspect and
+proceed to scaffolding.
 
 ### Step 1 — scaffold (no catalog.yaml)
 
@@ -53,7 +57,11 @@ skills, add a `skills:` entry with a `trigger` for each — the coverage gate wa
 on skills with no authored trigger, so this is the common source of the warnings
 seen in Step 3. Write what can be inferred from the plugin's own files; stop and
 ask the user only for values that require their judgment (the exact tagline
-wording, intro copy). Then re-inspect.
+wording, intro copy). If `entry.yaml`
+carries a `# yaml-language-server: $schema=` line for editor validation, point
+it at the published schema — `node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`
+— not a repo-relative path (a downstream repo's schemas live in node_modules).
+Then re-inspect.
 
 ### Step 3 — validate (--check is red)
 
@@ -84,9 +92,13 @@ or keep it as a build artifact?**
 - Site in the same repo/pipeline → artifact (keep git to source only; a
   downstream job consumes the artifact).
 
-Copy the matching template from this skill's `assets/` into the user's repo:
-- GitHub → `assets/github-manifest.yml` to `.github/workflows/manifest.yml`
-- GitLab → `assets/gitlab-manifest.yml` merged into `.gitlab-ci.yml`
+Read the matching template from this skill's bundled assets and write it into
+the user's repo. Use the `${CLAUDE_SKILL_DIR}` variable — it resolves to this
+skill's own directory regardless of the user's working directory (the plugin is
+installed in a managed cache, NOT the user's repo, so a bare relative path would
+fail):
+- GitHub → Read `${CLAUDE_SKILL_DIR}/assets/github-manifest.yml`, write to `.github/workflows/manifest.yml`
+- GitLab → Read `${CLAUDE_SKILL_DIR}/assets/gitlab-manifest.yml`, merge into `.gitlab-ci.yml`
 
 Keep only the block (git path vs artifact path) for the chosen strategy; delete
 the other, per the comments in the template. Tell the user about any required
@@ -106,4 +118,4 @@ This skill decides which step the user is on and drives it. The commands do the
 single-step work: `/cc-init` (scaffold), `/cc-check` (validate + explain),
 `/cc-generate` (write manifest). Do not re-implement their `npx` calls here —
 invoke the command. Writing the CI workflow in Step 5 is the one action no
-command covers, so do it directly from `assets/`.
+command covers, so do it directly by reading `${CLAUDE_SKILL_DIR}/assets/`.
