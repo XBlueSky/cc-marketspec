@@ -38,13 +38,14 @@ export function getAuthoringGuide(section: string): { section: string; title?: s
 	return { section, title: found.title, body: found.body };
 }
 
-export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport {
+export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport & { needsMoreWork: boolean } {
 	const source = new MemoryFileSource(args.files);
 	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
 	// entry.yaml content, if pasted, is parsed separately and passed as the entry overlay
 	const entryRaw = args.files[`plugins/${args.pluginId}/entry.yaml`];
 	const entry = entryRaw ? (yaml.load(entryRaw) as never) : null;
-	return analyzeCoverage(facts, entry, {}, args.pluginId);
+	const report = analyzeCoverage(facts, entry, {}, args.pluginId);
+	return { ...report, needsMoreWork: report.findings.length > 0 };
 }
 
 export function scaffoldEntry(args: { files: Record<string, string>; pluginId: string }): string {
@@ -87,7 +88,7 @@ export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
 	{ name: 'list_authoring_sections', description: 'List entry.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
 	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
-	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents). Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
 	{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
 ];
 

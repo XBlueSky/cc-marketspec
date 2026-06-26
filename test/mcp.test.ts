@@ -21,6 +21,19 @@ test('checkCoverage runs the core over pasted file contents', () => {
 	assert.ok(report.findings.some((f) => f.ruleId === 'skill.trigger'));
 });
 
+test('checkCoverage sets needsMoreWork true when findings remain', () => {
+	const r = checkCoverage({
+		pluginId: 'sample',
+		files: {
+			'plugins/sample/.claude-plugin/plugin.json': JSON.stringify({ name: 'sample', version: '1.0.0', author: { name: 'x' } }),
+			'plugins/sample/skills/s/SKILL.md': '---\nname: s\ndescription: d\n---\nbody'
+		}
+	}) as { needsMoreWork: boolean; findings: unknown[] };
+	// a bare skill with no entry.yaml overlay yields coverage findings
+	assert.equal(typeof r.needsMoreWork, 'boolean');
+	assert.equal(r.needsMoreWork, r.findings.length > 0);
+});
+
 test('scaffoldEntry emits a YAML skeleton mentioning the plugin', () => {
 	const yaml = scaffoldEntry({
 		pluginId: 'p',
