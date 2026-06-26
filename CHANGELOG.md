@@ -1,3 +1,15 @@
+# [0.7.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.6.0...v0.7.0) (2026-06-26)
+
+
+### Features
+
+* **build:** inline authoring guide for MCP + copy to skill references ([70a69d7](https://github.com/XBlueSky/cc-marketspec/commit/70a69d7c19df9536db164575bb13c7435f1e5567))
+* **docs:** canonical entry.yaml authoring guide + section parser ([76c5a00](https://github.com/XBlueSky/cc-marketspec/commit/76c5a00f07a2a41caa274272088c4a37d3656ff4))
+* **init:** richer entry.yaml stub; dogfood traps + object-form tip ([5d3a0df](https://github.com/XBlueSky/cc-marketspec/commit/5d3a0dfd444d73a518f6e91dc3040f52084e6b6f))
+* **mcp:** check_coverage returns needsMoreWork to drive the fix loop ([bb969ff](https://github.com/XBlueSky/cc-marketspec/commit/bb969ff9b589232836f15b4afa63d90866b2607d))
+* **mcp:** expose entry/catalog/manifest schemas as MCP resources ([ebe9c36](https://github.com/XBlueSky/cc-marketspec/commit/ebe9c360a9570c0c5f505084d2d3a4504c0cd706))
+* **mcp:** replace explain_field with two-stage authoring guide tools ([1704629](https://github.com/XBlueSky/cc-marketspec/commit/170462934f6de14fdc4b4686550bd6a2beec16ea))
+
 # [0.6.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.2...v0.6.0) (2026-06-26)
 
 
