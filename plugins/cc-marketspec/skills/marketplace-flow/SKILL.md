@@ -57,7 +57,11 @@ skills, add a `skills:` entry with a `trigger` for each — the coverage gate wa
 on skills with no authored trigger, so this is the common source of the warnings
 seen in Step 3. Write what can be inferred from the plugin's own files; stop and
 ask the user only for values that require their judgment (the exact tagline
-wording, intro copy). Then re-inspect.
+wording, intro copy). If `entry.yaml`
+carries a `# yaml-language-server: $schema=` line for editor validation, point
+it at the published schema — `node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`
+— not a repo-relative path (a downstream repo's schemas live in node_modules).
+Then re-inspect.
 
 ### Step 3 — validate (--check is red)
 
