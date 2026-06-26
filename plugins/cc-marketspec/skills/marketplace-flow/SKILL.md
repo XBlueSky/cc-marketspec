@@ -84,9 +84,13 @@ or keep it as a build artifact?**
 - Site in the same repo/pipeline → artifact (keep git to source only; a
   downstream job consumes the artifact).
 
-Copy the matching template from this skill's `assets/` into the user's repo:
-- GitHub → `assets/github-manifest.yml` to `.github/workflows/manifest.yml`
-- GitLab → `assets/gitlab-manifest.yml` merged into `.gitlab-ci.yml`
+Read the matching template from this skill's bundled assets and write it into
+the user's repo. Use the `${CLAUDE_SKILL_DIR}` variable — it resolves to this
+skill's own directory regardless of the user's working directory (the plugin is
+installed in a managed cache, NOT the user's repo, so a bare relative path would
+fail):
+- GitHub → Read `${CLAUDE_SKILL_DIR}/assets/github-manifest.yml`, write to `.github/workflows/manifest.yml`
+- GitLab → Read `${CLAUDE_SKILL_DIR}/assets/gitlab-manifest.yml`, merge into `.gitlab-ci.yml`
 
 Keep only the block (git path vs artifact path) for the chosen strategy; delete
 the other, per the comments in the template. Tell the user about any required
@@ -106,4 +110,4 @@ This skill decides which step the user is on and drives it. The commands do the
 single-step work: `/cc-init` (scaffold), `/cc-check` (validate + explain),
 `/cc-generate` (write manifest). Do not re-implement their `npx` calls here —
 invoke the command. Writing the CI workflow in Step 5 is the one action no
-command covers, so do it directly from `assets/`.
+command covers, so do it directly by reading `${CLAUDE_SKILL_DIR}/assets/`.
