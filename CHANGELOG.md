@@ -1,3 +1,10 @@
+## [0.5.2](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.1...v0.5.2) (2026-06-26)
+
+
+### Bug Fixes
+
+* drop Discussions contact link (not enabled on the repo) ([46662fb](https://github.com/XBlueSky/cc-marketspec/commit/46662fb45614c33f8b0ff83922ecbad0b8641c9c))
+
 ## [0.5.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.0...v0.5.1) (2026-06-26)
 
 
