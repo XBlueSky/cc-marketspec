@@ -1,0 +1,29 @@
+# Regenerate manifest.json on every push to main, then persist it.
+# The skill keeps EITHER the "git path" job OR the "artifact path" job below,
+# based on your answer to "commit manifest to git, or keep it as a build
+# artifact?" Delete the block you do not use.
+#
+# git path needs a token that can push back to a protected branch — set a
+# project access token as the CI/CD variable GIT_PUSH_TOKEN (Settings > CI/CD
+# > Variables). CI_JOB_TOKEN cannot push to protected branches.
+
+regenerate-manifest:
+  image: node:22
+  timeout: 10 minutes
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    # Produce: regenerate manifest.json from catalog.yaml + entry.yaml + native data.
+    - npx @xbluesky/cc-marketspec
+
+    # --- git path: commit the regenerated manifest back to the repo ---
+    - git config user.name "gitlab-ci"
+    - git config user.email "gitlab-ci@example.com"
+    - git add manifest.json
+    - git diff --staged --quiet || git commit -m "chore: regenerate manifest [skip ci]"
+    - git push "https://oauth2:${GIT_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
+
+  # --- artifact path: keep the manifest for a downstream site job ---
+  # artifacts:
+  #   paths:
+  #     - manifest.json
