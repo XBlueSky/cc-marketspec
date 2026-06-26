@@ -9,6 +9,7 @@
 
 regenerate-manifest:
   image: node:22
+  timeout: 10 minutes
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
   script:
