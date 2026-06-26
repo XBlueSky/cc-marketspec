@@ -1,3 +1,19 @@
+# [0.4.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.3.0...v0.4.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **skill:** add fetch-depth:0 to GitHub template, timeout to GitLab template ([dd27f8b](https://github.com/XBlueSky/cc-marketspec/commit/dd27f8b7d947f5668c65f15cca99944f1dbefee7))
+* **skill:** add generate step, align step numbering, use /cc-check in detection ([d0bef60](https://github.com/XBlueSky/cc-marketspec/commit/d0bef6041588d9bc3b3b74cf4c49ecc5cd114576))
+* **skill:** dogfooding fixes — warnings don't block, skill trigger guidance ([f12693d](https://github.com/XBlueSky/cc-marketspec/commit/f12693d2aab985ac488ef1cf0770807993a86b42))
+* **skill:** use git-diff (not mtime) for staleness, fix Step 2 wording, add GitHub branch-protection note ([0253f3e](https://github.com/XBlueSky/cc-marketspec/commit/0253f3edd05c27e6de7760ae27432dea1025c1c8))
+
+
+### Features
+
+* **skill:** add GitHub/GitLab manifest CI workflow templates ([2333664](https://github.com/XBlueSky/cc-marketspec/commit/2333664b335b880372b328e3b4c3a68c433543fa))
+* **skill:** add marketplace-flow navigation skill ([cf6d197](https://github.com/XBlueSky/cc-marketspec/commit/cf6d197edcb04922959539d121102bd851c05bcb))
+
 # [0.3.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.2.1...v0.3.0) (2026-06-25)
 
 
