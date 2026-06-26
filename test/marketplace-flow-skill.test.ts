@@ -72,6 +72,12 @@ test('plugin ships a README and LICENSE', () => {
   assert.ok(existsSync(new URL('LICENSE', `file://${pluginDir}`)), 'plugin LICENSE must exist');
 });
 
+test('plugin README carries the install commands (the first thing a user sees)', () => {
+  const readme = readFileSync(new URL('../plugins/cc-marketspec/README.md', import.meta.url), 'utf8');
+  assert.match(readme, /claude plugin marketplace add XBlueSky\/cc-marketspec/, 'has marketplace add');
+  assert.match(readme, /claude plugin install cc-marketspec/, 'has install');
+});
+
 test('repo README $schema example uses the scoped package path', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
