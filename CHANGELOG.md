@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.5.0...v0.5.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **plugin:** author must be an object, not a string ([a1f6120](https://github.com/XBlueSky/cc-marketspec/commit/a1f61202501b77d604ed0059c535bbc3eb5d2b84))
+
 # [0.5.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.4.1...v0.5.0) (2026-06-26)
 
 
