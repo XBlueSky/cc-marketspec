@@ -1,0 +1,7 @@
+{
+  "name": "your-marketplace-name",
+  "owner": { "name": "Your Name", "url": "https://github.com/your-handle" },
+  "plugins": [
+    { "name": "your-plugin", "source": "./plugins/your-plugin" }
+  ]
+}

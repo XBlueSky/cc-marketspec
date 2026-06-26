@@ -34,9 +34,13 @@ re-inspect and move to the next step.
 
 ### Step 0 — not a marketplace repo
 
-If `.claude-plugin/marketplace.json` is missing, explain the prerequisite: the
-repo must first declare a marketplace (`.claude-plugin/marketplace.json` listing
-its plugins). Do not force-scaffold past this. Stop and let the user set that up.
+If `.claude-plugin/marketplace.json` is missing, bootstrap it. Read the starter
+template at `${CLAUDE_SKILL_DIR}/assets/marketplace.json.example`, fill it from
+what you can see in the user's repo (the marketplace name, the owner, and a
+`plugins[]` entry per plugin directory found under `plugins/` — each with `name`
+and `source: ./plugins/<id>`), and write it to `.claude-plugin/marketplace.json`.
+Confirm the owner name/url with the user if not inferable. Then re-inspect and
+proceed to scaffolding.
 
 ### Step 1 — scaffold (no catalog.yaml)
 
