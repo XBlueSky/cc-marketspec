@@ -1,8 +1,5 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: Question or discussion
-    url: https://github.com/XBlueSky/cc-marketspec/discussions
-    about: Ask a question or discuss an idea before filing an issue.
   - name: Security vulnerability
     url: https://github.com/XBlueSky/cc-marketspec/security/advisories/new
     about: Report a security issue privately (do not open a public issue).
