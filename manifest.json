@@ -22,7 +22,8 @@
       "version": "0.2.0",
       "description": "Scaffold, validate, and generate a Claude Code plugin marketplace presentation manifest.",
       "author": {
-        "name": "XBlueSky"
+        "name": "XBlueSky",
+        "url": "https://github.com/XBlueSky"
       },
       "license": "MIT",
       "keywords": [
