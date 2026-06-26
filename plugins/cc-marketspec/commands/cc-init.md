@@ -9,4 +9,6 @@ This detects existing plugins and scaffolds a `catalog.yaml` and a per-plugin
 `entry.yaml` template for each.
 
 After it runs, tell the user which template fields to fill in next (taglines,
-skill triggers, command descriptions) and point them at `/cc-check` to validate.
+skill triggers, command/agent descriptions). Then point them at `/cc-check` to
+validate, and `/cc-generate` once it is clean. The marketplace-flow skill can
+drive this whole sequence end to end.
