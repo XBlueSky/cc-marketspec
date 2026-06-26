@@ -3,7 +3,7 @@
 // same handlers serve local stdio and a future hosted HTTP transport.
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import yaml from 'js-yaml';
 import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
@@ -13,6 +13,19 @@ import { SCHEMAS, VERSION } from './schemas.generated.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];
+}
+
+const SCHEMA_URI = (which: keyof typeof SCHEMAS) => `cc-marketspec://schema/${which}`;
+const SCHEMA_KEYS = ['entry', 'catalog', 'manifest'] as const;
+
+export function listResources(): { uri: string; name: string; mimeType: string }[] {
+	return SCHEMA_KEYS.map((k) => ({ uri: SCHEMA_URI(k), name: `${k} JSON schema`, mimeType: 'application/json' }));
+}
+
+export function readResource(uri: string): { uri: string; mimeType: string; text: string } {
+	const which = SCHEMA_KEYS.find((k) => SCHEMA_URI(k) === uri);
+	if (!which) throw new Error(`unknown resource ${uri}`);
+	return { uri, mimeType: 'application/json', text: JSON.stringify(SCHEMAS[which], null, 2) };
 }
 
 export function listAuthoringSections(): { id: string; title: string; when: string }[] {
@@ -81,9 +94,11 @@ export const TOOLS = [
 /** Build the MCP server with the shared tool table. Transport-agnostic — the
  *  stdio entry and the HTTP handler both call this so the tool set never drifts. */
 export function createMcpServer(): Server {
-	const server = new Server({ name: 'cc-marketspec', version: VERSION }, { capabilities: { tools: {} } });
+	const server = new Server({ name: 'cc-marketspec', version: VERSION }, { capabilities: { tools: {}, resources: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: TOOLS }));
 	server.setRequestHandler(CallToolRequestSchema, (req) => callTool(req.params.name, (req.params.arguments ?? {}) as Record<string, unknown>));
+	server.setRequestHandler(ListResourcesRequestSchema, () => ({ resources: listResources() }));
+	server.setRequestHandler(ReadResourceRequestSchema, (req) => ({ contents: [readResource(req.params.uri)] }));
 	return server;
 }
 

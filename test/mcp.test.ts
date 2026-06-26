@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getSchema, checkCoverage, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer } from '../src/mcp.ts';
+import { getSchema, checkCoverage, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer, listResources, readResource } from '../src/mcp.ts';
 import { SCHEMAS, VERSION } from '../src/schemas.generated.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
@@ -76,6 +76,23 @@ test('createMcpServer builds a server without needing a transport', () => {
 	const server = createMcpServer();
 	assert.ok(server);
 	assert.equal(typeof server.connect, 'function');
+});
+
+test('listResources exposes the three schema URIs', () => {
+	const uris = listResources().map((r) => r.uri).sort();
+	assert.deepEqual(uris, ['cc-marketspec://schema/catalog', 'cc-marketspec://schema/entry', 'cc-marketspec://schema/manifest']);
+});
+
+test('readResource returns the entry schema JSON for its URI', () => {
+	const r = readResource('cc-marketspec://schema/entry');
+	assert.equal(r.mimeType, 'application/json');
+	const parsed = JSON.parse(r.text);
+	assert.equal(typeof parsed, 'object');
+	assert.ok(parsed.properties, 'looks like a JSON schema');
+});
+
+test('readResource throws on unknown URI', () => {
+	assert.throws(() => readResource('cc-marketspec://schema/nope'));
 });
 
 test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => {
