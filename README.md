@@ -76,7 +76,7 @@ const { manifest, errors, warnings } = generateManifest(process.cwd());
 Point your YAML language server at the published JSON Schemas:
 
 ```yaml
-# yaml-language-server: $schema=node_modules/cc-marketspec/schemas/entry.schema.json
+# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
 group: build
 tagline: ...
 ```
