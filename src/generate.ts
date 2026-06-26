@@ -14,6 +14,7 @@ import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
 import { analyzeCoverage, resolve as resolveCoverage, type CoverageConfig } from './coverage.ts';
+import { PluginJson } from './plugin-json.ts';
 
 const DEFAULT_SCHEMA_VERSION = '1.0';
 const PLUGINS = 'plugins';
@@ -42,6 +43,11 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 	function buildPlugin(id: string, marketEntry: Record<string, unknown>, groupIds: Set<string>, coverageCfg: CoverageConfig = {}) {
 		const dir = join(PLUGINS, id);
 		const pj = readJSON(source, join(dir, '.claude-plugin', 'plugin.json'));
+		const pjParse = PluginJson.safeParse(pj);
+		if (!pjParse.success)
+			for (const i of pjParse.error.issues) err(`${id}/plugin.json: ${i.path.join('.')} ${i.message}`);
+		if (typeof pj.author === 'string')
+			err(`${id}/plugin.json: author must be an object {name, url?, email?}, not a string — Claude Code rejects string authors at install`);
 		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != directory "${id}"`);
 		if (marketEntry.name !== id) err(`${id}: marketplace entry name "${marketEntry.name}" != directory "${id}"`);
 
@@ -126,9 +132,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		for (const f of cov.findings) (f.severity === 'error' ? err : warn)(f.message);
 
 		const author = pj.author
-			? typeof pj.author === 'string'
-				? { name: pj.author }
-				: { name: pj.author.name, email: pj.author.email, url: pj.author.url }
+			? prune({ name: pj.author.name, email: pj.author.email, url: pj.author.url })
 			: undefined;
 
 		return prune({
