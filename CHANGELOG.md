@@ -1,3 +1,17 @@
+# [0.5.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.4.1...v0.5.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **skill:** anchor asset paths with ${CLAUDE_SKILL_DIR} ([47b1fcd](https://github.com/XBlueSky/cc-marketspec/commit/47b1fcd918f43cbfcdc41494cc40927ad666d188))
+* **skill:** Step 0 bootstraps marketplace.json from a starter template ([db79ec9](https://github.com/XBlueSky/cc-marketspec/commit/db79ec9208e46bb0f29d0c167b7e92392ca21248))
+* **skill:** Step 2 points downstream $schema at the published path ([68be240](https://github.com/XBlueSky/cc-marketspec/commit/68be240b62ecba96140675acf9343632d83bd463))
+
+
+### Features
+
+* **plugin:** add bundled README + LICENSE, bump plugin to 0.2.0 ([b87d0a3](https://github.com/XBlueSky/cc-marketspec/commit/b87d0a3db68aa393b3b185b49da88369c22e8a1b))
+
 ## [0.4.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.4.0...v0.4.1) (2026-06-26)
 
 
