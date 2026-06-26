@@ -65,6 +65,15 @@ test('agent.summary warns when neither native summary nor entry description pres
 	assert.ok(r.findings.some((x) => x.ruleId === 'agent.summary' && x.component === 'rev'));
 });
 
+test('agent.summary message says "description:", not "summary:" (the real entry.yaml key)', () => {
+	const f = facts({ agents: [{ name: 'rev' }] }); // no summary
+	const r = analyzeCoverage(f, null, {}, 'myplugin');
+	const finding = r.findings.find((x) => x.ruleId === 'agent.summary');
+	assert.ok(finding, 'agent.summary finding exists');
+	assert.match(finding.message, /add "description:" under the agents entry/, 'message says description');
+	assert.doesNotMatch(finding.message, /add "summary:"/, 'message must not say summary');
+});
+
 test('mcp.env warns when an env key has no authored description', () => {
 	const f = facts({ mcp: [{ name: 'srv', type: 'stdio', envKeys: ['API_KEY'] }] });
 	const r = analyzeCoverage(f, null, {}, 'p');
