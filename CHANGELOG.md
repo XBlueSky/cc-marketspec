@@ -1,3 +1,15 @@
+# [0.8.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.7.0...v0.8.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **coverage:** agent.summary hint must say "description:", the real entry.yaml key ([231a173](https://github.com/XBlueSky/cc-marketspec/commit/231a173c6f5f6877d40ccb6438d91db6e4db7e59))
+
+
+### Features
+
+* **coverage:** findings carry entry.yaml path and how-to-fix hint ([cf42be5](https://github.com/XBlueSky/cc-marketspec/commit/cf42be56b39333a9f51dd8711db825627c3596d4))
+
 # [0.7.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.6.0...v0.7.0) (2026-06-26)
 
 
