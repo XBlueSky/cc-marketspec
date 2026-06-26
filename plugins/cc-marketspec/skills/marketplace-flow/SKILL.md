@@ -63,6 +63,14 @@ it at the published schema — `node_modules/@xbluesky/cc-marketspec/schemas/ent
 — not a repo-relative path (a downstream repo's schemas live in node_modules).
 Then re-inspect.
 
+For anything beyond `tagline`/`intro` — `tips`/`traps`, per-component fields
+(skill `trigger`, agent `returns`/`not`, mcp `provides`/`auth`/`setup`, hook
+`why`), the full field guide is bundled at
+`${CLAUDE_SKILL_DIR}/references/entry-authoring.md` (read it before authoring
+those). The same guide is queryable from the cc-marketspec MCP without install:
+call `list_authoring_sections`, then `get_authoring_guide` for the section you
+need.
+
 ### Step 3 — validate (--check is red)
 
 Run `/cc-check`. Errors block — interpret each against the schema and apply or

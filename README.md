@@ -194,19 +194,20 @@ CI artifact — that choice is yours.
 npx @xbluesky/cc-marketspec mcp
 ```
 
-Starts a stdio MCP server. Four tools:
+Starts a stdio MCP server. Five tools:
 
 | Tool | What it does |
 |------|-------------|
 | `get_schema` | Returns the JSON Schema for `entry`, `catalog`, or `manifest` |
-| `explain_field` | Explains a field in the entry or catalog schema |
+| `list_authoring_sections` | Lists the entry.yaml authoring guide sections (id/title/when) |
+| `get_authoring_guide` | Returns the full authoring guide markdown for one section |
 | `check_coverage` | Runs the coverage gate against a plugin directory |
 | `scaffold_entry` | Generates an `entry.yaml` stub for a given plugin |
 
 ## Hosted MCP server
 
-The same four MCP tools (`get_schema`, `explain_field`, `check_coverage`,
-`scaffold_entry`) are available over HTTP so contributors can query the schema
+The same five MCP tools (`get_schema`, `list_authoring_sections`, `get_authoring_guide`,
+`check_coverage`, `scaffold_entry`) are available over HTTP so contributors can query the schema
 and be guided without installing anything. The handler is a platform-neutral
 web-standard `fetch(Request) → Response` (`handleHttpRequest`, exported from the
 package); Cloudflare Workers is the reference deployment but not a requirement.
@@ -265,8 +266,8 @@ claude plugin install cc-marketspec
 
 You get:
 
-- **The hosted MCP tools** (`get_schema`, `explain_field`, `check_coverage`,
-  `scaffold_entry`) wired in automatically — no endpoint config.
+- **The hosted MCP tools** (`get_schema`, `list_authoring_sections`, `get_authoring_guide`,
+  `check_coverage`, `scaffold_entry`) wired in automatically — no endpoint config.
 - **Slash commands** that run the generator against your current marketplace repo:
   - `/cc-generate` — write `manifest.json`
   - `/cc-check` — validate without writing, with errors explained

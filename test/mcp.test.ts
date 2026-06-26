@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getSchema, checkCoverage, scaffoldEntry, explainField, callTool, TOOLS, createMcpServer } from '../src/mcp.ts';
+import { getSchema, checkCoverage, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer, listResources, readResource } from '../src/mcp.ts';
 import { SCHEMAS, VERSION } from '../src/schemas.generated.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
@@ -21,6 +21,19 @@ test('checkCoverage runs the core over pasted file contents', () => {
 	assert.ok(report.findings.some((f) => f.ruleId === 'skill.trigger'));
 });
 
+test('checkCoverage sets needsMoreWork true when findings remain', () => {
+	const r = checkCoverage({
+		pluginId: 'sample',
+		files: {
+			'plugins/sample/.claude-plugin/plugin.json': JSON.stringify({ name: 'sample', version: '1.0.0', author: { name: 'x' } }),
+			'plugins/sample/skills/s/SKILL.md': '---\nname: s\ndescription: d\n---\nbody'
+		}
+	}) as { needsMoreWork: boolean; findings: unknown[] };
+	// a bare skill with no entry.yaml overlay yields coverage findings
+	assert.equal(typeof r.needsMoreWork, 'boolean');
+	assert.equal(r.needsMoreWork, r.findings.length > 0);
+});
+
 test('scaffoldEntry emits a YAML skeleton mentioning the plugin', () => {
 	const yaml = scaffoldEntry({
 		pluginId: 'p',
@@ -29,40 +42,32 @@ test('scaffoldEntry emits a YAML skeleton mentioning the plugin', () => {
 	assert.ok(yaml.includes('p'));
 });
 
-test('explainField resolves the live schema describe() text for skill.trigger', () => {
-	const r = explainField('skill.trigger');
-	assert.equal(r.path, 'skill.trigger');
-	assert.equal(typeof r.description, 'string');
-	assert.ok((r.description as string).length > 0);
-	// Must be the ACTUAL describe() text on skill.trigger, not a near-miss match.
-	assert.equal(r.description, "Human 'when to reach for it'.");
+test('listAuthoringSections returns the catalog with id/title/when, no body', () => {
+	const list = listAuthoringSections();
+	assert.ok(list.length >= 10, 'has all sections');
+	for (const s of list) {
+		assert.ok(s.id && s.title && s.when, 'each has id/title/when');
+		assert.equal((s as Record<string, unknown>).body, undefined, 'no body in the cheap catalog');
+	}
 });
 
-test('explainField distinguishes components (regression: prefix was ignored)', () => {
-	// Both fields are named differently, but the bug returned the SAME text for
-	// any path sharing a leaf name / ignored the component. These must differ.
-	const trigger = explainField('skill.trigger').description;
-	const cmdDesc = explainField('command.description').description;
-	assert.equal(typeof trigger, 'string');
-	assert.equal(typeof cmdDesc, 'string');
-	assert.notEqual(trigger, cmdDesc);
-	// skill.description vs command.description vs agent.summary must each resolve,
-	// and skill/command share the field name but carry distinct copy.
-	assert.notEqual(explainField('skill.description').description, explainField('command.description').description);
+test('getAuthoringGuide returns full body for a known section', () => {
+	const r = getAuthoringGuide('tips-traps');
+	assert.ok(r.body && r.body.length > 0, 'has body');
+	assert.match(r.body, /280/);
 });
 
-test('explainField resolves the synthetic remaps (agent.summary, mcp.env, mcp.provides, plugin.tagline)', () => {
-	assert.equal(explainField('agent.summary').description, 'Curated copy; falls back to native.');
-	assert.equal(explainField('mcp.env').description, 'Descriptions for env vars; keys must exist in .mcp.json (phantom = error).');
-	assert.equal(typeof explainField('mcp.provides').description, 'string');
-	assert.ok((explainField('mcp.provides').description as string).length > 0);
-	assert.equal(typeof explainField('plugin.tagline').description, 'string');
+test('getAuthoringGuide on unknown section returns an error listing available ids', () => {
+	const r = getAuthoringGuide('nope');
+	assert.ok(r.error, 'has error');
+	assert.ok(Array.isArray(r.available) && r.available.includes('tips-traps'), 'lists available');
 });
 
-test('explainField returns { description: undefined } for an unknown path, without throwing', () => {
-	assert.deepEqual(explainField('skill.nope'), { path: 'skill.nope', description: undefined });
-	assert.deepEqual(explainField('bogus.field'), { path: 'bogus.field', description: undefined });
-	assert.deepEqual(explainField('garbage'), { path: 'garbage', description: undefined });
+test('TOOLS no longer includes explain_field; includes the two authoring tools', () => {
+	const names = TOOLS.map((t) => t.name);
+	assert.ok(!names.includes('explain_field'), 'explain_field removed');
+	assert.ok(names.includes('list_authoring_sections'));
+	assert.ok(names.includes('get_authoring_guide'));
 });
 
 test('callTool wraps a thrown handler error (malformed entry.yaml) as a structured error', () => {
@@ -79,15 +84,28 @@ test('callTool wraps a thrown handler error (malformed entry.yaml) as a structur
 	assert.ok((payload.error as string).length > 0);
 });
 
-test('TOOLS is the single tool table with the four tools', () => {
-	const names = TOOLS.map((t) => t.name).sort();
-	assert.deepEqual(names, ['check_coverage', 'explain_field', 'get_schema', 'scaffold_entry']);
-});
 
 test('createMcpServer builds a server without needing a transport', () => {
 	const server = createMcpServer();
 	assert.ok(server);
 	assert.equal(typeof server.connect, 'function');
+});
+
+test('listResources exposes the three schema URIs', () => {
+	const uris = listResources().map((r) => r.uri).sort();
+	assert.deepEqual(uris, ['cc-marketspec://schema/catalog', 'cc-marketspec://schema/entry', 'cc-marketspec://schema/manifest']);
+});
+
+test('readResource returns the entry schema JSON for its URI', () => {
+	const r = readResource('cc-marketspec://schema/entry');
+	assert.equal(r.mimeType, 'application/json');
+	const parsed = JSON.parse(r.text);
+	assert.equal(typeof parsed, 'object');
+	assert.ok(parsed.properties, 'looks like a JSON schema');
+});
+
+test('readResource throws on unknown URI', () => {
+	assert.throws(() => readResource('cc-marketspec://schema/nope'));
 });
 
 test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => {

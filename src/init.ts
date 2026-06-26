@@ -29,8 +29,17 @@ function entryTemplate(pluginId: string): string {
 	return `# Presentation overlay for ${pluginId}. Every field is optional — native data
 # already yields a valid manifest; this only enriches it.
 # yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
-# tagline: TODO one-line summary
-# intro: TODO full lede
+#
+# Full field guide: open the marketplace-flow skill's entry-authoring reference,
+# or ask the cc-marketspec MCP (list_authoring_sections / get_authoring_guide).
+#
+# tagline: TODO one-line card summary (falls back to native description)
+# intro: TODO full lede paragraph
+# group: TODO a group id declared in catalog.yaml
+# tips:        # positive power-moves (≤280 chars each)
+#   - TODO
+# traps:       # gotchas / pitfalls (≤280 chars each)
+#   - TODO
 `;
 }
 

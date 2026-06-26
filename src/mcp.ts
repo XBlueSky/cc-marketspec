@@ -3,37 +3,49 @@
 // same handlers serve local stdio and a future hosted HTTP transport.
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import yaml from 'js-yaml';
 import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
 import { analyzeCoverage, type CoverageReport } from './coverage.ts';
-import { describeField } from './entry.ts';
+import { AUTHORING } from './authoring.generated.ts';
 import { SCHEMAS, VERSION } from './schemas.generated.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];
 }
 
-export function explainField(path: string): { path: string; description?: string } {
-	// path is "<component>.<field>" — e.g. skill.trigger, mcp.env, plugin.tagline.
-	// Resolve the field's authored .describe() text from the live Entry schema via
-	// describeField (single-sourced with the coverage schema-walk in entry.ts).
-	// Unknown / malformed paths return description: undefined (never throw).
-	const dot = path.indexOf('.');
-	if (dot <= 0 || dot === path.length - 1) return { path, description: undefined };
-	const component = path.slice(0, dot);
-	const field = path.slice(dot + 1);
-	return { path, description: describeField(component, field) };
+const SCHEMA_URI = (which: keyof typeof SCHEMAS) => `cc-marketspec://schema/${which}`;
+const SCHEMA_KEYS = ['entry', 'catalog', 'manifest'] as const;
+
+export function listResources(): { uri: string; name: string; mimeType: string }[] {
+	return SCHEMA_KEYS.map((k) => ({ uri: SCHEMA_URI(k), name: `${k} JSON schema`, mimeType: 'application/json' }));
 }
 
-export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport {
+export function readResource(uri: string): { uri: string; mimeType: string; text: string } {
+	const which = SCHEMA_KEYS.find((k) => SCHEMA_URI(k) === uri);
+	if (!which) throw new Error(`unknown resource ${uri}`);
+	return { uri, mimeType: 'application/json', text: JSON.stringify(SCHEMAS[which], null, 2) };
+}
+
+export function listAuthoringSections(): { id: string; title: string; when: string }[] {
+	return AUTHORING.map(({ id, title, when }) => ({ id, title, when }));
+}
+
+export function getAuthoringGuide(section: string): { section: string; title?: string; body?: string; error?: string; available?: string[] } {
+	const found = AUTHORING.find((s) => s.id === section);
+	if (!found) return { section, error: `unknown section "${section}"`, available: AUTHORING.map((s) => s.id) };
+	return { section, title: found.title, body: found.body };
+}
+
+export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport & { needsMoreWork: boolean } {
 	const source = new MemoryFileSource(args.files);
 	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
 	// entry.yaml content, if pasted, is parsed separately and passed as the entry overlay
 	const entryRaw = args.files[`plugins/${args.pluginId}/entry.yaml`];
 	const entry = entryRaw ? (yaml.load(entryRaw) as never) : null;
-	return analyzeCoverage(facts, entry, {}, args.pluginId);
+	const report = analyzeCoverage(facts, entry, {}, args.pluginId);
+	return { ...report, needsMoreWork: report.findings.length > 0 };
 }
 
 export function scaffoldEntry(args: { files: Record<string, string>; pluginId: string }): string {
@@ -56,8 +68,10 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 		switch (name) {
 			case 'get_schema':
 				return text(getSchema(args.which as keyof typeof SCHEMAS));
-			case 'explain_field':
-				return text(explainField(args.path as string));
+			case 'list_authoring_sections':
+				return text(listAuthoringSections());
+			case 'get_authoring_guide':
+				return text(getAuthoringGuide(args.section as string));
 			case 'check_coverage':
 				return text(checkCoverage(args as { files: Record<string, string>; pluginId: string }));
 			case 'scaffold_entry':
@@ -72,17 +86,20 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 
 export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
-	{ name: 'explain_field', description: 'Explain an entry field by <component>.<field> path', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
-	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
+	{ name: 'list_authoring_sections', description: 'List entry.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
+	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents). Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
 	{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
 ];
 
 /** Build the MCP server with the shared tool table. Transport-agnostic — the
  *  stdio entry and the HTTP handler both call this so the tool set never drifts. */
 export function createMcpServer(): Server {
-	const server = new Server({ name: 'cc-marketspec', version: VERSION }, { capabilities: { tools: {} } });
+	const server = new Server({ name: 'cc-marketspec', version: VERSION }, { capabilities: { tools: {}, resources: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: TOOLS }));
 	server.setRequestHandler(CallToolRequestSchema, (req) => callTool(req.params.name, (req.params.arguments ?? {}) as Record<string, unknown>));
+	server.setRequestHandler(ListResourcesRequestSchema, () => ({ resources: listResources() }));
+	server.setRequestHandler(ReadResourceRequestSchema, (req) => ({ contents: [readResource(req.params.uri)] }));
 	return server;
 }
 

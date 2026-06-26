@@ -41,8 +41,8 @@ fetched on first use.
 
 The plugin wires up a **hosted, read-only** MCP server
 (`https://cc-marketspec-mcp.xbluesky.workers.dev`). It needs no token and no
-setup. Its tools (`get_schema`, `explain_field`, `check_coverage`,
-`scaffold_entry`) take only the schema/field/file content you pass them — it
+setup. Its tools (`get_schema`, `list_authoring_sections`, `get_authoring_guide`,
+`check_coverage`, `scaffold_entry`) take only the schema/field/file content you pass them — it
 stores nothing and returns schema and validation help.
 
 ## Requirements

@@ -43,7 +43,7 @@
           "autoload": false,
           "resources": {
             "scripts": 0,
-            "references": 0,
+            "references": 1,
             "assets": 3
           }
         }
@@ -72,7 +72,8 @@
           "description": "Hosted, read-only MCP tools for schema lookup and coverage checks.",
           "provides": [
             "get_schema",
-            "explain_field",
+            "list_authoring_sections",
+            "get_authoring_guide",
             "check_coverage",
             "scaffold_entry"
           ]
@@ -81,6 +82,16 @@
       "tips": [
         {
           "text": "This repo is itself a cc-marketspec marketplace — it dogfoods its own framework."
+        },
+        {
+          "text": "Ask the hosted MCP for field help without installing anything.",
+          "href": "https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server",
+          "label": "Hosted MCP"
+        }
+      ],
+      "traps": [
+        {
+          "text": "entry.yaml never restates native facts — a skill trigger that just repeats the SKILL.md description adds nothing."
         }
       ]
     }
