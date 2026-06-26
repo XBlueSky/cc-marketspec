@@ -2,6 +2,11 @@
   <img src="cc-marketplace.png" width="140" alt="cc-marketspec logo" />
 
   # cc-marketspec
+
+  [![npm version](https://img.shields.io/npm/v/@xbluesky/cc-marketspec.svg)](https://www.npmjs.com/package/@xbluesky/cc-marketspec)
+  [![CI](https://github.com/XBlueSky/cc-marketspec/actions/workflows/ci.yml/badge.svg)](https://github.com/XBlueSky/cc-marketspec/actions/workflows/ci.yml)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Node >=20](https://img.shields.io/node/v/@xbluesky/cc-marketspec.svg)](https://nodejs.org)
 </div>
 
 A **headless data standard + generator** for the *presentation* of a Claude Code
