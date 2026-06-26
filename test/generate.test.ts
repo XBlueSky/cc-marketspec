@@ -110,3 +110,37 @@ test('coverage: catalog can promote skill.trigger to a build error', () => {
 	});
 	assert.ok(errors.some((e) => e.includes('skill.trigger')));
 });
+
+// ---- plugin.json shape validation -------------------------------------------
+
+test('author as a string is an error (Claude Code rejects string authors)', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0', author: 'XBlueSky' })
+	});
+	assert.ok(errors.some((e) => e.includes('author must be an object')), `expected author error, got: ${errors.join(' | ')}`);
+});
+
+test('author as an object is accepted', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0', author: { name: 'XBlueSky', url: 'https://github.com/XBlueSky' } })
+	});
+	assert.equal(errors.filter((e) => e.includes('plugin.json')).length, 0, errors.join(' | '));
+});
+
+test('keywords as a string (wrong shape) is an error', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0', keywords: 'oops' })
+	});
+	assert.ok(errors.some((e) => e.includes('sample/plugin.json:')), `expected shape error, got: ${errors.join(' | ')}`);
+});
+
+test('missing optional fields do NOT produce shape errors (only shape, not presence)', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample' })  // no version/author/keywords
+	});
+	assert.equal(errors.filter((e) => e.includes('plugin.json:')).length, 0, errors.join(' | '));
+});

@@ -2,7 +2,7 @@
   "name": "hello-plugin",
   "version": "1.2.0",
   "description": "A tiny demo plugin that greets you.",
-  "author": "Example Org",
+  "author": { "name": "Example Org" },
   "license": "MIT",
   "keywords": ["demo", "hello"]
 }
