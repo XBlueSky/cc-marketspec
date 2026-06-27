@@ -1,0 +1,14 @@
+---
+import manifest from '../../../manifest.json';
+---
+<!doctype html>
+<html lang={manifest.marketplace.lang ?? 'en'}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{manifest.marketplace.name}</title>
+	</head>
+	<body>
+		<h1>{manifest.marketplace.name}</h1>
+	</body>
+</html>
