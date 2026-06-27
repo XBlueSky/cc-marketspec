@@ -40,3 +40,11 @@ header a { color: var(--accent); text-decoration: none; }
 .complist code { background: #21262d; border-radius: 4px; padding: .1rem .35rem; font-size: .85rem; color: var(--accent); }
 .complist .line { color: var(--muted); }
 .complist .sub { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-left: .5rem; }
+.tips-traps { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.tips-traps h3 { font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .5rem; }
+.tips-traps .tips h3 { color: #3fb950; }
+.tips-traps .traps h3 { color: #f85149; }
+.tips-traps ul { margin: 0; padding-left: 1.1rem; color: var(--muted); }
+.tips-traps li { margin: .35rem 0; }
+.tips-traps a { color: var(--accent); margin-left: .35rem; }
+@media (max-width: 600px) { .tips-traps { grid-template-columns: 1fr; } }

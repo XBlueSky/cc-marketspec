@@ -33,3 +33,10 @@ test('rendered HTML lists skills, commands, and mcp tools', () => {
 	assert.match(html, /cc-generate/, 'command name appears');
 	assert.match(html, /get_schema/, 'an mcp provided tool appears');
 });
+
+test('rendered HTML shows tips (incl. object-form href/label) and traps', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /dogfoods its own framework/, 'a string-form tip appears');
+	assert.match(html, /Hosted MCP/, 'an object-form tip label appears');
+	assert.match(html, /never restates native facts/, 'a trap appears');
+});
