@@ -19,3 +19,10 @@ test('build regenerates the top-level manifest (single source of truth)', () => 
 	assert.equal(manifest.marketplace.name, 'cc-marketspec');
 	assert.ok(Array.isArray(manifest.plugins) && manifest.plugins.length >= 1);
 });
+
+test('rendered HTML shows the plugin name, tagline, and a keyword', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /cc-marketspec/, 'plugin name appears');
+	assert.match(html, /Headless data standard/, 'tagline appears');
+	assert.match(html, /claude-code/, 'a keyword appears');
+});

@@ -1,0 +1,27 @@
+---
+import '../styles/global.css';
+interface Props {
+	title: string;
+	owner?: { name: string; url?: string };
+}
+const { title, owner } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+	</head>
+	<body>
+		<div class="wrap">
+			<header>
+				<h1>{title}</h1>
+				{owner && (
+					<p>by {owner.url ? <a href={owner.url}>{owner.name}</a> : owner.name}</p>
+				)}
+			</header>
+			<slot />
+		</div>
+	</body>
+</html>
