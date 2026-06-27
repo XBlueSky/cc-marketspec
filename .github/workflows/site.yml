@@ -23,7 +23,7 @@ jobs:
       # as ci.yml's validate job.
       - run: npm ci --registry=https://registry.npmjs.org
       # Site deps + build (build script regenerates the manifest, then astro build).
-      - run: npm install --registry=https://registry.npmjs.org
+      - run: npm ci --registry=https://registry.npmjs.org
         working-directory: site
       - run: npm run build
         working-directory: site
