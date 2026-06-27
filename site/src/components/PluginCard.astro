@@ -1,0 +1,26 @@
+---
+interface Props {
+	plugin: {
+		id: string;
+		name: string;
+		version?: string;
+		tagline?: string;
+		intro?: string;
+		description?: string;
+		keywords?: string[];
+		group?: string;
+	};
+}
+const { plugin } = Astro.props;
+---
+<article class="card">
+	<h2>{plugin.name} <span class="version">{plugin.version}</span></h2>
+	{plugin.tagline && <p class="tagline">{plugin.tagline}</p>}
+	{(plugin.intro ?? plugin.description) && <p class="intro">{plugin.intro ?? plugin.description}</p>}
+	{plugin.keywords && plugin.keywords.length > 0 && (
+		<div class="keywords">
+			{plugin.keywords.map((k) => <span>{k}</span>)}
+		</div>
+	)}
+	<slot />
+</article>

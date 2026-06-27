@@ -1,0 +1,50 @@
+:root {
+	--bg: #0d1117;
+	--card: #161b22;
+	--fg: #e6edf3;
+	--muted: #8b949e;
+	--accent: #58a6ff;
+	--border: #30363d;
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	font: 16px/1.6 system-ui, -apple-system, sans-serif;
+	background: var(--bg);
+	color: var(--fg);
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+header h1 { margin: 0 0 .25rem; }
+header a { color: var(--accent); text-decoration: none; }
+.card {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 1.5rem;
+	margin: 1.5rem 0;
+}
+.card h2 { margin: 0 0 .25rem; }
+.card .version { color: var(--muted); font-size: .85rem; font-weight: normal; }
+.card .tagline { color: var(--fg); font-size: 1.1rem; margin: .5rem 0; }
+.card .intro { color: var(--muted); margin: .5rem 0 1rem; }
+.keywords { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+.keywords span {
+	background: #21262d; border: 1px solid var(--border);
+	border-radius: 999px; padding: .15rem .6rem; font-size: .8rem; color: var(--muted);
+}
+@media (max-width: 600px) { .wrap { padding: 1rem; } }
+.complist { margin: 1rem 0; }
+.complist h3 { font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 1rem 0 .5rem; }
+.complist ul { list-style: none; padding: 0; margin: 0; }
+.complist li { padding: .35rem 0; border-top: 1px solid var(--border); }
+.complist code { background: #21262d; border-radius: 4px; padding: .1rem .35rem; font-size: .85rem; color: var(--accent); }
+.complist .line { color: var(--muted); }
+.complist .sub { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-left: .5rem; }
+.tips-traps { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.tips-traps h3 { font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .5rem; }
+.tips-traps .tips h3 { color: #3fb950; }
+.tips-traps .traps h3 { color: #f85149; }
+.tips-traps ul { margin: 0; padding-left: 1.1rem; color: var(--muted); }
+.tips-traps li { margin: .35rem 0; }
+.tips-traps a { color: var(--accent); margin-left: .35rem; }
+@media (max-width: 600px) { .tips-traps { grid-template-columns: 1fr; } }

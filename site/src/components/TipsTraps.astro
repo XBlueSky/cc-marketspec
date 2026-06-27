@@ -1,0 +1,45 @@
+---
+type Note = string | { text: string; href?: string; label?: string };
+interface Props {
+	tips?: Note[];
+	traps?: Note[];
+}
+const { tips = [], traps = [] } = Astro.props;
+const norm = (n: Note) => (typeof n === 'string' ? { text: n } : n);
+---
+{(tips.length > 0 || traps.length > 0) && (
+	<div class="tips-traps">
+		{tips.length > 0 && (
+			<section class="tips">
+				<h3>Tips</h3>
+				<ul>
+					{tips.map((n) => {
+						const { text, href, label } = norm(n);
+						return (
+							<li>
+								{text}
+								{href && <a href={href}>{label ?? href}</a>}
+							</li>
+						);
+					})}
+				</ul>
+			</section>
+		)}
+		{traps.length > 0 && (
+			<section class="traps">
+				<h3>Traps</h3>
+				<ul>
+					{traps.map((n) => {
+						const { text, href, label } = norm(n);
+						return (
+							<li>
+								{text}
+								{href && <a href={href}>{label ?? href}</a>}
+							</li>
+						);
+					})}
+				</ul>
+			</section>
+		)}
+	</div>
+)}
