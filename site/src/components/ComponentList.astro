@@ -1,0 +1,28 @@
+---
+interface Item {
+	name: string;
+	line?: string;
+	sub?: string[];
+}
+interface Props {
+	title: string;
+	items: Item[];
+}
+const { title, items } = Astro.props;
+---
+{items.length > 0 && (
+	<section class="complist">
+		<h3>{title}</h3>
+		<ul>
+			{items.map((item) => (
+				<li>
+					<code>{item.name}</code>
+					{item.line && <span class="line"> — {item.line}</span>}
+					{item.sub && item.sub.length > 0 && (
+						<span class="sub">{item.sub.map((s) => <code>{s}</code>)}</span>
+					)}
+				</li>
+			))}
+		</ul>
+	</section>
+)}

@@ -26,3 +26,10 @@ test('rendered HTML shows the plugin name, tagline, and a keyword', () => {
 	assert.match(html, /Headless data standard/, 'tagline appears');
 	assert.match(html, /claude-code/, 'a keyword appears');
 });
+
+test('rendered HTML lists skills, commands, and mcp tools', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /marketplace-flow/, 'skill name appears');
+	assert.match(html, /cc-generate/, 'command name appears');
+	assert.match(html, /get_schema/, 'an mcp provided tool appears');
+});
