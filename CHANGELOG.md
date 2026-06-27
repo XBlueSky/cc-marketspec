@@ -1,3 +1,18 @@
+# [0.9.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.8.0...v0.9.0) (2026-06-27)
+
+
+### Bug Fixes
+
+* **site:** pin public npm registry so the lockfile isn't poisoned by a private mirror ([8e57b0e](https://github.com/XBlueSky/cc-marketspec/commit/8e57b0e71ea5dc1785688293716fc994a855ef50))
+
+
+### Features
+
+* **site:** Astro skeleton with regenerate-manifest build pipeline ([751cef6](https://github.com/XBlueSky/cc-marketspec/commit/751cef61a15aec0cb0b40b91b291d42fe71b7be1))
+* **site:** ComponentList renders skills/commands/agents/mcp from manifest ([aa3f960](https://github.com/XBlueSky/cc-marketspec/commit/aa3f9603e8251303218fd4b37c3261727aee5d44))
+* **site:** Layout and PluginCard render plugin meta from manifest ([c1d4b61](https://github.com/XBlueSky/cc-marketspec/commit/c1d4b6195d0a2b61a6ce14a2281fe42211d7742a))
+* **site:** TipsTraps renders string and object-form notes from manifest ([f0e7e4e](https://github.com/XBlueSky/cc-marketspec/commit/f0e7e4e395984a651dc0c8e590e0e69344bdd94e))
+
 # [0.8.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.7.0...v0.8.0) (2026-06-26)
 
 
