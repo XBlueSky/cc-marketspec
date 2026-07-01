@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import MentalModel from '../components/MentalModel.astro';
+import Pipeline from '../components/Pipeline.astro';
 import PluginCard from '../components/PluginCard.astro';
 import ComponentList from '../components/ComponentList.astro';
 import TipsTraps from '../components/TipsTraps.astro';
@@ -13,6 +14,7 @@ const line = (it: AnyItem) => it.trigger ?? it.summary ?? it.description;
 <Layout title={manifest.marketplace.name} owner={manifest.marketplace.owner}>
 	<Hero />
 	<MentalModel />
+	<Pipeline />
 	{manifest.plugins.map((plugin) => (
 		<PluginCard plugin={plugin}>
 			<ComponentList title="Skills" items={(plugin.skills ?? []).map((s) => ({ name: s.name, line: line(s) }))} />
