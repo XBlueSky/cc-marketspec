@@ -64,3 +64,10 @@ test('page keeps the dogfood showcase manifest-driven', () => {
 	assert.match(html, /marketplace-flow/, 'skill from manifest renders in showcase');
 	assert.match(html, /get_schema/, 'mcp tool from manifest renders in showcase');
 });
+
+test('v2 adds section-number, hairline, and background texture primitives', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /--on-accent/, 'on-accent token defined');
+	assert.match(html, /bg-texture/, 'background texture layer present');
+	assert.match(html, /sec-num/, 'section-number primitive present');
+});
