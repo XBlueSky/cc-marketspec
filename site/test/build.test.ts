@@ -91,3 +91,10 @@ test('v2 numbers the content sections', () => {
 		assert.match(html, new RegExp(`sec-num[^>]*>\\s*${n}`), `section number ${n} present`);
 	}
 });
+
+test('v3 hero keeps real full YAML while wrapping lines for reveal', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /yline/, 'YAML lines wrapped for staged reveal');
+	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
+	assert.match(html, /hosted-mcp-server/, 'real second tip href intact');
+});
