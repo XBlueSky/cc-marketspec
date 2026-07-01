@@ -71,3 +71,18 @@ test('v2 adds section-number, hairline, and background texture primitives', () =
 	assert.match(html, /bg-texture/, 'background texture layer present');
 	assert.match(html, /sec-num/, 'section-number primitive present');
 });
+
+test('v2 renders real code contrasts and the comparison table', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /mcpServers/, 'real native .mcp.json snippet present');
+	assert.match(html, /wrote manifest\.json/, 'real CLI output present in pipeline');
+	assert.match(html, /You author the left/, 'author-vs-derived table present');
+	assert.match(html, /native already encodes it/, 'derived column present');
+});
+
+test('v2 numbers the content sections', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	for (const n of ['02','03','04','05','06','07']) {
+		assert.match(html, new RegExp(`sec-num[^>]*>\\s*${n}`), `section number ${n} present`);
+	}
+});
