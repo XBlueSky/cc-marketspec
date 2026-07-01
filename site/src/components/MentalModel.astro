@@ -33,7 +33,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
           <pre><code><span class="c">// plugin.json</span>
 <span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span> <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span> <span class="p">}</span>
 <span class="c">// .mcp.json</span>
-<span class="p">{</span> <span class="k">"mcpServers"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"cc-marketspec"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span> <span class="p">}</span> <span class="p">}</span> <span class="p">}</span></code></pre>
+<span class="p">{</span> <span class="k">"mcpServers"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"cc-marketspec"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span><span class="p">,</span> <span class="c">…</span> <span class="p">}</span> <span class="p">}</span> <span class="p">}</span></code></pre>
         </figure>
         <figure class="mm-code-panel">
           <figcaption>entry.yaml</figcaption>
@@ -47,6 +47,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
         <figcaption>manifest.json</figcaption>
         <pre><code><span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span>
   <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span><span class="p">,</span> <span class="k">"group"</span><span class="p">:</span> <span class="s">"tools"</span><span class="p">,</span>
+  <span class="c">…</span><span class="p">,</span>
   <span class="k">"mcp"</span><span class="p">:</span> <span class="p">[{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span><span class="p">,</span> <span class="k">"provides"</span><span class="p">:</span> <span class="p">[</span> <span class="c">…</span> <span class="p">]</span> <span class="p">}]</span> <span class="p">}</span></code></pre>
       </figure>
     </div>
