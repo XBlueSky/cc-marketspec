@@ -2,6 +2,7 @@
   --bg:#FBFAF8; --surface:#FFFFFF; --fg:#221E1A; --muted:#736C64;
   --accent:#C15F3C; --accent-soft:#CC785C; --border:#EBE7E1; --code-chip:#F4EDE7;
   --tip:#3f7a4a; --trap:#b04a3f;
+  --syntax-string:#6a6058; --syntax-comment:#b3aca2; --syntax-punct:#a49c92;
   --serif:'Newsreader', Georgia, serif;
   --sans:'Geist Sans', ui-sans-serif, -apple-system, sans-serif;
   --mono:'Geist Mono', ui-monospace, 'SF Mono', monospace;
