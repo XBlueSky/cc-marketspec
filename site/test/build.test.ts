@@ -42,12 +42,12 @@ test('rendered HTML shows tips (incl. object-form href/label) and traps', () => 
 });
 
 test('build inlines fonts as data-URI (no font CDN)', () => {
-  const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-  assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
-  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
+	assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
 });
 test('page uses the light-ground clay palette', () => {
-  const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-  assert.match(html, /#FBFAF8/i, 'paper ground token present');
-  assert.match(html, /#C15F3C/i, 'clay accent token present');
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /#FBFAF8/i, 'paper ground token present');
+	assert.match(html, /#C15F3C/i, 'clay accent token present');
 });
