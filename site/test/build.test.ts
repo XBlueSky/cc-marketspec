@@ -46,6 +46,11 @@ test('build inlines fonts as data-URI (no font CDN)', () => {
 	assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
 	assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
 });
+test('display face is Fraunces, not Newsreader', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /Fraunces/, 'Fraunces face present');
+	assert.doesNotMatch(html, /Newsreader/, 'Newsreader fully removed');
+});
 test('page uses the light-ground clay palette', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
 	assert.match(html, /#FBFAF8/i, 'paper ground token present');
