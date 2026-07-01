@@ -27,11 +27,11 @@ const derived = [
     <span class="eyebrow">Write little, get much</span>
     <h2 class="avd-h2">You author the left. The generator fills the right.</h2>
     <div class="avd-grid reveal">
-      <div class="avd-col avd-author">
+      <div class="avd-col avd-author reveal" style="--i:0">
         <h3 class="avd-cap">You author <span>— no native source</span></h3>
         <ul>{authored.map((x) => <li>{x}</li>)}</ul>
       </div>
-      <div class="avd-col avd-derived">
+      <div class="avd-col avd-derived reveal" style="--i:1">
         <h3 class="avd-cap">Derived for you <span>— native already encodes it</span></h3>
         <ul>{derived.map((x) => <li>{x}</li>)}</ul>
       </div>

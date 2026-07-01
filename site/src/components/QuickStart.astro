@@ -13,8 +13,8 @@ const blocks = [
     <span class="eyebrow">Quick start</span>
     <h2 class="qs-h2">Run it in your marketplace repo.</h2>
     <div class="qs-blocks">
-      {blocks.map((b) => (
-        <div class="qs-block reveal">
+      {blocks.map((b, i) => (
+        <div class="qs-block reveal" style={`--i:${i}`}>
           <span class="qs-label">{b.label}</span>
           <pre class="qs-cmd"><code>{b.cmd}</code></pre>
         </div>
