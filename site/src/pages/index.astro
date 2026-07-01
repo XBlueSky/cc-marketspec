@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import MentalModel from '../components/MentalModel.astro';
 import Pipeline from '../components/Pipeline.astro';
+import Derived from '../components/Derived.astro';
 import PluginCard from '../components/PluginCard.astro';
 import ComponentList from '../components/ComponentList.astro';
 import TipsTraps from '../components/TipsTraps.astro';
@@ -15,6 +16,7 @@ const line = (it: AnyItem) => it.trigger ?? it.summary ?? it.description;
 	<Hero />
 	<MentalModel />
 	<Pipeline />
+	<Derived />
 	{manifest.plugins.map((plugin) => (
 		<PluginCard plugin={plugin}>
 			<ComponentList title="Skills" items={(plugin.skills ?? []).map((s) => ({ name: s.name, line: line(s) }))} />

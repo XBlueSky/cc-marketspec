@@ -1,0 +1,38 @@
+---
+// "What it derives for you" — the effort-saved payoff. Content from the README
+// "What the generator derives (so you don't restate it)" list.
+const derived = [
+  ['skill autoload badge', 'from user-invocable: false'],
+  ['command argument table', 'from native arguments / argument-hint'],
+  ['agent tools', 'from frontmatter tools'],
+  ['mcp transport + env keys', 'from .mcp.json'],
+  ['hook event / matcher', 'from hooks.json'],
+  ['plugin identity', 'name, version, author, license, keywords, deps'],
+  ['plugin category', 'from marketplace.json entry category'],
+];
+---
+<section class="section derived">
+  <div class="wrap">
+    <span class="eyebrow">Less to write</span>
+    <h2 class="d-h2">It derives what native already encodes.</h2>
+    <p class="d-lede">You maintain native manifests anyway. cc-marketspec reads them
+      so your presentation overlay stays tiny.</p>
+    <ul class="d-list">
+      {derived.map(([what, from], i) => (
+        <li class="d-item reveal" style={`--i:${i}`}>
+          <strong>{what}</strong>
+          <span class="d-from">{from}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+<style>
+  .d-h2 { font-size:clamp(1.8rem,4vw,2.6rem); margin:1rem 0 .6rem; }
+  .d-lede { color:var(--muted); max-width:58ch; margin:0 0 2rem; }
+  .d-list { list-style:none; padding:0; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:0; }
+  .d-item { padding:1rem 0; border-top:1px solid var(--border); transition-delay:calc(var(--i) * 60ms); }
+  .d-item strong { display:block; font-weight:600; font-size:.98rem; }
+  .d-from { font-family:var(--mono); font-size:.78rem; color:var(--muted); }
+  @media (max-width:640px){ .d-list { grid-template-columns:1fr; } }
+</style>
