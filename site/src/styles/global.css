@@ -17,7 +17,7 @@ body { margin:0; background:var(--bg); color:var(--fg);
 a { color:var(--accent); }
 .wrap { max-width:1100px; margin:0 auto; padding:0 clamp(1rem,4vw,2rem); }
 .section { padding-block: var(--step); }
-h1,h2,h3 { font-family:var(--serif); font-weight:500; letter-spacing:-0.025em;
+h1,h2,h3 { font-family:var(--serif); font-weight:700; letter-spacing:-0.025em;
   line-height:1.08; text-wrap:balance; margin:0; }
 .eyebrow { display:inline-block; font-family:var(--mono); font-size:.68rem;
   letter-spacing:.18em; text-transform:uppercase; color:var(--accent);
