@@ -51,3 +51,16 @@ test('page uses the light-ground clay palette', () => {
 	assert.match(html, /#FBFAF8/i, 'paper ground token present');
 	assert.match(html, /#C15F3C/i, 'clay accent token present');
 });
+test('page renders all landing sections in order', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	for (const anchor of ['Ship', 'not design', 'presentation never restates',
+		'no design decisions', 'native already encodes', 'This section is the product',
+		'Run it in your marketplace repo']) {
+		assert.match(html, new RegExp(anchor), `section marker "${anchor}" present`);
+	}
+});
+test('page keeps the dogfood showcase manifest-driven', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /marketplace-flow/, 'skill from manifest renders in showcase');
+	assert.match(html, /get_schema/, 'mcp tool from manifest renders in showcase');
+});

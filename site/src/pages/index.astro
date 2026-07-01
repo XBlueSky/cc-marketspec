@@ -7,9 +7,8 @@ import Derived from '../components/Derived.astro';
 import Showcase from '../components/Showcase.astro';
 import QuickStart from '../components/QuickStart.astro';
 import SiteFooter from '../components/SiteFooter.astro';
-import manifest from '../../../manifest.json';
 ---
-<Layout title={manifest.marketplace.name} owner={manifest.marketplace.owner}>
+<Layout title="cc-marketspec — ship data, not design" description="A headless data standard + generator for a Claude Code plugin marketplace's presentation. Ship data, not design.">
 	<Hero />
 	<MentalModel />
 	<Pipeline />
@@ -17,7 +16,5 @@ import manifest from '../../../manifest.json';
 	<Showcase />
 	<QuickStart />
 	<SiteFooter />
+	<script>import '../scripts/reveal.ts';</script>
 </Layout>
-<script>
-  import '../scripts/reveal.ts';
-</script>
