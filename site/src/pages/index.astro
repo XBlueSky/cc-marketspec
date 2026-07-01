@@ -5,6 +5,8 @@ import MentalModel from '../components/MentalModel.astro';
 import Pipeline from '../components/Pipeline.astro';
 import Derived from '../components/Derived.astro';
 import Showcase from '../components/Showcase.astro';
+import QuickStart from '../components/QuickStart.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import manifest from '../../../manifest.json';
 ---
 <Layout title={manifest.marketplace.name} owner={manifest.marketplace.owner}>
@@ -13,4 +15,9 @@ import manifest from '../../../manifest.json';
 	<Pipeline />
 	<Derived />
 	<Showcase />
+	<QuickStart />
+	<SiteFooter />
 </Layout>
+<script>
+  import '../scripts/reveal.ts';
+</script>
