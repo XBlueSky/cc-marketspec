@@ -12,6 +12,7 @@
         cc-marketspec joins it with the native plugin manifests, validates, and
         emits one render-agnostic <span class="codechip">manifest.json</span> any
         site can be built from.</p>
+      <p class="hero-contrast"><span>~8 lines of YAML</span> in, <span>a full marketplace manifest</span> out.</p>
       <div class="hero-cta">
         <a class="btn-primary" href="#quick-start">npx @xbluesky/cc-marketspec</a>
         <a class="btn-ghost" href="#mental-model">Read the mental model →</a>
@@ -24,7 +25,9 @@
 <span class="k">group</span><span class="p">:</span> <span class="s">tools</span>
 <span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator for a Claude Code marketplace's presentation</span>
 <span class="k">tips</span><span class="p">:</span>
-  <span class="p">-</span> <span class="s">This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.</span></code></pre>
+  <span class="p">-</span> <span class="s">This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.</span>
+  <span class="p">-</span> <span class="k">text</span><span class="p">:</span> <span class="s">Ask the hosted MCP for field help without installing anything.</span>
+    <span class="k">href</span><span class="p">:</span> <span class="s">https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server</span></code></pre>
       </figure>
       <p class="arrow" aria-hidden="true">↓ generated manifest.json ↓</p>
       <div class="minicard">
@@ -38,9 +41,11 @@
 </section>
 <style>
   .hero { display:grid; grid-template-columns:1.05fr 1fr; gap:2.5rem; align-items:center; }
-  .hero-h1 { font-size:clamp(2.4rem,5.5vw,3.6rem); margin:1.2rem 0 1rem; }
+  .hero-h1 { font-size:var(--hero-size); margin:1.2rem 0 1rem; }
   .hero-h1 em { font-style:italic; color:var(--accent); }
   .hero-lede { color:var(--muted); font-size:1.05rem; max-width:46ch; margin:0 0 1.8rem; }
+  .hero-contrast { font-family:var(--mono); font-size:.8rem; color:var(--muted); margin:0 0 1.6rem; }
+  .hero-contrast span { color:var(--accent); }
   .hero-cta { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
   .yamlcard { margin:0; background:var(--surface); border:1px solid var(--border);
     border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(34,30,26,.03); }
@@ -50,7 +55,9 @@
   pre { margin:0; padding:.9rem 1rem; overflow-x:auto; }
   code { font-family:var(--mono); font-size:.74rem; line-height:1.7; }
   .k{color:var(--accent);} .s{color:var(--syntax-string);} .c{color:var(--syntax-comment);} .p{color:var(--syntax-punct);}
-  .arrow { text-align:center; font-family:var(--mono); font-size:.7rem; color:var(--muted); margin:.9rem 0; }
+  .arrow { position:relative; text-align:center; font-family:var(--mono); font-size:.7rem; color:var(--muted); margin:1.1rem 0; }
+  .arrow::before { content:''; position:absolute; left:50%; top:-1.1rem; width:2px; height:1.1rem; background:var(--accent); opacity:.4; transform:translateX(-50%); }
+  .arrow::after { content:''; position:absolute; left:50%; bottom:-1.1rem; width:2px; height:1.1rem; background:var(--accent); opacity:.4; transform:translateX(-50%); }
   .minicard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.1rem 1.2rem; }
   .minicard h3 { font-size:1.15rem; }
   .minicard-tag { color:var(--muted); font-size:.85rem; margin:.2rem 0 .8rem; }
