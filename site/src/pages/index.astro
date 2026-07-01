@@ -4,26 +4,13 @@ import Hero from '../components/Hero.astro';
 import MentalModel from '../components/MentalModel.astro';
 import Pipeline from '../components/Pipeline.astro';
 import Derived from '../components/Derived.astro';
-import PluginCard from '../components/PluginCard.astro';
-import ComponentList from '../components/ComponentList.astro';
-import TipsTraps from '../components/TipsTraps.astro';
+import Showcase from '../components/Showcase.astro';
 import manifest from '../../../manifest.json';
-
-type AnyItem = { name: string; trigger?: string; summary?: string; description?: string; provides?: string[] };
-const line = (it: AnyItem) => it.trigger ?? it.summary ?? it.description;
 ---
 <Layout title={manifest.marketplace.name} owner={manifest.marketplace.owner}>
 	<Hero />
 	<MentalModel />
 	<Pipeline />
 	<Derived />
-	{manifest.plugins.map((plugin) => (
-		<PluginCard plugin={plugin}>
-			<ComponentList title="Skills" items={(plugin.skills ?? []).map((s) => ({ name: s.name, line: line(s) }))} />
-			<ComponentList title="Commands" items={(plugin.commands ?? []).map((c) => ({ name: c.name, line: line(c) }))} />
-			<ComponentList title="Agents" items={(plugin.agents ?? []).map((a) => ({ name: a.name, line: line(a) }))} />
-			<ComponentList title="MCP" items={(plugin.mcp ?? []).map((m) => ({ name: m.name, line: m.description, sub: m.provides }))} />
-			<TipsTraps tips={plugin.tips} traps={plugin.traps} />
-		</PluginCard>
-	))}
+	<Showcase />
 </Layout>

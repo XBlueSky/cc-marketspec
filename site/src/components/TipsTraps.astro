@@ -43,3 +43,14 @@ const norm = (n: Note) => (typeof n === 'string' ? { text: n } : n);
 		)}
 	</div>
 )}
+<style>
+  .tips-traps { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
+  .tips-traps h3 { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em;
+    font-family:var(--mono); margin:0 0 .5rem; }
+  .tips-traps .tips h3 { color:var(--tip); }
+  .tips-traps .traps h3 { color:var(--trap); }
+  .tips-traps ul { margin:0; padding-left:1.1rem; color:var(--muted); }
+  .tips-traps li { margin:.35rem 0; }
+  .tips-traps a { color:var(--accent); margin-left:.35rem; }
+  @media (max-width:600px){ .tips-traps { grid-template-columns:1fr; } }
+</style>

@@ -1,0 +1,30 @@
+---
+import PluginCard from './PluginCard.astro';
+import ComponentList from './ComponentList.astro';
+import TipsTraps from './TipsTraps.astro';
+import manifest from '../../../manifest.json';
+type AnyItem = { name:string; trigger?:string; summary?:string; description?:string; provides?:string[] };
+const line = (it: AnyItem) => it.trigger ?? it.summary ?? it.description;
+---
+<section id="showcase" class="section showcase">
+  <div class="wrap">
+    <span class="eyebrow">This section is the product</span>
+    <h2 class="sc-h2">Rendered from this repo's manifest.json.</h2>
+    <p class="sc-lede">The cards below are what cc-marketspec generated from this
+      repository — the framework dogfoods itself.
+      <a href="https://github.com/XBlueSky/cc-marketspec/blob/main/site/src/components/Showcase.astro">View source →</a></p>
+    {manifest.plugins.map((plugin) => (
+      <PluginCard plugin={plugin}>
+        <ComponentList title="Skills" items={(plugin.skills ?? []).map((s) => ({ name:s.name, line:line(s) }))} />
+        <ComponentList title="Commands" items={(plugin.commands ?? []).map((c) => ({ name:c.name, line:line(c) }))} />
+        <ComponentList title="Agents" items={(plugin.agents ?? []).map((a) => ({ name:a.name, line:line(a) }))} />
+        <ComponentList title="MCP" items={(plugin.mcp ?? []).map((m) => ({ name:m.name, line:m.description, sub:m.provides }))} />
+        <TipsTraps tips={plugin.tips} traps={plugin.traps} />
+      </PluginCard>
+    ))}
+  </div>
+</section>
+<style>
+  .sc-h2 { font-size:clamp(1.8rem,4vw,2.6rem); margin:1rem 0 .6rem; }
+  .sc-lede { color:var(--muted); max-width:60ch; margin:0 0 2rem; }
+</style>
