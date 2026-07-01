@@ -11,3 +11,17 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   }, { rootMargin: '0px 0px -10% 0px' });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 }
+
+// Hero live "generate": reveal YAML lines top-to-bottom, then the arrow + card.
+// Under reduced-motion we skip animation (CSS media query already shows them);
+// without JS, .js-ready is never set so the hidden state never applies.
+const hero = document.querySelector('.hero-visual');
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (hero && !reduce) {
+  hero.classList.add('hero-live');
+  const lines = hero.querySelectorAll('.yline');
+  lines.forEach((el) => el.classList.add('in'));           // CSS stagger via --i handles timing
+  const gens = hero.querySelectorAll('.hero-gen');
+  const lastDelay = lines.length * 140 + 200;
+  window.setTimeout(() => gens.forEach((el) => el.classList.add('in')), lastDelay);
+}
