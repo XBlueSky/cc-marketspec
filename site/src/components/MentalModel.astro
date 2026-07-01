@@ -26,6 +26,30 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
         <p>one render-agnostic document</p>
       </div>
     </div>
+    <div class="mm-code-section reveal">
+      <div class="mm-code-row">
+        <figure class="mm-code-panel">
+          <figcaption>plugin.json & .mcp.json</figcaption>
+          <pre><code><span class="c">// plugin.json</span>
+<span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span> <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span> <span class="p">}</span>
+<span class="c">// .mcp.json</span>
+<span class="p">{</span> <span class="k">"mcpServers"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"cc-marketspec"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span> <span class="p">}</span> <span class="p">}</span> <span class="p">}</span></code></pre>
+        </figure>
+        <figure class="mm-code-panel">
+          <figcaption>entry.yaml</figcaption>
+          <pre><code><span class="c"># entry.yaml</span>
+<span class="k">group</span><span class="p">:</span> <span class="s">tools</span>
+<span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator …</span></code></pre>
+        </figure>
+      </div>
+      <p class="mm-code-arrow" aria-hidden="true">↓ generated ↓</p>
+      <figure class="mm-code-panel mm-code-full">
+        <figcaption>manifest.json</figcaption>
+        <pre><code><span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span>
+  <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span><span class="p">,</span> <span class="k">"group"</span><span class="p">:</span> <span class="s">"tools"</span><span class="p">,</span>
+  <span class="k">"mcp"</span><span class="p">:</span> <span class="p">[{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span><span class="p">,</span> <span class="k">"provides"</span><span class="p">:</span> <span class="p">[</span> <span class="c">…</span> <span class="p">]</span> <span class="p">}]</span> <span class="p">}</span></code></pre>
+      </figure>
+    </div>
   </div>
 </section>
 <style>
@@ -45,5 +69,14 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
   .mm-arrow { font-size:1.6rem; color:var(--muted); }
   .mm-manifest { font-family:var(--mono); font-size:.9rem; color:var(--accent); font-weight:500; margin:.4rem 0 .2rem; }
   .mm-out p { color:var(--muted); font-size:.78rem; margin:0; }
-  @media (max-width:820px){ .mm-diagram { grid-template-columns:1fr; } .mm-arrow { transform:rotate(90deg); } }
+  .mm-code-section { margin:1.8rem 0 0; display:flex; flex-direction:column; }
+  .mm-code-row { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+  .mm-code-panel { margin:0; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .mm-code-panel figcaption { font-family:var(--mono); font-size:.7rem; color:var(--muted); background:var(--code-chip); padding:.5rem .8rem; border-bottom:1px solid var(--border); }
+  .mm-code-panel pre { margin:0; padding:.6rem .8rem; overflow-x:auto; }
+  .mm-code-panel code { font-family:var(--mono); font-size:.7rem; line-height:1.6; }
+  .mm-code-full { grid-column:1 / -1; }
+  .mm-code-arrow { text-align:center; font-family:var(--mono); font-size:.7rem; color:var(--muted); margin:.9rem 0; }
+  .k{color:var(--accent);} .s{color:var(--syntax-string);} .c{color:var(--syntax-comment);} .p{color:var(--syntax-punct);}
+  @media (max-width:820px){ .mm-diagram { grid-template-columns:1fr; } .mm-arrow { transform:rotate(90deg); } .mm-code-row { grid-template-columns:1fr; } }
 </style>
