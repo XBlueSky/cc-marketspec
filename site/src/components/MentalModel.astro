@@ -75,7 +75,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
   .mm-code-row { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
   .mm-code-panel { margin:0; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; min-width:0; }
   .mm-code-panel figcaption { font-family:var(--mono); font-size:.7rem; color:var(--muted); background:var(--code-chip); padding:.5rem .8rem; border-bottom:1px solid var(--border); }
-  .mm-code-panel pre { margin:0; padding:.6rem .8rem; overflow-x:auto; }
+  .mm-code-panel pre { margin:0; padding:.6rem .8rem; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
   .mm-code-panel code { font-family:var(--mono); font-size:.7rem; line-height:1.6; }
   .mm-code-full { grid-column:1 / -1; }
   .mm-code-arrow { text-align:center; font-family:var(--mono); font-size:.7rem; color:var(--muted); margin:.9rem 0; }
