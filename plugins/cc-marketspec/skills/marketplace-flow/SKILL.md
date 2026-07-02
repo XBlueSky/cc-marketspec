@@ -65,11 +65,14 @@ Then re-inspect.
 
 For anything beyond `tagline`/`intro` — `tips`/`traps`, per-component fields
 (skill `trigger`, agent `returns`/`not`, mcp `provides`/`auth`/`setup`, hook
-`why`), the full field guide is bundled at
-`${CLAUDE_SKILL_DIR}/references/entry-authoring.md` (read it before authoring
-those). The same guide is queryable from the cc-marketspec MCP without install:
-call `list_authoring_sections`, then `get_authoring_guide` for the section you
-need.
+`why`) — pull the field guide from the cc-marketspec MCP: call
+`list_authoring_sections`, then `get_authoring_guide` for the section you need.
+Prefer the MCP: it is hosted, so it returns the current guide even if the
+installed plugin is an older version, and it ships with this plugin (the
+`.mcp.json` next to this skill registers it on install — no extra setup). If the
+MCP is unreachable (offline, or the endpoint is down), fall back to the same
+guide bundled at `${CLAUDE_SKILL_DIR}/references/entry-authoring.md`. Read one or
+the other before authoring those fields.
 
 ### Step 3 — validate (--check is red)
 
@@ -125,5 +128,20 @@ user to add it to PR/MR CI if not present.
 This skill decides which step the user is on and drives it. The commands do the
 single-step work: `/cc-init` (scaffold), `/cc-check` (validate + explain),
 `/cc-generate` (write manifest). Do not re-implement their `npx` calls here —
-invoke the command. Writing the CI workflow in Step 5 is the one action no
-command covers, so do it directly by reading `${CLAUDE_SKILL_DIR}/assets/`.
+invoke the command. The cc-marketspec MCP is the knowledge source: `get_schema`
+for field meanings and `list_authoring_sections` / `get_authoring_guide` for the
+authoring guide (Step 2). It ships with this plugin via the adjacent `.mcp.json`,
+so prefer it over the bundled copy — a hosted guide stays current even against an
+older installed plugin.
+
+Do not confuse the MCP's action tools with the commands. The MCP also exposes
+`scaffold_entry` and `check_coverage`, which overlap `/cc-init` and `/cc-check`
+in purpose — but they exist for clients with no plugin installed (a bare
+Streamable-HTTP MCP connection), where the file-writing commands are unavailable.
+In this skill the plugin *is* installed, so always drive the doing-steps with the
+commands (they read and write files in the repo) and use the MCP only for
+knowledge (schema, authoring guide). Never call `scaffold_entry` / `check_coverage`
+here.
+
+Writing the CI workflow in Step 5 is the one action no
+command or MCP tool covers, so do it directly by reading `${CLAUDE_SKILL_DIR}/assets/`.
