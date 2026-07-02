@@ -50,3 +50,13 @@ test('entry.yaml stub scaffolds the main fields as commented TODOs with a guide 
 	for (const f of ['tagline', 'intro', 'group', 'tips', 'traps']) assert.match(stub, new RegExp(`# ${f}:`));
 	assert.match(stub, /list_authoring_sections|entry-authoring/);
 });
+
+test('scaffolds entry.yaml at repo root for a root-level plugin (source: "./")', () => {
+	const s = new MemoryFileSource({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'cortex', plugins: [{ name: 'cortex', source: './' }] }),
+		'.claude-plugin/plugin.json': JSON.stringify({ name: 'cortex', version: '1.0.0' })
+	});
+	const { writes } = planInit(s);
+	assert.ok('entry.yaml' in writes, 'root entry.yaml scaffolded');
+	assert.ok(!('plugins/cortex/entry.yaml' in writes), 'not scaffolded under plugins/');
+});
