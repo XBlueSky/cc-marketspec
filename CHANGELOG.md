@@ -1,3 +1,42 @@
+# [0.10.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.9.0...v0.10.0) (2026-07-02)
+
+
+### Bug Fixes
+
+* **lint:** declare Node globals for .mjs scripts ([5997699](https://github.com/XBlueSky/cc-marketspec/commit/599769959d42d2fceed0014c3f3ec047f47fd46a))
+* **site:** derived item wording 'env-var keys' to match README exactly ([da65203](https://github.com/XBlueSky/cc-marketspec/commit/da65203d633af9ab96a357aef7faa3e658b73a0a))
+* **site:** eliminate remaining mobile horizontal overflow (min-width:0 on Pipeline/MentalModel/QuickStart grid items) ([649e276](https://github.com/XBlueSky/cc-marketspec/commit/649e276668148741970367d4069517792614dfb8))
+* **site:** heading weight matches shipped Fraunces face (700); fix mobile horizontal overflow (min-width:0 on hero grid items) ([877fe13](https://github.com/XBlueSky/cc-marketspec/commit/877fe1357f1717a26cc0488fbb45bfb94ea3be89))
+* **site:** hero uses real full entry.yaml text; syntax colors promoted to global tokens ([a1648cd](https://github.com/XBlueSky/cc-marketspec/commit/a1648cd049d3a32fe3fcdde2787b02aa36c9316d))
+* **site:** mark plugin.json truncation in mental-model panel (consistency with .mcp.json) ([ab37c5b](https://github.com/XBlueSky/cc-marketspec/commit/ab37c5ba4b9e0c73cba3611932f145acac67bebc))
+* **site:** mark truncations in mental-model snippets (.mcp.json url, manifest plugin fields) ([b37e9ab](https://github.com/XBlueSky/cc-marketspec/commit/b37e9ab15d3af9b822b0740febdda1e296727c0f))
+* **site:** mental-model native filenames match README exactly (add agents/*.md, qualify paths) ([1f8ac86](https://github.com/XBlueSky/cc-marketspec/commit/1f8ac86e7956d1155b1fda0cbca875c7d0c5afd6))
+* **site:** reposition hero ambient bg to section lower-right bleed (not the awkward inter-card gap) ([b3ebed2](https://github.com/XBlueSky/cc-marketspec/commit/b3ebed27ef68371c18aeee4eac0686d6ecfce387))
+* **site:** reveal-on-scroll degrades gracefully without JS (js-ready gating) ([545285f](https://github.com/XBlueSky/cc-marketspec/commit/545285fd1de3d46a96a99b7bf89cd841c8c238c3))
+* **site:** WCAG AA contrast — deep clay (--accent-ink) for text/buttons/chips/syntax; bright clay kept for decoration ([e60513b](https://github.com/XBlueSky/cc-marketspec/commit/e60513bff51cc2813014a95f23f15005c6b95e21))
+* **site:** wrap long code/YAML lines instead of horizontal-scrolling (removes ugly scrollbars) ([4203d2b](https://github.com/XBlueSky/cc-marketspec/commit/4203d2b26dcfa44bc8158a599a937bef0ad25eb0))
+
+
+### Features
+
+* **site:** denser hero — larger headline, in/out contrast line, real 2nd tip, clay connecting flow ([fb94229](https://github.com/XBlueSky/cc-marketspec/commit/fb942292411a8181d8d8f2b14f62de7a3ee3cbde))
+* **site:** derived-fields section — what the generator derives ([ddecb79](https://github.com/XBlueSky/cc-marketspec/commit/ddecb79e0a269be7af1ec48b3d27b08b6905b243))
+* **site:** dogfood showcase — real manifest rendered, sub-components re-skinned ([15aefe9](https://github.com/XBlueSky/cc-marketspec/commit/15aefe99bc6014c587a5345b62fa4a35766b1c50))
+* **site:** hero — YAML→marketplace split, 'Ship data, not design.' ([efca56b](https://github.com/XBlueSky/cc-marketspec/commit/efca56b9ddd175d242ba06b4624d619afbcc3325))
+* **site:** light-ground Paper & Clay foundation — tokens, inlined fonts, primitives ([78687b8](https://github.com/XBlueSky/cc-marketspec/commit/78687b843d8708aa7bdd691d09447a13aa04dbf6))
+* **site:** live hero — YAML reveals line-by-line then card generates (reduced-motion + no-JS safe) ([d2e61db](https://github.com/XBlueSky/cc-marketspec/commit/d2e61db5539b4a3539e0f623ace58e7a0db19345))
+* **site:** mental-model section — native vs presentation two-layer diagram ([6cbcd69](https://github.com/XBlueSky/cc-marketspec/commit/6cbcd697e65919abcf9ac405eee7361ba57e633b))
+* **site:** mental-model shows real native→manifest code contrast (plugin.json/.mcp.json/entry.yaml) ([09aea0a](https://github.com/XBlueSky/cc-marketspec/commit/09aea0ac15dd3ba7edafa439fa546adbdf5d5f0b))
+* **site:** new author-vs-derived comparison table — the 'write little, get much' proof ([ab109a5](https://github.com/XBlueSky/cc-marketspec/commit/ab109a540a7631b2b8c5bca4cca391ef51527722))
+* **site:** page-wide staggered entrance choreography (house curve, --i stagger, reduced-motion safe) ([9969e9b](https://github.com/XBlueSky/cc-marketspec/commit/9969e9b06214de719e06565dfa91884f449bd80b))
+* **site:** pipeline section — describe → generate → manifest flow ([3e2e9b7](https://github.com/XBlueSky/cc-marketspec/commit/3e2e9b7d6b912ae758f57f71a89e3f7bd83bd05b))
+* **site:** pipeline shows real complete snippets (catalog.yaml, CLI output, manifest shape) ([b2cddb0](https://github.com/XBlueSky/cc-marketspec/commit/b2cddb013692c8245bab456a7d9b3c13d79fe24e))
+* **site:** quick-start + footer + scroll-reveal script ([006a5dd](https://github.com/XBlueSky/cc-marketspec/commit/006a5dd27d1147809078c73f3bf3b9b220bb6e5e))
+* **site:** section numbering 02–07 for rhythm; denser showcase card (resource counts, all mcp tools) ([b43e66f](https://github.com/XBlueSky/cc-marketspec/commit/b43e66fa2f356a7da4f9a17a84124e23e811debf))
+* **site:** subtle ambient decoration (hero bg, section divider, OG image) — quiet the text-dense page ([ed25809](https://github.com/XBlueSky/cc-marketspec/commit/ed25809597a58d10ab063ffeef7de38955ba4d1d))
+* **site:** v2 visual foundation — section numbers, hairlines, bg texture, on-accent token, hero scale ([b6f3682](https://github.com/XBlueSky/cc-marketspec/commit/b6f36824b1f9abf7859d4afdf03113169453c03d))
+* **site:** v3 display face → Fraunces (drop Newsreader + unused bricolage dep) ([11c9aff](https://github.com/XBlueSky/cc-marketspec/commit/11c9affe05d2e010e0c00a3f11d2d7d88f5521f4))
+
 # [0.9.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.8.0...v0.9.0) (2026-06-27)
 
 
