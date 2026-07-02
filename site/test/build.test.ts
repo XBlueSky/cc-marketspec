@@ -87,9 +87,10 @@ test('v2 renders real code contrasts and the comparison table', () => {
 
 test('v2 numbers the content sections', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-	for (const n of ['02','03','04','05','06','07']) {
+	for (const n of ['02','03','04','05','06']) {
 		assert.match(html, new RegExp(`sec-num[^>]*>\\s*${n}`), `section number ${n} present`);
 	}
+	assert.doesNotMatch(html, new RegExp(`sec-num[^>]*>\\s*07`), 'section 07 not present (Derived removed)');
 });
 
 test('v3 hero keeps real full YAML while wrapping lines for reveal', () => {

@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import MentalModel from '../components/MentalModel.astro';
 import Pipeline from '../components/Pipeline.astro';
-import Derived from '../components/Derived.astro';
 import AuthorVsDerived from '../components/AuthorVsDerived.astro';
 import Showcase from '../components/Showcase.astro';
 import QuickStart from '../components/QuickStart.astro';
@@ -12,29 +11,10 @@ import SiteFooter from '../components/SiteFooter.astro';
 <Layout title="cc-marketspec — ship data, not design" description="A headless data standard + generator for a Claude Code plugin marketplace's presentation. Ship data, not design.">
 	<Hero />
 	<MentalModel />
-	<div class="section-divider" aria-hidden="true">
-		<img src="/img/divider.png" alt="" aria-hidden="true" loading="lazy" class="divider-img" />
-	</div>
 	<Pipeline />
-	<Derived />
 	<AuthorVsDerived />
 	<Showcase />
 	<QuickStart />
 	<SiteFooter />
 	<script>import '../scripts/reveal.ts';</script>
 </Layout>
-<style>
-  .section-divider {
-    text-align: center;
-    padding-block: 0.5rem;
-    overflow: hidden;
-  }
-  .divider-img {
-    display: block;
-    max-width: min(900px, 100%);
-    width: 100%;
-    height: auto;
-    margin: 0 auto;
-    opacity: 0.5;
-  }
-</style>
