@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryFileSource } from '../src/fs-source.ts';
+import { MemoryFileSource, normalize } from '../src/fs-source.ts';
 
 const fs = new MemoryFileSource({
 	'.claude-plugin/marketplace.json': '{"name":"mk"}',
@@ -35,4 +35,11 @@ test('root is enumerable via "" and "."', () => {
 	assert.deepEqual(top, ['.claude-plugin', 'catalog.yaml', 'plugins']);
 	assert.deepEqual(fs.list('.').sort(), top);
 	assert.equal(fs.isDir('.'), true);
+});
+test('normalize maps source-field shapes to relative dirs', () => {
+	assert.equal(normalize('./'), '');
+	assert.equal(normalize('.'), '');
+	assert.equal(normalize('./plugins/foo'), 'plugins/foo');
+	assert.equal(normalize('plugins/foo/'), 'plugins/foo');
+	assert.equal(normalize('packages/bar'), 'packages/bar');
 });

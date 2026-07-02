@@ -7,11 +7,11 @@
 // Referential integrity (entry <-> on-disk components, group <-> catalog, env <->
 // .mcp.json) is enforced here — it cannot live in declarative schema.
 
-import { join, basename } from 'node:path';
+import { join } from 'node:path';
 import { Manifest } from './manifest.ts';
 import { Entry, coverageTargets } from './entry.ts';
 import { Catalog } from './catalog.ts';
-import { type FileSource, NodeFileSource } from './fs-source.ts';
+import { type FileSource, NodeFileSource, normalize } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
 import { analyzeCoverage, resolve as resolveCoverage, type CoverageConfig } from './coverage.ts';
 import { PluginJson } from './plugin-json.ts';
@@ -40,16 +40,23 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		return o;
 	};
 
-	function buildPlugin(id: string, marketEntry: Record<string, unknown>, groupIds: Set<string>, coverageCfg: CoverageConfig = {}) {
-		const dir = join(PLUGINS, id);
+	// A plugin's id is its marketplace entry name; its directory is the entry's
+	// `source` (normalized — "./" and "." mean the repo root). Missing source
+	// preserves the legacy implicit plugins/<id> convention.
+	function resolvePlugin(entry: Record<string, unknown>): { id: string; dir: string } {
+		const id = (entry.name as string) ?? '';
+		const dir = typeof entry.source === 'string' ? normalize(entry.source) : (id ? join(PLUGINS, id) : '');
+		return { id, dir };
+	}
+
+	function buildPlugin(id: string, dir: string, marketEntry: Record<string, unknown>, groupIds: Set<string>, coverageCfg: CoverageConfig = {}) {
 		const pj = readJSON(source, join(dir, '.claude-plugin', 'plugin.json'));
 		const pjParse = PluginJson.safeParse(pj);
 		if (!pjParse.success)
 			for (const i of pjParse.error.issues) err(`${id}/plugin.json: ${i.path.join('.')} ${i.message}`);
 		if (typeof pj.author === 'string')
 			err(`${id}/plugin.json: author must be an object {name, url?, email?}, not a string — Claude Code rejects string authors at install`);
-		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != directory "${id}"`);
-		if (marketEntry.name !== id) err(`${id}: marketplace entry name "${marketEntry.name}" != directory "${id}"`);
+		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != marketplace entry name "${id}" — both must be the canonical install id`);
 
 		const entry = (() => {
 			const raw = loadYaml<unknown>(source, join(dir, 'entry.yaml'));
@@ -128,7 +135,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		const hooks = nHooks.map((h) => prune({ ...h, why: eHooks.find((e) => hookMatches(e, h))?.why }));
 
 		const facts = { plugin: pj, skills: nSkills, commands: nCmds, agents: nAgents, mcp: nMcp, hooks: nHooks };
-		const cov = analyzeCoverage(facts, entry, coverageCfg, id);
+		const cov = analyzeCoverage(facts, entry, coverageCfg, id, join(dir, 'entry.yaml'));
 		for (const f of cov.findings) (f.severity === 'error' ? err : warn)(f.message);
 
 		const author = pj.author
@@ -196,10 +203,15 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 
 	const plugins = ((market.plugins as Record<string, unknown>[]) ?? [])
 		.map((e) => {
-			const id = (typeof e.source === 'string' ? basename(e.source as string) : (e.name as string)) as string;
-			if (!source.exists(join(PLUGINS, id, '.claude-plugin', 'plugin.json'))) return null;
+			const { id, dir } = resolvePlugin(e);
+			if (!id) {
+				const src = typeof e.source === 'string' ? ` (source: "${e.source}")` : '';
+				err(`marketplace entry missing "name"${src}`);
+				return null;
+			}
+			if (!source.exists(join(dir, '.claude-plugin', 'plugin.json'))) return null;
 			try {
-				return buildPlugin(id, e, groupIds, coverageCfg);
+				return buildPlugin(id, dir, e, groupIds, coverageCfg);
 			} catch (ex) {
 				err(`${id}: failed to process — ${ex instanceof Error ? ex.message : String(ex)}`);
 				return null;

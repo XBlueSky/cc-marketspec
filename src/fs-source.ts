@@ -12,7 +12,7 @@ export interface FileSource {
 	list(path: string): string[]; // child entry names if path is a dir, else []
 }
 
-function normalize(p: string): string {
+export function normalize(p: string): string {
 	return p.replace(/^\.?\/+|^\.$/, '').replace(/\/+$/, '').replace(/\/{2,}/g, '/');
 }
 

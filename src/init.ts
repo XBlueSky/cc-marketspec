@@ -1,7 +1,8 @@
 // Detection-based, non-destructive scaffold. Pure over a FileSource: decides what
 // to create vs skip and returns the writes for the CLI to flush to disk.
-import { join, basename } from 'node:path';
+import { join } from 'node:path';
 import type { FileSource } from './fs-source.ts';
+import { normalize } from './fs-source.ts';
 import { readJSON } from './native.ts';
 
 export interface InitAction { path: string; status: 'created' | 'skipped'; reason?: string }
@@ -65,12 +66,13 @@ export function planInit(source: FileSource): {
 		// no marketplace.json — nothing to scaffold per-plugin; catalog + CI snippet still useful
 	}
 	for (const e of market.plugins ?? []) {
-		const id = e.source ? basename(e.source) : (e.name ?? '');
+		const id = e.name ?? '';
 		if (!id) continue;
-		const p = join('plugins', id, 'entry.yaml');
+		const dir = typeof e.source === 'string' ? normalize(e.source) : join('plugins', id);
+		const p = join(dir, 'entry.yaml');
 		if (source.exists(p)) {
 			actions.push({ path: p, status: 'skipped', reason: 'already exists' });
-		} else if (source.exists(join('plugins', id, '.claude-plugin', 'plugin.json'))) {
+		} else if (source.exists(join(dir, '.claude-plugin', 'plugin.json'))) {
 			writes[p] = entryTemplate(id);
 			actions.push({ path: p, status: 'created' });
 		}
