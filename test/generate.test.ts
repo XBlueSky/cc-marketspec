@@ -144,3 +144,51 @@ test('missing optional fields do NOT produce shape errors (only shape, not prese
 	});
 	assert.equal(errors.filter((e) => e.includes('plugin.json:')).length, 0, errors.join(' | '));
 });
+
+// ---- arbitrary plugin source (root-level & non-plugins/ layouts) -----------
+
+test('resolves a root-level plugin (source: "./") and derives its components', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'cortex', source: './' }),
+		'.claude-plugin/plugin.json': plugin({ name: 'cortex', version: '1.0.0' }),
+		'skills/using-cortex/SKILL.md': '---\nname: using-cortex\ndescription: use it\n---\nbody',
+		'commands/distill.md': '---\nname: distill\ndescription: Distill notes.\n---\nbody',
+		'hooks/hooks.json': JSON.stringify({ hooks: { SessionStart: [{ matcher: 'startup' }] } })
+	});
+	assert.deepEqual(errors, []);
+	const plugins = (manifest as { plugins: { id: string; skills: unknown[]; commands: unknown[]; hooks: unknown[] }[] }).plugins;
+	assert.equal(plugins.length, 1);
+	assert.equal(plugins[0].id, 'cortex');
+	assert.equal(plugins[0].skills.length, 1);
+	assert.equal(plugins[0].commands.length, 1);
+	assert.equal(plugins[0].hooks.length, 1);
+});
+
+test('resolves a plugin at an arbitrary non-plugins/ path', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'bar', source: 'packages/bar' }),
+		'packages/bar/.claude-plugin/plugin.json': plugin({ name: 'bar', version: '2.0.0' })
+	});
+	assert.deepEqual(errors, []);
+	const plugins = (manifest as { plugins: { id: string; version: string }[] }).plugins;
+	assert.equal(plugins.length, 1);
+	assert.equal(plugins[0].id, 'bar');
+	assert.equal(plugins[0].version, '2.0.0');
+});
+
+test('an entry with no source falls back to plugins/<name> (back-compat)', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'legacy' }),
+		'plugins/legacy/.claude-plugin/plugin.json': plugin({ name: 'legacy', version: '1.0.0' })
+	});
+	assert.deepEqual(errors, []);
+	assert.equal((manifest as { plugins: { id: string }[] }).plugins[0].id, 'legacy');
+});
+
+test('plugin.json name mismatching the marketplace entry name is an error', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'cortex', source: './' }),
+		'.claude-plugin/plugin.json': plugin({ name: 'not-cortex', version: '1.0.0' })
+	});
+	assert.equal(errors.some((e) => /name/.test(e) && /cortex/.test(e)), true, `expected a name-mismatch error, got: ${JSON.stringify(errors)}`);
+});
