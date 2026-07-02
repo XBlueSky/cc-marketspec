@@ -135,7 +135,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		const hooks = nHooks.map((h) => prune({ ...h, why: eHooks.find((e) => hookMatches(e, h))?.why }));
 
 		const facts = { plugin: pj, skills: nSkills, commands: nCmds, agents: nAgents, mcp: nMcp, hooks: nHooks };
-		const cov = analyzeCoverage(facts, entry, coverageCfg, id);
+		const cov = analyzeCoverage(facts, entry, coverageCfg, id, join(dir, 'entry.yaml'));
 		for (const f of cov.findings) (f.severity === 'error' ? err : warn)(f.message);
 
 		const author = pj.author

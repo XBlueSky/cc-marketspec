@@ -104,3 +104,20 @@ test('message for a top-level plugin field says "at the top level", not "under t
 	assert.match(tagline.message, /add "tagline:" at the top level/, 'top-level wording');
 	assert.doesNotMatch(tagline.message, /under the plugins entry/, 'must not pluralize plugin');
 });
+
+test('finding message uses the provided entryPath (root-level plugin)', () => {
+	const f = { plugin: {}, skills: [{ name: 'using-cortex', autoload: false }], commands: [], agents: [], mcp: [], hooks: [] };
+	const r = analyzeCoverage(f, null, {}, 'cortex', 'entry.yaml');
+	const finding = r.findings.find((x) => x.ruleId === 'skill.trigger');
+	assert.ok(finding, 'a skill.trigger finding exists');
+	assert.match(finding.message, /^entry\.yaml:/, 'message names the real root entry.yaml path');
+	assert.doesNotMatch(finding.message, /plugins\/cortex/, 'must not point at a non-existent plugins/cortex path');
+});
+
+test('finding message falls back to plugins/<id>/entry.yaml when no entryPath given', () => {
+	const f = { plugin: {}, skills: [{ name: 's', autoload: false }], commands: [], agents: [], mcp: [], hooks: [] };
+	const r = analyzeCoverage(f, null, {}, 'myplugin');
+	const finding = r.findings.find((x) => x.ruleId === 'skill.trigger');
+	assert.ok(finding);
+	assert.match(finding.message, /^plugins\/myplugin\/entry\.yaml:/, 'unchanged fallback for 4-arg callers');
+});

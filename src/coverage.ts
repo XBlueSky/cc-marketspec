@@ -102,10 +102,12 @@ export function analyzeCoverage(
 	facts: NativeFacts,
 	entry: Entry | null,
 	config: CoverageConfig,
-	pluginId: string
+	pluginId: string,
+	entryPath?: string
 ): CoverageReport {
 	const findings: CoverageFinding[] = [];
 	const summary = { error: 0, warn: 0, off: 0 };
+	const path = entryPath ?? `plugins/${pluginId}/entry.yaml`;
 	for (const rule of RULES) {
 		const severity = resolve(rule.id, rule.defaultSeverity, config);
 		const hits = rule.scan(facts, entry);
@@ -120,7 +122,7 @@ export function analyzeCoverage(
 				severity,
 				pluginId,
 				component,
-				message: `plugins/${pluginId}/entry.yaml: ${rule.id} — "${component}" has no authored value (${howToFix(rule.id)})`
+				message: `${path}: ${rule.id} — "${component}" has no authored value (${howToFix(rule.id)})`
 			});
 			summary[severity] += 1;
 		}
