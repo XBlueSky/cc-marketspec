@@ -1,3 +1,17 @@
+# [0.11.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.10.0...v0.11.0) (2026-07-02)
+
+
+### Bug Fixes
+
+* **coverage:** point warnings at the plugin's real entry.yaml path (root-level plugins) ([9489b89](https://github.com/XBlueSky/cc-marketspec/commit/9489b896227d61880212f0fe62ed2767733b576a))
+* **generate:** report nameless marketplace entries instead of crashing or silently dropping ([9bee882](https://github.com/XBlueSky/cc-marketspec/commit/9bee882a8d84e585ecbaf8a8091a3f880b5f8a3c))
+
+
+### Features
+
+* **generate:** resolve plugin dir from marketplace source (root-level & arbitrary paths) ([3655b9d](https://github.com/XBlueSky/cc-marketspec/commit/3655b9d5fcefff6758a9f44b4565577b94fba863))
+* **init:** scaffold entry.yaml at the resolved plugin dir (supports root-level plugins) ([6120ae1](https://github.com/XBlueSky/cc-marketspec/commit/6120ae1b46f53f8d4323c4d881af6c2fac28844e))
+
 # [0.10.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.9.0...v0.10.0) (2026-07-02)
 
 
