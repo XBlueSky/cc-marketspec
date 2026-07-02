@@ -35,23 +35,24 @@
 </section>
 <style>
   .hero { display:grid; grid-template-columns:1.05fr 1fr; gap:2.5rem; align-items:center; position:relative; }
-  /* Ambient hero-bg: sits in the right column, very pale, purely decorative */
-  .hero-visual { position:relative; }
-  .hero-visual::before {
+  .hero > * { min-width:0; position:relative; z-index:1; }
+  /* Ambient hero-bg: a large, pale clay-contour wash bleeding off the section's
+     lower-right — sits behind the whole hero, never under the headline. */
+  .hero-wrap { position:relative; overflow:hidden; }
+  .hero-wrap::after {
     content:'';
     position:absolute;
-    inset:0;
+    right:0; bottom:0;
+    width:60%; height:90%;
     background-image: url('/img/hero-bg.jpg');
-    background-position: right center;
+    background-position: bottom right;
     background-repeat: no-repeat;
-    background-size: cover;
-    opacity: 0.55;
+    background-size: contain;
+    opacity: 0.35;
     pointer-events: none;
-    z-index: -1;
-    border-radius: 12px;
+    z-index: 0;
   }
-  @media (max-width:820px) { .hero-visual::before { display:none; } }
-  .hero > * { min-width:0; }
+  @media (max-width:820px) { .hero-wrap::after { display:none; } }
   .hero-h1 { font-size:var(--hero-size); margin:1.2rem 0 1rem; }
   .hero-h1 em { font-style:italic; color:var(--accent); /* large display text — AA-large passes at 4.05; bright clay kept for brand vibrancy */ }
   .hero-lede { color:var(--muted); font-size:1.05rem; max-width:46ch; margin:0 0 1.8rem; }
