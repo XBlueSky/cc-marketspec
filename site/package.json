@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "npm run build --prefix .. && node ../dist/cli.js ..",
+    "fonts:inline": "node scripts/gen-fonts.mjs",
+    "generate": "npm run fonts:inline && npm run build --prefix .. && node ../dist/cli.js ..",
     "dev": "npm run generate && astro dev",
     "build": "npm run generate && astro build",
     "preview": "astro preview"
   },
   "dependencies": {
     "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@fontsource/fraunces": "^5.2.9",
+    "@fontsource/geist-mono": "^5.2.8",
+    "@fontsource/geist-sans": "^5.2.5"
   }
 }

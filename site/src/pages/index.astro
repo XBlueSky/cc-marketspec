@@ -1,21 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PluginCard from '../components/PluginCard.astro';
-import ComponentList from '../components/ComponentList.astro';
-import TipsTraps from '../components/TipsTraps.astro';
-import manifest from '../../../manifest.json';
-
-type AnyItem = { name: string; trigger?: string; summary?: string; description?: string; provides?: string[] };
-const line = (it: AnyItem) => it.trigger ?? it.summary ?? it.description;
+import Hero from '../components/Hero.astro';
+import MentalModel from '../components/MentalModel.astro';
+import Pipeline from '../components/Pipeline.astro';
+import AuthorVsDerived from '../components/AuthorVsDerived.astro';
+import Showcase from '../components/Showcase.astro';
+import QuickStart from '../components/QuickStart.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 ---
-<Layout title={manifest.marketplace.name} owner={manifest.marketplace.owner}>
-	{manifest.plugins.map((plugin) => (
-		<PluginCard plugin={plugin}>
-			<ComponentList title="Skills" items={(plugin.skills ?? []).map((s) => ({ name: s.name, line: line(s) }))} />
-			<ComponentList title="Commands" items={(plugin.commands ?? []).map((c) => ({ name: c.name, line: line(c) }))} />
-			<ComponentList title="Agents" items={(plugin.agents ?? []).map((a) => ({ name: a.name, line: line(a) }))} />
-			<ComponentList title="MCP" items={(plugin.mcp ?? []).map((m) => ({ name: m.name, line: m.description, sub: m.provides }))} />
-			<TipsTraps tips={plugin.tips} traps={plugin.traps} />
-		</PluginCard>
-	))}
+<Layout title="cc-marketspec — ship data, not design" description="A headless data standard + generator for a Claude Code plugin marketplace's presentation. Ship data, not design.">
+	<Hero />
+	<MentalModel />
+	<Pipeline />
+	<AuthorVsDerived />
+	<Showcase />
+	<QuickStart />
+	<SiteFooter />
+	<script>import '../scripts/reveal.ts';</script>
 </Layout>

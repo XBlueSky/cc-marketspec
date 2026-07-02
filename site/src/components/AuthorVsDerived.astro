@@ -1,0 +1,54 @@
+---
+// The core "write little, get much" proof, as a real two-column table.
+// Left = authored (no native source); right = derived (native already encodes it).
+// Content from README "What you author" and "What the generator derives".
+const authored = [
+  'description / tagline / intro',
+  'agent returns / not',
+  'mcp provides / install / auth / setup',
+  'examples',
+  'hook why',
+  'configuration (.local.md settings)',
+  'tips / traps',
+];
+const derived = [
+  'skill autoload badge · resource counts',
+  'command argument table · summary',
+  'agent tools · summary',
+  'mcp transport · env-var keys',
+  'hook event / matcher',
+  'plugin identity (name/version/author/license/keywords/deps)',
+  'plugin category',
+];
+---
+<section class="section avd">
+  <div class="wrap">
+    <span class="sec-num">04</span>
+    <span class="eyebrow">Write little, get much</span>
+    <h2 class="avd-h2">You author the left. The generator fills the right.</h2>
+    <div class="avd-grid reveal">
+      <div class="avd-col avd-author reveal" style="--i:0">
+        <h3 class="avd-cap">You author <span>— no native source</span></h3>
+        <ul>{authored.map((x) => <li>{x}</li>)}</ul>
+      </div>
+      <div class="avd-col avd-derived reveal" style="--i:1">
+        <h3 class="avd-cap">Derived for you <span>— native already encodes it</span></h3>
+        <ul>{derived.map((x) => <li>{x}</li>)}</ul>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+  .avd-h2 { font-size:clamp(1.8rem,4vw,2.6rem); margin:1rem 0 2rem; max-width:20ch; }
+  .avd-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .avd-col { padding:1.6rem 1.8rem; }
+  .avd-author { background:var(--surface); border-right:1px solid var(--border); }
+  .avd-derived { background:var(--code-chip); }
+  .avd-cap { font-family:var(--sans); font-weight:600; font-size:.95rem; margin:0 0 1rem; }
+  .avd-cap span { color:var(--muted); font-weight:400; font-size:.82rem; }
+  .avd-derived .avd-cap { color:var(--accent-ink); }
+  .avd-col ul { list-style:none; padding:0; margin:0; }
+  .avd-col li { padding:.55rem 0; border-top:1px solid var(--border); font-size:.9rem; line-height:1.4; }
+  .avd-derived li { color:var(--fg); }
+  @media (max-width:760px){ .avd-grid { grid-template-columns:1fr; } .avd-author { border-right:0; border-bottom:1px solid var(--border); } }
+</style>

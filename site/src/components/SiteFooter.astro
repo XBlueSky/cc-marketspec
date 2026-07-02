@@ -1,0 +1,22 @@
+---
+const links = [
+  ['GitHub', 'https://github.com/XBlueSky/cc-marketspec'],
+  ['npm', 'https://www.npmjs.com/package/@xbluesky/cc-marketspec'],
+  ['Hosted MCP', 'https://cc-marketspec-mcp.xbluesky.workers.dev'],
+  ['MIT License', 'https://github.com/XBlueSky/cc-marketspec/blob/main/LICENSE'],
+];
+---
+<footer class="site-footer">
+  <div class="wrap sf">
+    <span class="sf-brand">cc-marketspec</span>
+    <nav class="sf-links">{links.map(([t, h]) => <a href={h}>{t}</a>)}</nav>
+  </div>
+</footer>
+<style>
+  .site-footer { border-top:1px solid var(--border); padding-block:2.5rem; }
+  .sf { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+  .sf-brand { font-family:var(--serif); font-size:1.1rem; }
+  .sf-links { display:flex; gap:1.2rem; flex-wrap:wrap; }
+  .sf-links a { color:var(--muted); font-size:.85rem; text-decoration:none; }
+  .sf-links a:hover { color:var(--accent-ink); }
+</style>

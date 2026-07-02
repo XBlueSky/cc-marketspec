@@ -1,0 +1,34 @@
+---
+// Copyable commands, sourced from README Install/Usage/CI.
+const blocks = [
+  { label:'Install', cmd:'npm install -D @xbluesky/cc-marketspec' },
+  { label:'Scaffold', cmd:'npx @xbluesky/cc-marketspec init' },
+  { label:'Generate', cmd:'npx @xbluesky/cc-marketspec' },
+  { label:'CI gate (validate only)', cmd:'npx @xbluesky/cc-marketspec --check' },
+];
+---
+<section id="quick-start" class="section qs">
+  <div class="wrap">
+    <span class="sec-num">06</span>
+    <span class="eyebrow">Quick start</span>
+    <h2 class="qs-h2">Run it in your marketplace repo.</h2>
+    <div class="qs-blocks">
+      {blocks.map((b, i) => (
+        <div class="qs-block reveal" style={`--i:${i}`}>
+          <span class="qs-label">{b.label}</span>
+          <pre class="qs-cmd"><code>{b.cmd}</code></pre>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+<style>
+  .qs-h2 { font-size:clamp(1.8rem,4vw,2.6rem); margin:1rem 0 2rem; }
+  .qs-blocks { display:grid; gap:1rem; max-width:640px; }
+  .qs-block { min-width:0; }
+  .qs-label { font-family:var(--mono); font-size:.72rem; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--muted); }
+  .qs-cmd { margin:.4rem 0 0; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:.8rem 1rem; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+  .qs-cmd code { font-family:var(--mono); font-size:.82rem; color:var(--fg); }
+</style>

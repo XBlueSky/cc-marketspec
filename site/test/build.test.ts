@@ -40,3 +40,70 @@ test('rendered HTML shows tips (incl. object-form href/label) and traps', () => 
 	assert.match(html, /Hosted MCP/, 'an object-form tip label appears');
 	assert.match(html, /never restates native facts/, 'a trap appears');
 });
+
+test('build inlines fonts as data-URI (no font CDN)', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
+	assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
+});
+test('display face is Fraunces, not Newsreader', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /Fraunces/, 'Fraunces face present');
+	assert.doesNotMatch(html, /Newsreader/, 'Newsreader fully removed');
+});
+test('page uses the light-ground clay palette', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /#FBFAF8/i, 'paper ground token present');
+	assert.match(html, /#C15F3C/i, 'clay accent token present');
+});
+test('page renders all landing sections in order', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	for (const anchor of ['Ship', 'not design', 'presentation never restates',
+		'no design decisions', 'native already encodes', 'This section is the product',
+		'Run it in your marketplace repo']) {
+		assert.match(html, new RegExp(anchor), `section marker "${anchor}" present`);
+	}
+});
+test('page keeps the dogfood showcase manifest-driven', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /marketplace-flow/, 'skill from manifest renders in showcase');
+	assert.match(html, /get_schema/, 'mcp tool from manifest renders in showcase');
+});
+
+test('v2 adds section-number, hairline, and background texture primitives', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /--on-accent/, 'on-accent token defined');
+	assert.match(html, /bg-texture/, 'background texture layer present');
+	assert.match(html, /sec-num/, 'section-number primitive present');
+});
+
+test('v2 renders real code contrasts and the comparison table', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /mcpServers/, 'real native .mcp.json snippet present');
+	assert.match(html, /wrote manifest\.json/, 'real CLI output present in pipeline');
+	assert.match(html, /You author the left/, 'author-vs-derived table present');
+	assert.match(html, /native already encodes it/, 'derived column present');
+});
+
+test('v2 numbers the content sections', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	for (const n of ['02','03','04','05','06']) {
+		assert.match(html, new RegExp(`sec-num[^>]*>\\s*${n}`), `section number ${n} present`);
+	}
+	assert.doesNotMatch(html, new RegExp(`sec-num[^>]*>\\s*07`), 'section 07 not present (Derived removed)');
+});
+
+test('v3 hero keeps real full YAML while wrapping lines for reveal', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /yline/, 'YAML lines wrapped for staged reveal');
+	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
+	assert.match(html, /hosted-mcp-server/, 'real second tip href intact');
+});
+
+test('ambient decoration: og:image and twitter:card meta tags present', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /og:image/, 'og:image meta tag present');
+	assert.match(html, /\/img\/og\.jpg/, 'og:image points to og.jpg');
+	assert.match(html, /twitter:card/, 'twitter:card meta tag present');
+	assert.match(html, /summary_large_image/, 'twitter card type is summary_large_image');
+});

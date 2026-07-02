@@ -1,0 +1,75 @@
+---
+// Hero: the core sell as one picture — real entry.yaml on the left,
+// a real rendered plugin card on the right. YAML text mirrors the repo's
+// plugins/cc-marketspec/entry.yaml so the page never ships fake data.
+---
+<section class="section">
+  <div class="wrap hero">
+    <div class="hero-copy reveal">
+      <span class="eyebrow">Marketplace as data</span>
+      <h1 class="hero-h1">Ship <em>data</em>,<br>not design.</h1>
+      <p class="hero-lede">Describe your marketplace as a little YAML. cc-marketspec
+        joins it with your native plugin manifests and emits one render-agnostic
+        <span class="codechip">manifest.json</span>.</p>
+      <p class="hero-contrast"><span>~8 lines of YAML</span> in, <span>a full marketplace manifest</span> out.</p>
+      <div class="hero-cta">
+        <a class="btn-primary" href="#quick-start">npx @xbluesky/cc-marketspec</a>
+        <a class="btn-ghost" href="#mental-model">Read the mental model →</a>
+      </div>
+    </div>
+    <div class="hero-visual reveal">
+      <figure class="yamlcard">
+        <figcaption class="bar"><i></i><i></i><i></i><span>entry.yaml</span></figcaption>
+        <pre><code><span class="yline" style="--i:0"><span class="c"># presentation overlay — never restates native</span></span><span class="yline" style="--i:1"><span class="k">group</span><span class="p">:</span> <span class="s">tools</span></span><span class="yline" style="--i:2"><span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator for a Claude Code marketplace&#39;s presentation</span></span><span class="yline" style="--i:3"><span class="k">tips</span><span class="p">:</span></span><span class="yline" style="--i:4">  <span class="p">-</span> <span class="s">This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.</span></span><span class="yline" style="--i:5">  <span class="p">-</span> <span class="k">text</span><span class="p">:</span> <span class="s">Ask the hosted MCP for field help without installing anything.</span></span><span class="yline" style="--i:6">    <span class="k">href</span><span class="p">:</span> <span class="s">https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server</span></span></code></pre>
+      </figure>
+      <p class="arrow hero-gen" aria-hidden="true">↓ generated manifest.json ↓</p>
+      <div class="minicard hero-gen">
+        <h3>cc-marketspec</h3>
+        <p class="minicard-tag">Headless data standard + generator for a marketplace's presentation</p>
+        <div class="minicard-chips"><b>1 skill</b><b>3 commands</b><b>1 mcp</b></div>
+        <p class="minicard-row"><code>/cc-generate</code> Generate manifest.json from your data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+  .hero { display:grid; grid-template-columns:1.05fr 1fr; gap:2.5rem; align-items:center; }
+  .hero > * { min-width:0; }
+  .hero-h1 { font-size:var(--hero-size); margin:1.2rem 0 1rem; }
+  .hero-h1 em { font-style:italic; color:var(--accent); /* large display text — AA-large passes at 4.05; bright clay kept for brand vibrancy */ }
+  .hero-lede { color:var(--muted); font-size:1.05rem; max-width:46ch; margin:0 0 1.8rem; }
+  .hero-contrast { font-family:var(--mono); font-size:.8rem; color:var(--muted); margin:0 0 1.6rem; }
+  .hero-contrast span { color:var(--accent-ink); }
+  .hero-cta { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+  .yamlcard { margin:0; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(34,30,26,.03); }
+  .bar { display:flex; gap:.4rem; align-items:center; padding:.6rem .8rem; border-bottom:1px solid var(--border); }
+  .bar i { width:9px; height:9px; border-radius:999px; background:var(--border); }
+  .bar span { margin-left:.5rem; font-family:var(--mono); font-size:.7rem; color:var(--muted); }
+  pre { margin:0; padding:.9rem 1rem; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+  code { font-family:var(--mono); font-size:.74rem; line-height:1.7; }
+  .k{color:var(--accent-ink);} .s{color:var(--syntax-string);} .c{color:var(--syntax-comment);} .p{color:var(--syntax-punct);}
+  .arrow { position:relative; text-align:center; font-family:var(--mono); font-size:.7rem; color:var(--muted); margin:1.1rem 0; }
+  .arrow::before { content:''; position:absolute; left:50%; top:-1.1rem; width:2px; height:1.1rem; background:var(--accent); opacity:.4; transform:translateX(-50%); }
+  .arrow::after { content:''; position:absolute; left:50%; bottom:-1.1rem; width:2px; height:1.1rem; background:var(--accent); opacity:.4; transform:translateX(-50%); }
+  .minicard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.1rem 1.2rem; }
+  .minicard h3 { font-size:1.15rem; }
+  .minicard-tag { color:var(--muted); font-size:.85rem; margin:.2rem 0 .8rem; }
+  .minicard-chips { display:flex; gap:.35rem; margin-bottom:.6rem; }
+  .minicard-chips b { font-family:var(--mono); font-size:.68rem; font-weight:500;
+    background:var(--code-chip); color:var(--accent-ink); border-radius:5px; padding:.2rem .5rem; }
+  .minicard-row { font-size:.82rem; color:var(--muted); margin:0; }
+  .minicard-row code { font-family:var(--mono); font-size:.78rem; color:var(--accent-ink); }
+  @media (max-width:820px){ .hero { grid-template-columns:1fr; gap:2rem; } }
+
+  /* Hero live-reveal: gate hidden state behind .js-ready so no-JS sees everything */
+  /* Use :global() so these rules target the document root (.js-ready on <html>), not scoped elements */
+  :global(.yline) { display:block; }
+  :global(.js-ready) .yline { opacity:0; transform:translateY(6px); }
+  :global(.js-ready) .hero-live .yline.in { opacity:1; transform:none; transition:opacity .45s cubic-bezier(.16,1,.3,1), transform .45s cubic-bezier(.16,1,.3,1); transition-delay:calc(var(--i) * 140ms); }
+  :global(.js-ready) .hero-gen { opacity:0; transform:translateY(10px); }
+  :global(.js-ready) .hero-live .hero-gen.in { opacity:1; transform:none; transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js-ready) .yline, :global(.js-ready) .hero-gen { opacity:1; transform:none; transition:none; }
+  }
+</style>

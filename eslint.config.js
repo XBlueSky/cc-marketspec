@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import globals from 'globals';
 
 export default tseslint.config(
 	{ ignores: ['dist/**', 'node_modules/**', 'schemas/**', 'coverage/**', 'src/schemas.generated.ts'] },
@@ -10,6 +11,12 @@ export default tseslint.config(
 			// The generator reads untyped JSON/YAML; explicit casts are intentional.
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+		}
+	},
+	{
+		files: ['**/*.mjs'],
+		languageOptions: {
+			globals: globals.node
 		}
 	}
 );
