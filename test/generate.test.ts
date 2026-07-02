@@ -192,3 +192,21 @@ test('plugin.json name mismatching the marketplace entry name is an error', () =
 	});
 	assert.equal(errors.some((e) => /name/.test(e) && /cortex/.test(e)), true, `expected a name-mismatch error, got: ${JSON.stringify(errors)}`);
 });
+
+test('a nameless+sourceless entry yields an error, not an uncaught throw', () => {
+	let result: { errors: string[]; manifest: unknown } | undefined;
+	assert.doesNotThrow(() => {
+		result = run({
+			'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [{}] })
+		});
+	}, 'generateManifest must not throw on a {} entry');
+	assert.ok(result!.errors.some((e) => /missing "name"/.test(e)), `expected a missing-name error, got: ${JSON.stringify(result!.errors)}`);
+});
+
+test('an entry with source but no name is reported, not silently dropped', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [{ source: './plugins/foo' }] }),
+		'plugins/foo/.claude-plugin/plugin.json': plugin({ name: 'foo', version: '1.0.0' })
+	});
+	assert.ok(errors.some((e) => /missing "name"/.test(e) && /plugins\/foo/.test(e)), `expected a missing-name error naming the source, got: ${JSON.stringify(errors)}`);
+});

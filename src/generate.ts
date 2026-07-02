@@ -44,8 +44,8 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 	// `source` (normalized — "./" and "." mean the repo root). Missing source
 	// preserves the legacy implicit plugins/<id> convention.
 	function resolvePlugin(entry: Record<string, unknown>): { id: string; dir: string } {
-		const id = entry.name as string;
-		const dir = typeof entry.source === 'string' ? normalize(entry.source) : join(PLUGINS, id);
+		const id = (entry.name as string) ?? '';
+		const dir = typeof entry.source === 'string' ? normalize(entry.source) : (id ? join(PLUGINS, id) : '');
 		return { id, dir };
 	}
 
@@ -204,7 +204,12 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 	const plugins = ((market.plugins as Record<string, unknown>[]) ?? [])
 		.map((e) => {
 			const { id, dir } = resolvePlugin(e);
-			if (!id || !source.exists(join(dir, '.claude-plugin', 'plugin.json'))) return null;
+			if (!id) {
+				const src = typeof e.source === 'string' ? ` (source: "${e.source}")` : '';
+				err(`marketplace entry missing "name"${src}`);
+				return null;
+			}
+			if (!source.exists(join(dir, '.claude-plugin', 'plugin.json'))) return null;
 			try {
 				return buildPlugin(id, dir, e, groupIds, coverageCfg);
 			} catch (ex) {
