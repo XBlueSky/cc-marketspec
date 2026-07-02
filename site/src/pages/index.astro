@@ -12,6 +12,9 @@ import SiteFooter from '../components/SiteFooter.astro';
 <Layout title="cc-marketspec — ship data, not design" description="A headless data standard + generator for a Claude Code plugin marketplace's presentation. Ship data, not design.">
 	<Hero />
 	<MentalModel />
+	<div class="section-divider" aria-hidden="true">
+		<img src="/img/divider.png" alt="" aria-hidden="true" loading="lazy" class="divider-img" />
+	</div>
 	<Pipeline />
 	<Derived />
 	<AuthorVsDerived />
@@ -20,3 +23,18 @@ import SiteFooter from '../components/SiteFooter.astro';
 	<SiteFooter />
 	<script>import '../scripts/reveal.ts';</script>
 </Layout>
+<style>
+  .section-divider {
+    text-align: center;
+    padding-block: 0.5rem;
+    overflow: hidden;
+  }
+  .divider-img {
+    display: block;
+    max-width: min(900px, 100%);
+    width: 100%;
+    height: auto;
+    margin: 0 auto;
+    opacity: 0.5;
+  }
+</style>

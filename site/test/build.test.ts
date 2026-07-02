@@ -98,3 +98,11 @@ test('v3 hero keeps real full YAML while wrapping lines for reveal', () => {
 	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
 	assert.match(html, /hosted-mcp-server/, 'real second tip href intact');
 });
+
+test('ambient decoration: og:image and twitter:card meta tags present', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /og:image/, 'og:image meta tag present');
+	assert.match(html, /\/img\/og\.jpg/, 'og:image points to og.jpg');
+	assert.match(html, /twitter:card/, 'twitter:card meta tag present');
+	assert.match(html, /summary_large_image/, 'twitter card type is summary_large_image');
+});
