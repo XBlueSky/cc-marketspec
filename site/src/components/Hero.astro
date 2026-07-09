@@ -6,7 +6,8 @@
 // YAML text mirrors plugins/cc-marketspec/entry.yaml so the page never ships
 // fake data.
 ---
-<section id="hero" class="section">
+<section id="hero" class="section hero-sec">
+  <div class="hero-aurora" aria-hidden="true"></div>
   <div class="wrap hero">
     <div class="hero-copy reveal">
       <span class="eyebrow">The live run</span>
@@ -36,6 +37,15 @@
   </div>
 </section>
 <style>
+  /* Optional AI-backdrop slot: /img/hero-aurora.png (see public/img/README.md).
+     CSS background-image 404s silently, so the page is identical without it.
+     Anchored right, behind the opaque .term/.minicard panels — body text on the
+     left never sits on the image, so the AA table is unaffected. */
+  .hero-sec { position:relative; overflow:hidden; }
+  .hero-aurora { position:absolute; top:-10%; right:0; width:60%; height:120%;
+    background:url('/img/hero-aurora.png') right center / cover no-repeat;
+    opacity:.5; pointer-events:none; }
+  .hero-sec .wrap { position:relative; z-index:1; }
   .hero { display:grid; grid-template-columns:1.05fr 1fr; gap:2.5rem; align-items:center; }
   .hero > * { min-width:0; }
   .hero-h1 { font-size:var(--hero-size); margin:1.2rem 0 1rem; }

@@ -12,6 +12,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
     <p class="mm-lede">cc-marketspec adds only what native can't express — and the rule is strict:
       <strong>presentation never restates native facts.</strong></p>
     <div class="mm-merge reveal" aria-hidden="true">
+      <div class="mm-nebula"></div>
       <svg viewBox="0 0 640 150" preserveAspectRatio="xMidYMid meet" role="presentation">
         <path class="mm-stream" d="M20,25 C 280,25 360,75 620,75" />
         <path class="mm-stream mm-stream-pres" d="M20,125 C 280,125 360,75 620,75" />
@@ -67,6 +68,16 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
   .mm-lede { color:var(--muted); max-width:60ch; margin:0 0 2.2rem; }
   .mm-lede strong { color:var(--fg); }
   .mm-merge { position:relative; margin:0 0 2rem; }
+  /* Optional AI-glow slot: /img/merge-nebula.png (see public/img/README.md).
+     Silent 404 fallback; svg is position:relative so the crisp strokes always
+     paint above the raster glow. Desktop-only — hidden at the stacked layout. */
+  .mm-nebula { position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width:min(420px,55%); height:220%;
+    background:url('/img/merge-nebula.png') center / contain no-repeat;
+    opacity:.7; pointer-events:none; }
+  .mm-merge svg { position:relative; }
+  .mm-stream-label { text-shadow:0 0 6px rgba(10,14,20,.9), 0 0 12px rgba(10,14,20,.7); }
+  @media (max-width:820px){ .mm-nebula { display:none; } }
   .mm-merge svg { display:block; width:100%; height:auto; }
   .mm-stream { fill:none; stroke:var(--accent-ink); stroke-width:2; stroke-dasharray:6 7; }
   .mm-stream-pres { stroke:var(--accent); }
