@@ -9,15 +9,18 @@ const steps = [
 <section id="how" class="section how">
   <div class="wrap">
     <span class="sec-num">03</span>
-    <span class="eyebrow">How it works</span>
+    <span class="eyebrow">The trace</span>
     <h2 class="how-h2">Three steps, no design decisions.</h2>
     <ol class="how-flow">
       {steps.map((s, i) => (
         <li class="how-step reveal" style={`--i:${i}`}>
-          <span class="how-n">{s.n}</span>
+          <span class="how-n">[{s.n}/03]</span>
           <h3 class="how-k">{s.k}</h3>
           <p class="how-d">{s.d}</p>
-          <pre class="how-code"><code>{s.code}</code></pre>
+          <figure class="term how-term">
+            <figcaption class="term-bar"><i></i><i></i><i></i><span>{s.k.toLowerCase()}</span></figcaption>
+            <pre class="term-body"><code>{s.code}</code></pre>
+          </figure>
         </li>
       ))}
     </ol>
@@ -30,8 +33,6 @@ const steps = [
   .how-n { font-family:var(--mono); font-size:.8rem; color:var(--accent-ink); }
   .how-k { font-size:1.3rem; margin:.3rem 0 .5rem; }
   .how-d { color:var(--muted); font-size:.92rem; margin:0 0 1rem; }
-  .how-code { margin:0; background:var(--surface); border:1px solid var(--border);
-    border-radius:8px; padding:.7rem .9rem; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
-  .how-code code { font-family:var(--mono); font-size:.74rem; color:var(--fg); }
+  .how-term { margin:0; }
   @media (max-width:820px){ .how-flow { grid-template-columns:1fr; } }
 </style>
