@@ -46,15 +46,16 @@ test('build inlines fonts as data-URI (no font CDN)', () => {
 	assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
 	assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
 });
-test('display face is Fraunces, not Newsreader', () => {
+test('display face is Space Grotesk, Fraunces removed', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-	assert.match(html, /Fraunces/, 'Fraunces face present');
-	assert.doesNotMatch(html, /Newsreader/, 'Newsreader fully removed');
+	assert.match(html, /Space Grotesk/, 'Space Grotesk face present');
+	assert.doesNotMatch(html, /Fraunces/, 'Fraunces fully removed');
 });
-test('page uses the light-ground clay palette', () => {
+test('page uses the dark terminal palette', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-	assert.match(html, /#FBFAF8/i, 'paper ground token present');
-	assert.match(html, /#C15F3C/i, 'clay accent token present');
+	assert.match(html, /#0A0E14/i, 'dark ink ground token present');
+	assert.match(html, /#FF7A45/i, 'electric orange accent token present');
+	assert.match(html, /#3DDC84/i, 'ok-green token present');
 });
 test('page renders all landing sections in order', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');

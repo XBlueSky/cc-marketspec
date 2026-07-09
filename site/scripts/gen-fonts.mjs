@@ -6,9 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const faces = [
-  { family: 'Fraunces', file: 'fraunces/files/fraunces-latin-900-normal.woff2', weight: 900, style: 'normal' },
-  { family: 'Fraunces', file: 'fraunces/files/fraunces-latin-700-normal.woff2', weight: 700, style: 'normal' },
-  { family: 'Fraunces', file: 'fraunces/files/fraunces-latin-900-italic.woff2', weight: 900, style: 'italic' },
+  { family: 'Space Grotesk', file: 'space-grotesk/files/space-grotesk-latin-500-normal.woff2', weight: 500, style: 'normal' },
+  { family: 'Space Grotesk', file: 'space-grotesk/files/space-grotesk-latin-700-normal.woff2', weight: 700, style: 'normal' },
   { family: 'Geist Sans', file: 'geist-sans/files/geist-sans-latin-400-normal.woff2', weight: 400, style: 'normal' },
   { family: 'Geist Sans', file: 'geist-sans/files/geist-sans-latin-500-normal.woff2', weight: 500, style: 'normal' },
   { family: 'Geist Sans', file: 'geist-sans/files/geist-sans-latin-600-normal.woff2', weight: 600, style: 'normal' },
