@@ -122,3 +122,10 @@ test('v5 hero shows the real CLI run', () => {
 	assert.match(html, /yline/, 'line-stagger wrappers intact');
 	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
 });
+
+test('v5 mental model draws the two-stream merge', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /mm-stream/, 'stream paths present');
+	assert.match(html, /mcpServers/, 'real .mcp.json panel intact');
+	assert.match(html, /class="mm-merge[^"]*"[^>]*aria-hidden="true"/, 'merge SVG wrapper is decorative');
+});
