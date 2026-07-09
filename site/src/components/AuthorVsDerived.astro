@@ -41,14 +41,18 @@ const derived = [
 <style>
   .avd-h2 { font-size:clamp(1.8rem,4vw,2.6rem); margin:1rem 0 2rem; max-width:20ch; }
   .avd-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-  .avd-col { padding:1.6rem 1.8rem; }
+  .avd-col { padding:1.6rem 1.8rem; min-width:0; }
   .avd-author { background:var(--surface); border-right:1px solid var(--border); }
-  .avd-derived { background:var(--code-chip); }
+  .avd-derived { background:var(--term-bg); }
   .avd-cap { font-family:var(--sans); font-weight:600; font-size:.95rem; margin:0 0 1rem; }
   .avd-cap span { color:var(--muted); font-weight:400; font-size:.82rem; }
-  .avd-derived .avd-cap { color:var(--accent-ink); }
+  .avd-derived .avd-cap { color:var(--ok); }
   .avd-col ul { list-style:none; padding:0; margin:0; }
-  .avd-col li { padding:.55rem 0; border-top:1px solid var(--border); font-size:.9rem; line-height:1.4; }
+  .avd-col li { padding:.55rem 0 .55rem 1.4rem; border-top:1px solid var(--border); line-height:1.4;
+    position:relative; font-family:var(--mono); font-size:.82rem; }
+  .avd-col li::before { position:absolute; left:0; font-family:var(--mono); }
+  .avd-author li::before { content:'+'; color:var(--accent-ink); }
+  .avd-derived li::before { content:'✓'; color:var(--ok); }
   .avd-derived li { color:var(--fg); }
   @media (max-width:760px){ .avd-grid { grid-template-columns:1fr; } .avd-author { border-right:0; border-bottom:1px solid var(--border); } }
 </style>
