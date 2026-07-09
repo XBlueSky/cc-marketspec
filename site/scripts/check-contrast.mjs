@@ -17,6 +17,7 @@ const checks = [
   ['fg on bg', T.fg, T.bg, 4.5], ['fg on surface', T.fg, T.surface, 4.5], ['fg on chip', T.fg, T.chip, 4.5],
   ['muted on bg', T.muted, T.bg, 4.5], ['muted on surface', T.muted, T.surface, 4.5],
   ['muted on chip', T.muted, T.chip, 4.5], ['muted on termbg', T.muted, T.termbg, 4.5],
+  ['fg on termbg', T.fg, T.termbg, 4.5],
   ['accentInk on bg', T.accentInk, T.bg, 4.5], ['accentInk on surface', T.accentInk, T.surface, 4.5],
   ['accentInk on chip', T.accentInk, T.chip, 4.5], ['accentInk on termbg', T.accentInk, T.termbg, 4.5],
   ['accent on bg (large text only)', T.accent, T.bg, 3.0],

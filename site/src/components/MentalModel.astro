@@ -75,7 +75,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
   .mm-label-native { left:0; top:-1.2rem; }
   .mm-label-pres { left:0; bottom:-1.2rem; color:var(--accent-ink); }
   .mm-label-out { right:0; top:50%; transform:translateY(-160%); color:var(--ok); }
-  /* draw-on-reveal: default fully drawn (no-JS); .js-ready hides; .in draws */
+  /* dash-flow on reveal: streams visible in every state (dasharray 6 7 means a 900 offset only shifts the pattern); .js-ready offsets the dashes, .in animates the offset to 0 as a marching flow */
   :global(.js-ready) .mm-stream { stroke-dashoffset:900; }
   :global(.js-ready) .mm-merge.in .mm-stream { stroke-dashoffset:0;
     transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1); }
