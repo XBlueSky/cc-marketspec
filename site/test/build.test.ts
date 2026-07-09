@@ -108,3 +108,17 @@ test('ambient decoration: og:image and twitter:card meta tags present', () => {
 	assert.match(html, /twitter:card/, 'twitter:card meta tag present');
 	assert.match(html, /summary_large_image/, 'twitter card type is summary_large_image');
 });
+
+test('v5 terminal primitives present', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /term-bar/, 'terminal window chrome present');
+	assert.match(html, /--term-bg/, 'terminal ground token defined');
+});
+
+test('v5 hero shows the real CLI run', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /npx @xbluesky\/cc-marketspec/, 'real command present');
+	assert.match(html, /wrote manifest\.json — 1 plugins, 0 warning\(s\)\./, 'real CLI output line present');
+	assert.match(html, /yline/, 'line-stagger wrappers intact');
+	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
+});

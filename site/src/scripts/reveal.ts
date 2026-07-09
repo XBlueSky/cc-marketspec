@@ -12,16 +12,16 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 }
 
-// Hero live "generate": reveal YAML lines top-to-bottom, then the arrow + card.
-// Under reduced-motion we skip animation (CSS media query already shows them);
-// without JS, .js-ready is never set so the hidden state never applies.
+// Hero live run: terminal lines appear top-to-bottom (CSS stagger via --i:
+// YAML excerpt 0-6, command types at 7, real output at 14, idle cursor at 15),
+// then the arrow + minicard. Under reduced-motion we skip animation (CSS media
+// query already shows everything); without JS, .js-ready is never set so the
+// hidden state never applies.
 const hero = document.querySelector('.hero-visual');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (hero && !reduce) {
   hero.classList.add('hero-live');
-  const lines = hero.querySelectorAll('.yline');
-  lines.forEach((el) => el.classList.add('in'));           // CSS stagger via --i handles timing
+  hero.querySelectorAll('.yline').forEach((el) => el.classList.add('in'));
   const gens = hero.querySelectorAll('.hero-gen');
-  const lastDelay = lines.length * 140 + 200;
-  window.setTimeout(() => gens.forEach((el) => el.classList.add('in')), lastDelay);
+  window.setTimeout(() => gens.forEach((el) => el.classList.add('in')), 2600);
 }
