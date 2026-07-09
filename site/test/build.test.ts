@@ -129,3 +129,10 @@ test('v5 mental model draws the two-stream merge', () => {
 	assert.match(html, /mcpServers/, 'real .mcp.json panel intact');
 	assert.match(html, /class="mm-merge[^"]*"[^>]*aria-hidden="true"/, 'merge SVG wrapper is decorative');
 });
+
+test('v5 showcase remains manifest-driven after re-skin', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /marketplace-flow/, 'skill from manifest renders');
+	assert.match(html, /get_schema/, 'mcp tool from manifest renders');
+	assert.match(html, /This section is the product/, 'showcase eyebrow intact');
+});
