@@ -1,3 +1,25 @@
+# [0.12.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.11.0...v0.12.0) (2026-07-10)
+
+
+### Bug Fixes
+
+* **site:** wrap long derived-column lines instead of clipping at 360px ([c7e2946](https://github.com/XBlueSky/cc-marketspec/commit/c7e2946913478d65976dc81a1f576c6dbac106af))
+
+
+### Features
+
+* **site:** add generated aurora/nebula images, re-shoot og card ([4028102](https://github.com/XBlueSky/cc-marketspec/commit/4028102aeef927348455a2f36f1080dc87155277))
+* **site:** add terminal-window/prompt/cursor/glow primitives + grid texture ([9e98c7e](https://github.com/XBlueSky/cc-marketspec/commit/9e98c7e31526f284731d331bcd53d119d82f1547))
+* **site:** dark-terminal Showcase family, render loop byte-identical ([1d53109](https://github.com/XBlueSky/cc-marketspec/commit/1d53109a6ac75b1c7a023ab8ff909890b6c927e4))
+* **site:** diff-view AuthorVsDerived + prompt-style QuickStart, data unchanged ([6c32501](https://github.com/XBlueSky/cc-marketspec/commit/6c3250178c39d94a8012add089589167ece79e9c))
+* **site:** re-skin Hero as the live run terminal, real data unchanged ([f250ff7](https://github.com/XBlueSky/cc-marketspec/commit/f250ff7514fe33f6a3da8c7269c2e529618b4414))
+* **site:** re-skin MentalModel as two-stream merge, code panels byte-identical ([44ec99f](https://github.com/XBlueSky/cc-marketspec/commit/44ec99f64bb3b411af1a8907a9c8441ca64df2ad))
+* **site:** re-skin Pipeline as trace log in terminal windows, steps data unchanged ([8dcd469](https://github.com/XBlueSky/cc-marketspec/commit/8dcd4694190dc390a73fb6447ec76bfbb3a85722))
+* **site:** regenerate og image for the Live Run design ([14fdbdc](https://github.com/XBlueSky/cc-marketspec/commit/14fdbdc9e015330aa74756a49ac269050fb94823))
+* **site:** scroll-driven run choreography — spine, flowing streams, trace typing, card depth ([7ba84d2](https://github.com/XBlueSky/cc-marketspec/commit/7ba84d2258cfb62a208602d0f7ce7abf6ccbb9f4))
+* **site:** swap Paper&Clay tokens for dark terminal palette + Space Grotesk ([39e209d](https://github.com/XBlueSky/cc-marketspec/commit/39e209d584d69336f10a5f1cc390713557e7d27b))
+* **site:** wire aurora/nebula AI-image slots with silent 404 fallbacks + prompt sheet ([87ce885](https://github.com/XBlueSky/cc-marketspec/commit/87ce88557b4bba65d24ca397565133c2ede2394a))
+
 # [0.11.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.10.0...v0.11.0) (2026-07-02)
 
 
