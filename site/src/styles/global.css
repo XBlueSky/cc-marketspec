@@ -64,6 +64,26 @@ h1,h2,h3 { font-family:var(--display); font-weight:700; letter-spacing:-0.025em;
   vertical-align:text-bottom; margin-left:.15em; }
 @keyframes blink { 50% { opacity:0; } }
 .js-ready .cursor { animation:blink 1s step-end infinite; }
+/* Run spine: the execution path stitching the sections together (wide screens
+   only). Dashes march downward continuously; where CSS scroll timelines are
+   supported, the line also draws in with page scroll. Pure CSS — works with
+   JS disabled; browsers without scroll-timeline support see the full static
+   line with marching dashes. */
+@keyframes spine-march { to { background-position:0 13px; } }
+@keyframes spine-draw { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+.run-spine { display:none; }
+@media (min-width:1280px) and (prefers-reduced-motion: no-preference) {
+  .run-spine { display:block; position:fixed; top:0; bottom:0; z-index:-1;
+    left:calc(50vw - 550px - 3.5rem); width:2px; pointer-events:none; opacity:.35;
+    background-image:linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 13px);
+    background-size:2px 13px; background-repeat:repeat-y;
+    transform-origin:top;
+    animation:spine-march 1.2s linear infinite; }
+  @supports (animation-timeline: scroll()) {
+    .run-spine { animation:spine-march 1.2s linear infinite, spine-draw linear both;
+      animation-timeline:auto, scroll(root); }
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior:auto; }
   .reveal, .js-ready .reveal { opacity:1; transform:none; transition:none; }

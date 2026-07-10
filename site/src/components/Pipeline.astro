@@ -19,7 +19,7 @@ const steps = [
           <p class="how-d">{s.d}</p>
           <figure class="term how-term">
             <figcaption class="term-bar"><i></i><i></i><i></i><span>{s.k.toLowerCase()}</span></figcaption>
-            <pre class="term-body"><code>{s.code}</code></pre>
+            <pre class="term-body"><code>{s.code.split('\n').map((ln, j) => <span class="tline" style={`--j:${j}`}>{ln}</span>)}</code></pre>
           </figure>
         </li>
       ))}
@@ -34,5 +34,23 @@ const steps = [
   .how-k { font-size:1.3rem; margin:.3rem 0 .5rem; }
   .how-d { color:var(--muted); font-size:.92rem; margin:0 0 1rem; }
   .how-term { margin:0; }
+  .tline { display:block; }
+  /* Trace types on scroll: each code line reveals as its terminal scrolls
+     into view, staggered per line via a named view-timeline on the panel.
+     Hidden states exist ONLY inside this @supports block, so browsers
+     without scroll-timeline support (and JS-off — this is pure CSS) always
+     see the full static trace. The `steps` data above is untouched — the
+     line split happens at render time only. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .how-term { view-timeline:--how-term block; }
+      .tline { opacity:0; transform:translateY(4px);
+        animation:tline-in linear both;
+        animation-duration:auto;
+        animation-timeline:--how-term;
+        animation-range:entry calc(var(--j) * 14%) entry calc(40% + var(--j) * 14%); }
+    }
+  }
+  @keyframes tline-in { to { opacity:1; transform:none; } }
   @media (max-width:820px){ .how-flow { grid-template-columns:1fr; } }
 </style>

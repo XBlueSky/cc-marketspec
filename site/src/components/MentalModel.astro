@@ -90,6 +90,17 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
   :global(.js-ready) .mm-stream { stroke-dashoffset:900; }
   :global(.js-ready) .mm-merge.in .mm-stream { stroke-dashoffset:0;
     transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1); }
+  /* After the reveal settles, the dashes keep marching toward the node —
+     the data never stops flowing. Delayed past the 1.4s reveal transition so
+     the animation (which overrides the transitioned property) takes over
+     seamlessly at offset 0. -13 = one dasharray period (6+7). */
+  @keyframes stream-flow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-13px; } }
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js-ready) .mm-merge.in .mm-stream { animation:stream-flow .9s linear 1.5s infinite; }
+    .mm-node { transform-box:fill-box; transform-origin:center;
+      animation:node-pulse 2.4s ease-in-out infinite; }
+  }
+  @keyframes node-pulse { 50% { transform:scale(1.35); } }
   .mm-diagram { display:grid; grid-template-columns:1fr 1fr auto; gap:1.2rem; align-items:stretch; }
   .mm-layer { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.4rem; }
   .mm-pres { border-color:var(--accent-soft); }
