@@ -10,7 +10,7 @@ const blocks = [
 <section id="quick-start" class="section qs">
   <div class="wrap">
     <span class="sec-num">06</span>
-    <span class="eyebrow">Quick start</span>
+    <span class="eyebrow">Your turn</span>
     <h2 class="qs-h2">Run it in your marketplace repo.</h2>
     <div class="qs-blocks">
       {blocks.map((b, i) => (
@@ -28,7 +28,8 @@ const blocks = [
   .qs-block { min-width:0; }
   .qs-label { font-family:var(--mono); font-size:.72rem; text-transform:uppercase;
     letter-spacing:.08em; color:var(--muted); }
-  .qs-cmd { margin:.4rem 0 0; background:var(--surface); border:1px solid var(--border);
+  .qs-cmd { margin:.4rem 0 0; background:var(--term-bg); border:1px solid var(--border);
     border-radius:8px; padding:.8rem 1rem; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
   .qs-cmd code { font-family:var(--mono); font-size:.82rem; color:var(--fg); }
+  .qs-cmd code::before { content:'$ '; color:var(--muted); }
 </style>

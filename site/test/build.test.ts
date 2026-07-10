@@ -46,15 +46,16 @@ test('build inlines fonts as data-URI (no font CDN)', () => {
 	assert.match(html, /data:font\/woff2;base64/, 'a font is inlined');
 	assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/, 'no google font CDN');
 });
-test('display face is Fraunces, not Newsreader', () => {
+test('display face is Space Grotesk, Fraunces removed', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-	assert.match(html, /Fraunces/, 'Fraunces face present');
-	assert.doesNotMatch(html, /Newsreader/, 'Newsreader fully removed');
+	assert.match(html, /Space Grotesk/, 'Space Grotesk face present');
+	assert.doesNotMatch(html, /Fraunces/, 'Fraunces fully removed');
 });
-test('page uses the light-ground clay palette', () => {
+test('page uses the dark terminal palette', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
-	assert.match(html, /#FBFAF8/i, 'paper ground token present');
-	assert.match(html, /#C15F3C/i, 'clay accent token present');
+	assert.match(html, /#0A0E14/i, 'dark ink ground token present');
+	assert.match(html, /#FF7A45/i, 'electric orange accent token present');
+	assert.match(html, /#3DDC84/i, 'ok-green token present');
 });
 test('page renders all landing sections in order', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
@@ -106,4 +107,32 @@ test('ambient decoration: og:image and twitter:card meta tags present', () => {
 	assert.match(html, /\/img\/og\.jpg/, 'og:image points to og.jpg');
 	assert.match(html, /twitter:card/, 'twitter:card meta tag present');
 	assert.match(html, /summary_large_image/, 'twitter card type is summary_large_image');
+});
+
+test('v5 terminal primitives present', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /term-bar/, 'terminal window chrome present');
+	assert.match(html, /--term-bg/, 'terminal ground token defined');
+});
+
+test('v5 hero shows the real CLI run', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /npx @xbluesky\/cc-marketspec/, 'real command present');
+	assert.match(html, /wrote manifest\.json — 1 plugins, 0 warning\(s\)\./, 'real CLI output line present');
+	assert.match(html, /yline/, 'line-stagger wrappers intact');
+	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
+});
+
+test('v5 mental model draws the two-stream merge', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /mm-stream/, 'stream paths present');
+	assert.match(html, /mcpServers/, 'real .mcp.json panel intact');
+	assert.match(html, /class="mm-merge[^"]*"[^>]*aria-hidden="true"/, 'merge SVG wrapper is decorative');
+});
+
+test('v5 showcase remains manifest-driven after re-skin', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /marketplace-flow/, 'skill from manifest renders');
+	assert.match(html, /get_schema/, 'mcp tool from manifest renders');
+	assert.match(html, /This section is the product/, 'showcase eyebrow intact');
 });
