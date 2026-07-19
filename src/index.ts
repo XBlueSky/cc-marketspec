@@ -18,3 +18,5 @@ export {
 	type AuthoredLayout,
 	type VersionCheck
 } from './version.ts';
+export { normalizeInternalPath, resolveWithinRoot, PathPolicyError } from './path-policy.ts';
+export { OverlayFileSource } from './fs-source.ts';

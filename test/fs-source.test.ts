@@ -43,3 +43,15 @@ test('normalize maps source-field shapes to relative dirs', () => {
 	assert.equal(normalize('plugins/foo/'), 'plugins/foo');
 	assert.equal(normalize('packages/bar'), 'packages/bar');
 });
+
+test('list order is canonical regardless of insertion order', () => {
+	const a = new MemoryFileSource({ 'z/file': 'z', 'a/file': 'a' });
+	const b = new MemoryFileSource({ 'a/file': 'a', 'z/file': 'z' });
+	assert.deepEqual(a.list(''), ['a', 'z']);
+	assert.deepEqual(a.list(''), b.list(''));
+});
+
+test('unsafe paths are rejected instead of normalized outside the root', () => {
+	assert.throws(() => normalize('../outside'), /parent/i);
+	assert.throws(() => fs.read('../catalog.yaml'), /parent/i);
+});
