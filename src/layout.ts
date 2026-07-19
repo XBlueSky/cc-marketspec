@@ -128,6 +128,21 @@ function parseYaml(source: FileSource, path: string): unknown {
 	}
 }
 
+function filesBelow(source: FileSource, root: string): string[] {
+	const files: string[] = [];
+	const visit = (dir: string) => {
+		if (!source.isDir(dir)) return;
+		for (const name of source.list(dir).slice().sort(compare)) {
+			if (!name || name === '.' || name === '..' || name.includes('/') || name.includes('\\')) continue;
+			const path = posix.join(dir, name);
+			if (source.isDir(path)) visit(path);
+			else if (source.read(path) !== null) files.push(path);
+		}
+	};
+	visit(root);
+	return files.sort(compare);
+}
+
 export function inspectLegacyCandidates(source: FileSource, plugins: ResolvedPlugin[]): LegacyInspection {
 	const catalogRaw = source.read(LEGACY_CATALOG_PATH);
 	const errors: string[] = [];
@@ -191,17 +206,13 @@ export function inspectLegacyCandidates(source: FileSource, plugins: ResolvedPlu
 
 export function inspectLayout(source: FileSource, plugins: ResolvedPlugin[]): LayoutInspection {
 	const legacy = inspectLegacyCandidates(source, plugins);
-	const namespacedEntryNames = source.isDir(ENTRIES_DIR) ? source.list(ENTRIES_DIR) : [];
-	const namespacedCandidates =
-		source.read(CATALOG_PATH) !== null ||
-		namespacedEntryNames.some((name) => source.read(posix.join(ENTRIES_DIR, name)) !== null);
+	const namespacedEntryPaths = filesBelow(source, ENTRIES_DIR);
+	const namespacedCandidates = source.read(CATALOG_PATH) !== null || namespacedEntryPaths.length > 0;
 	if (namespacedCandidates) {
-		const expected = new Set(plugins.map((plugin) => posix.basename(plugin.namespacedEntryPath)));
-		const warnings = namespacedEntryNames.length > 0
-			? namespacedEntryNames
-					.filter((name) => name.endsWith('.yaml') && !expected.has(name))
-					.map((name) => `${posix.join(ENTRIES_DIR, name)}: orphan entry has no marketplace plugin`)
-			: [];
+		const expected = new Set(plugins.map((plugin) => plugin.namespacedEntryPath));
+		const warnings = namespacedEntryPaths
+			.filter((path) => path.endsWith('.yaml') && !expected.has(path))
+			.map((path) => `${path}: orphan entry has no marketplace plugin`);
 		if (legacy.strong) {
 			warnings.push('recognized legacy files remain; run cc-marketspec migrate to resume safe cleanup');
 		}

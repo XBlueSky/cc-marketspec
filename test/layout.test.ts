@@ -7,6 +7,7 @@ import { MemoryFileSource, NodeFileSource } from '../src/fs-source.ts';
 import {
 	CATALOG_PATH,
 	DIST_MANIFEST_PATH,
+	entryPathForLayout,
 	entryPathForPlugin,
 	inspectLayout,
 	resolveMarketplacePlugins
@@ -19,6 +20,14 @@ test('maps ids to prefixed portable entry filenames', () => {
 	assert.equal(DIST_MANIFEST_PATH, '.cc-marketspec/dist/manifest.json');
 	assert.equal(entryPathForPlugin('con'), '.cc-marketspec/entries/plugin-con.yaml');
 	assert.equal(entryPathForPlugin('nul'), '.cc-marketspec/entries/plugin-nul.yaml');
+});
+
+test('maps plugin entry paths for namespaced, legacy, and fresh layouts', () => {
+	const plugin = marketplace({ name: 'p', source: './plugins/p' }).plugins[0];
+
+	assert.equal(entryPathForLayout('namespaced', plugin), '.cc-marketspec/entries/plugin-p.yaml');
+	assert.equal(entryPathForLayout('legacy', plugin), 'plugins/p/entry.yaml');
+	assert.equal(entryPathForLayout('fresh', plugin), null);
 });
 
 test('requires explicit ./ for local sources and permits the repo root', () => {
@@ -104,6 +113,24 @@ test('a malformed namespaced entry candidate still selects namespaced', () => {
 	assert.equal(layout.catalogPath, '.cc-marketspec/catalog.yaml');
 });
 
+test('a nested namespaced file takes precedence over strong legacy leftovers', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(
+		new MemoryFileSource({
+			'.cc-marketspec/entries/archive/plugin-p.yaml': 'tagline: Archived\n',
+			'catalog.yaml': 'schemaVersion: "1.0"\n',
+			'plugins/p/entry.yaml': 'tagline: Legacy\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'namespaced');
+	assert.deepEqual(layout.warnings, [
+		'.cc-marketspec/entries/archive/plugin-p.yaml: orphan entry has no marketplace plugin',
+		'recognized legacy files remain; run cc-marketspec migrate to resume safe cleanup'
+	]);
+});
+
 test('reports namespaced orphan entries in deterministic order', () => {
 	const resolved = marketplace({ name: 'p', source: './plugins/p' });
 	const layout = inspectLayout(
@@ -124,7 +151,7 @@ test('reports namespaced orphan entries in deterministic order', () => {
 test('an empty child directory under namespaced entries stays fresh', (t) => {
 	const root = mkdtempSync(join(tmpdir(), 'cc-marketspec-layout-'));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
-	mkdirSync(join(root, '.cc-marketspec', 'entries', 'empty'), { recursive: true });
+	mkdirSync(join(root, '.cc-marketspec', 'entries', 'empty', 'deeper'), { recursive: true });
 	const resolved = marketplace({ name: 'p', source: './plugins/p' });
 
 	assert.equal(inspectLayout(new NodeFileSource(root), resolved.plugins).kind, 'fresh');
@@ -148,6 +175,41 @@ test('requires a strong signature before auto-selecting legacy', () => {
 		resolved.plugins
 	);
 	assert.equal(catalogOnly.kind, 'ambiguous');
+});
+
+test('a mapped legacy entry without a catalog is ambiguous', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(
+		new MemoryFileSource({ 'plugins/p/entry.yaml': 'tagline: Entry only\n' }),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'ambiguous');
+	assert.equal(layout.legacy.hasCandidates, true);
+	assert.equal(layout.legacy.strong, false);
+});
+
+test('malformed legacy catalog and entry candidates remain ambiguous', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const malformedCatalog = inspectLayout(
+		new MemoryFileSource({
+			'catalog.yaml': 'schemaVersion: [unterminated\n',
+			'plugins/p/entry.yaml': 'tagline: Valid\n'
+		}),
+		resolved.plugins
+	);
+	const malformedEntry = inspectLayout(
+		new MemoryFileSource({
+			'catalog.yaml': 'schemaVersion: "1.0"\n',
+			'plugins/p/entry.yaml': 'tagline: [unterminated\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.equal(malformedCatalog.kind, 'ambiguous');
+	assert.ok(malformedCatalog.legacy.errors.some((error) => /catalog\.yaml does not validate/i.test(error)));
+	assert.equal(malformedEntry.kind, 'ambiguous');
+	assert.ok(malformedEntry.legacy.errors.some((error) => /plugins\/p\/entry\.yaml does not validate/i.test(error)));
 });
 
 test('root manifest alone is fresh, and dist-only namespace is fresh', () => {
@@ -210,4 +272,5 @@ test('recognizes remote objects without inventing a local directory', () => {
 	assert.deepEqual(result.errors, []);
 	assert.equal(result.plugins[0].sourceKind, 'remote');
 	assert.equal(result.plugins[0].dir, null);
+	assert.equal(result.plugins[0].legacyEntryPath, null);
 });
