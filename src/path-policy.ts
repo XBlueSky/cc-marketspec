@@ -14,6 +14,9 @@ export function normalizeInternalPath(raw: string, options: { allowRoot?: boolea
 	if (parts.some((part) => part === '..')) throw new PathPolicyError('parent path segments are forbidden');
 	if (parts.some((part) => part === '')) throw new PathPolicyError('empty path segments are forbidden');
 	const canonicalParts = parts.filter((part) => part !== '.');
+	if (canonicalParts.some((part) => /^[A-Za-z]:/.test(part))) {
+		throw new PathPolicyError('drive-prefixed path segments are forbidden');
+	}
 	if (canonicalParts.length === 0 && !options.allowRoot) {
 		throw new PathPolicyError('path must not name the repository root');
 	}

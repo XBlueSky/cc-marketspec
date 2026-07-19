@@ -16,6 +16,8 @@ test('normalizes only safe POSIX-relative paths', () => {
 		'C:relative',
 		'./C:/abs',
 		'./C:relative',
+		'safe/C:/abs',
+		'safe/C:relative',
 		'\\\\server\\share',
 		'a\\b'
 	]) {
