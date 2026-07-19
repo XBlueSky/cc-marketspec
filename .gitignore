@@ -3,6 +3,7 @@ dist/
 *.tgz
 docs/superpowers/
 .superpowers/
+.worktrees/
 
 # Claude Code local files (machine-specific, never commit)
 .claude.local.json
