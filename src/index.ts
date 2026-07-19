@@ -11,3 +11,10 @@ export { analyzeCoverage, type CoverageReport, type CoverageFinding, type Covera
 export { coverageTargets } from './entry.ts';
 export { planInit, type InitAction } from './init.ts';
 export { handleHttpRequest } from './http.ts';
+export {
+	CURRENT_FORMAT_VERSION,
+	LEGACY_FORMAT_VERSION,
+	checkFormatVersion,
+	type AuthoredLayout,
+	type VersionCheck
+} from './version.ts';
