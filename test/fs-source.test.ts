@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MemoryFileSource, NodeFileSource, OverlayFileSource, normalize } from '../src/fs-source.ts';
@@ -95,4 +95,17 @@ test('overlay files and directories shadow exact base collisions coherently', ()
 	assert.equal(dirOverFile.read('node'), null);
 	assert.equal(dirOverFile.isDir('node'), true);
 	assert.deepEqual(dirOverFile.list('node'), ['overlay-child']);
+});
+
+test('overlay symlink introspection honors exact virtual shadowing', (t) => {
+	const root = mkdtempSync(join(tmpdir(), 'ccms-overlay-link-'));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	mkdirSync(join(root, 'target'));
+	symlinkSync(join(root, 'target'), join(root, 'link'), process.platform === 'win32' ? 'junction' : 'dir');
+	const base = new NodeFileSource(root);
+
+	assert.equal(base.isSymbolicLink?.('link'), true);
+	assert.equal(new OverlayFileSource(base, { link: 'virtual file' }).isSymbolicLink?.('link'), false);
+	assert.equal(new OverlayFileSource(base, { 'link/child': 'virtual child' }).isSymbolicLink?.('link'), false);
+	assert.equal(new OverlayFileSource(base, { other: 'virtual' }).isSymbolicLink?.('link'), true);
 });

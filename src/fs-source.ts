@@ -2,7 +2,7 @@
 // OS filesystem (CLI / local) or an in-memory file map (Cloudflare Worker, tests).
 // All paths are RELATIVE to the source's root.
 
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, lstatSync, statSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { normalizeInternalPath, resolveWithinRoot } from './path-policy.ts';
 
@@ -11,6 +11,7 @@ export interface FileSource {
 	exists(path: string): boolean; // a file or directory exists at path
 	isDir(path: string): boolean; // path exists and is a directory
 	list(path: string): string[]; // child entry names if path is a dir, else []
+	isSymbolicLink?(path: string): boolean; // optional source capability; missing paths are false
 }
 
 export function normalize(p: string): string {
@@ -45,6 +46,15 @@ export class NodeFileSource implements FileSource {
 		const a = this.abs(p);
 		return a !== null && existsSync(a) && statSync(a).isDirectory();
 	}
+	isSymbolicLink(p: string): boolean {
+		const a = this.abs(p);
+		if (a === null) return false;
+		try {
+			return lstatSync(a).isSymbolicLink();
+		} catch {
+			return false;
+		}
+	}
 	list(p: string): string[] {
 		const a = this.abs(p);
 		return a !== null && existsSync(a) && statSync(a).isDirectory() ? readdirSync(a).sort() : [];
@@ -70,6 +80,9 @@ export class MemoryFileSource implements FileSource {
 	}
 	isDir(p: string): boolean {
 		return this.dirs.has(normalize(p));
+	}
+	isSymbolicLink(_p: string): boolean {
+		return false;
 	}
 	list(p: string): string[] {
 		const base = normalizeInternalPath(p, { allowRoot: true });
@@ -99,6 +112,9 @@ export class OverlayFileSource implements FileSource {
 	}
 	isDir(path: string): boolean {
 		return this.overlay.exists(path) ? this.overlay.isDir(path) : this.base.isDir(path);
+	}
+	isSymbolicLink(path: string): boolean {
+		return this.overlay.exists(path) ? false : (this.base.isSymbolicLink?.(path) ?? false);
 	}
 	list(path: string): string[] {
 		if (this.overlay.exists(path) && !this.overlay.isDir(path)) return [];

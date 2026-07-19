@@ -131,7 +131,7 @@ function parseYaml(source: FileSource, path: string): unknown {
 function filesBelow(source: FileSource, root: string): string[] {
 	const files: string[] = [];
 	const visit = (dir: string) => {
-		if (!source.isDir(dir)) return;
+		if (source.isSymbolicLink?.(dir) || !source.isDir(dir)) return;
 		for (const name of source.list(dir).slice().sort(compare)) {
 			if (!name || name === '.' || name === '..' || name.includes('/') || name.includes('\\')) continue;
 			const path = posix.join(dir, name);

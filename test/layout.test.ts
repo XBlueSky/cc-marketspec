@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { MemoryFileSource, NodeFileSource } from '../src/fs-source.ts';
@@ -155,6 +155,24 @@ test('an empty child directory under namespaced entries stays fresh', (t) => {
 	const resolved = marketplace({ name: 'p', source: './plugins/p' });
 
 	assert.equal(inspectLayout(new NodeFileSource(root), resolved.plugins).kind, 'fresh');
+});
+
+test('skips symlinked directory cycles while discovering namespaced files', (t) => {
+	const root = mkdtempSync(join(tmpdir(), 'cc-marketspec-layout-loop-'));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	const entries = join(root, '.cc-marketspec', 'entries');
+	mkdirSync(join(entries, 'real'), { recursive: true });
+	writeFileSync(join(entries, 'real', 'orphan.yaml'), '{}\n');
+	symlinkSync(entries, join(entries, 'loop'), process.platform === 'win32' ? 'junction' : 'dir');
+	const source = new NodeFileSource(root);
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+
+	assert.equal(source.isSymbolicLink?.('.cc-marketspec/entries/loop'), true);
+	const layout = inspectLayout(source, resolved.plugins);
+	assert.equal(layout.kind, 'namespaced');
+	assert.deepEqual(layout.warnings, [
+		'.cc-marketspec/entries/real/orphan.yaml: orphan entry has no marketplace plugin'
+	]);
 });
 
 test('requires a strong signature before auto-selecting legacy', () => {
