@@ -1,7 +1,7 @@
 # Namespaced authoring bundle and safe migration — design
 
 **Date:** 2026-07-19
-**Status:** Approved after adversarial review; pending written-spec review
+**Status:** Approved after adversarial review; implementation plan complete
 **Scope:** Replace collision-prone presentation paths with a namespaced bundle,
 keep generated output out of git by default, and migrate legacy repositories
 safely.
@@ -251,24 +251,35 @@ Multiple ids pointing at one legacy entry are an error.
 3. Preserve comments, quoting, and key order with a comment-preserving YAML
    document API while updating only schemaVersion.
 4. Write .cc-marketspec/.gitignore content as /dist/.
-5. Run namespaced generation and validation against staging.
-6. Generate the staged deterministic manifest.
-7. Rename the complete staging tree to .cc-marketspec on the same filesystem.
-8. After cutover, remove only claimed, digest-unchanged legacy authored files.
+5. Write a transient migration receipt containing the claimed source paths and
+   digests plus target digests. It is internal recovery state, not part of the
+   final canonical layout.
+6. Run namespaced generation and validation against staging.
+7. Generate the staged deterministic manifest.
+8. Rename the complete staging tree to .cc-marketspec on the same filesystem.
+9. After cutover, remove only claimed, digest-unchanged legacy authored files.
    Remove root manifest.json only when it is byte-identical to output freshly
    generated from the validated legacy inputs.
-9. Remove staging remnants on pre-cutover failure.
+10. Remove the receipt only after every planned cleanup succeeds. Remove
+    staging remnants on pre-cutover failure.
 
 No target is overwritten and there is no force-overwrite option.
 
 If cleanup fails after cutover, the complete namespaced bundle remains
 authoritative. The command exits non-zero with exact remaining legacy paths.
-Re-running migrate detects a cleanup-only plan: it validates equivalence with
-the namespaced bundle and resumes safe deletion without replacing the bundle.
-Namespaced repositories with unrelated generic files are normal no-ops; those
-files are never cleanup candidates. Changed planned sources are left in place
-and reported instead of being deleted. The command never operates git;
-filesystem changes remain visible for user review.
+Re-running migrate detects the receipt, verifies both target and remaining
+source digests, regenerates the manifest from the current namespaced and native
+inputs, and requires those bytes to match the cutover manifest before resuming
+safe deletion without replacing the bundle. A missing or malformed receipt
+never authorizes cleanup. Receipt removal paths are re-authorized against the
+current marketplace's resolved legacy catalog, manifest, and entry-path
+allowlist, so a forged receipt cannot act as an arbitrary repo-internal delete
+list. Remaining catalog and entry sources are schema-validated again, and a
+root manifest is re-derived from the verified namespaced manifest before it can
+be removed. Namespaced repositories with unrelated generic files are normal
+no-ops; those files are never cleanup candidates. Changed planned sources are
+left in place and reported instead of being deleted. The command never operates
+git; filesystem changes remain visible for user review.
 
 Layout migration must not round-trip YAML through js-yaml because that discards
 comments and formatting. Comment preservation is a functional requirement.
@@ -386,7 +397,10 @@ Migration:
 - collisions and malformed input produce zero mutations;
 - staging failure preserves legacy input;
 - injected write/rename failure is recoverable;
-- cleanup failure can resume;
+- cleanup failure leaves a receipt and can resume across a new process;
+- successful cleanup removes the receipt;
+- unrelated namespaced repositories never synthesize cleanup without a receipt;
+- forged traversal and unrelated root-contained receipt removals are rejected;
 - current-format rerun is a successful no-op;
 - root plugin, remote source, and duplicate mapping cases are explicit;
 - no git command is invoked.
