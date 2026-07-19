@@ -303,3 +303,124 @@ test('diagnostics and discovered component arrays are deterministic', () => {
 		['alpha', 'zeta']
 	);
 });
+
+test('malformed catalog YAML is a canonical error and keeps native plugins', () => {
+	let result: ReturnType<typeof run> | undefined;
+	assert.doesNotThrow(() => {
+		result = run({
+			'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+			'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+			'.cc-marketspec/catalog.yaml': 'schemaVersion: [unterminated\n',
+			[entryPath('sample')]: 'tagline: Must not apply\n'
+		});
+	});
+	assert.equal(result!.layout, 'namespaced');
+	assert.ok(result!.errors.some((error) => /^\.cc-marketspec\/catalog\.yaml:.*parse/i.test(error)), result!.errors.join(' | '));
+	const generated = result!.manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
+	assert.equal(generated.schemaVersion, '1.1');
+	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
+	assert.equal(generated.plugins[0].tagline, undefined);
+});
+
+test('malformed entry YAML skips only the overlay and keeps the native plugin', () => {
+	let result: ReturnType<typeof run> | undefined;
+	assert.doesNotThrow(() => {
+		result = run({
+			'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+			'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+			'.cc-marketspec/catalog.yaml': catalog(),
+			[entryPath('sample')]: 'tagline: [unterminated\n'
+		});
+	});
+	assert.ok(result!.errors.some((error) => /^\.cc-marketspec\/entries\/plugin-sample\.yaml:.*parse/i.test(error)), result!.errors.join(' | '));
+	const plugins = (result!.manifest as { plugins: { id: string; tagline?: string }[] }).plugins;
+	assert.deepEqual(plugins.map(({ id }) => id), ['sample']);
+	assert.equal(plugins[0].tagline, undefined);
+});
+
+test('an entry without its required catalog is not applied to the native manifest', () => {
+	const { manifest, errors, layout } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		[entryPath('sample')]: 'tagline: Must not apply\n'
+	});
+	assert.equal(layout, 'namespaced');
+	assert.ok(errors.some((error) => /^\.cc-marketspec\/catalog\.yaml:.*required/i.test(error)), errors.join(' | '));
+	const generated = manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
+	assert.equal(generated.schemaVersion, '1.1');
+	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
+	assert.equal(generated.plugins[0].tagline, undefined);
+});
+
+test('an entry under a future catalog is not relabeled or applied as current data', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		'.cc-marketspec/catalog.yaml': 'schemaVersion: "2.0"\n',
+		[entryPath('sample')]: 'tagline: Future value\n'
+	});
+	assert.ok(errors.some((error) => /schemaVersion 2\.0/i.test(error)), errors.join(' | '));
+	const generated = manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
+	assert.equal(generated.schemaVersion, '1.1');
+	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
+	assert.equal(generated.plugins[0].tagline, undefined);
+});
+
+test('non-object marketplace JSON values are explicit malformed-content errors', () => {
+	for (const value of [null, false, 0, '', []]) {
+		let result: ReturnType<typeof run> | undefined;
+		assert.doesNotThrow(() => {
+			result = run({ '.claude-plugin/marketplace.json': JSON.stringify(value) });
+		}, `must not throw for ${JSON.stringify(value)}`);
+		assert.equal(result!.layout, 'fresh');
+		assert.deepEqual(result!.manifest, {});
+		assert.ok(
+			result!.errors.some((error) => /^\.claude-plugin\/marketplace\.json:.*object/i.test(error)),
+			`missing malformed-content error for ${JSON.stringify(value)}: ${result!.errors.join(' | ')}`
+		);
+	}
+});
+
+test('preserves authored marketplace, group, and entry intent-array order', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market(
+			{ name: 'zeta', source: './plugins/zeta' },
+			{ name: 'alpha', source: './plugins/alpha' }
+		),
+		'plugins/zeta/.claude-plugin/plugin.json': plugin({ name: 'zeta', version: '1.0.0' }),
+		'plugins/alpha/.claude-plugin/plugin.json': plugin({ name: 'alpha', version: '1.0.0' }),
+		'.cc-marketspec/catalog.yaml': catalog(
+			'groups:\n  - id: second\n    label: Second\n  - id: first\n    label: First\n'
+		),
+		[entryPath('zeta')]: 'tips:\n  - Second intent\n  - First intent\n'
+	});
+	assert.deepEqual(errors, []);
+	const generated = manifest as {
+		groups: { id: string }[];
+		plugins: { id: string; tips?: { text: string }[] }[];
+	};
+	assert.deepEqual(generated.plugins.map(({ id }) => id), ['zeta', 'alpha']);
+	assert.deepEqual(generated.groups.map(({ id }) => id), ['second', 'first']);
+	assert.deepEqual(generated.plugins[0].tips?.map(({ text }) => text), ['Second intent', 'First intent']);
+});
+
+test('sorts and deduplicates repeated diagnostics while reporting missing local data', () => {
+	const { errors, warnings } = run({
+		'.claude-plugin/marketplace.json': market(
+			{ name: 'zeta' },
+			{ name: 'alpha' },
+			{ name: 'alpha' }
+		)
+	});
+	assert.deepEqual(errors, [
+		'alpha: local source is missing .claude-plugin/plugin.json at plugins/alpha',
+		'duplicate plugin id "alpha"',
+		'zeta: local source is missing .claude-plugin/plugin.json at plugins/zeta'
+	]);
+	assert.deepEqual(warnings, [
+		'alpha: implicit plugins/alpha source is deprecated; add source: "./plugins/alpha"',
+		'zeta: implicit plugins/zeta source is deprecated; add source: "./plugins/zeta"'
+	]);
+	assert.equal(new Set(errors).size, errors.length);
+	assert.equal(new Set(warnings).size, warnings.length);
+});

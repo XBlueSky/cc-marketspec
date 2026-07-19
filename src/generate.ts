@@ -55,15 +55,20 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		return object;
 	};
 
-	const market = (() => {
+	const rawMarket: unknown = (() => {
 		try {
 			return readJSON(source, posix.join('.claude-plugin', 'marketplace.json'));
 		} catch {
 			err('cannot read .claude-plugin/marketplace.json — is this a Claude Code marketplace repo?');
-			return null;
+			return undefined;
 		}
 	})();
-	if (!market) return finish({}, 'fresh');
+	if (rawMarket === undefined) return finish({}, 'fresh');
+	if (rawMarket === null || typeof rawMarket !== 'object' || Array.isArray(rawMarket)) {
+		err('.claude-plugin/marketplace.json: expected a JSON object');
+		return finish({}, 'fresh');
+	}
+	const market = rawMarket as Record<string, unknown>;
 
 	if (Array.isArray(market.plugins)) {
 		for (const value of market.plugins) {
@@ -86,25 +91,36 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 	const catalog = (() => {
 		if (layout === 'fresh') return null;
 		if (layout === 'ambiguous' || inspected.catalogPath === null) return null;
-		const raw = loadYaml<unknown>(source, inspected.catalogPath);
+		const catalogPath = inspected.catalogPath;
+		const raw = (() => {
+			try {
+				return loadYaml<unknown>(source, catalogPath);
+			} catch (error) {
+				err(`${catalogPath}: cannot parse YAML — ${error instanceof Error ? error.message : String(error)}`);
+				return undefined;
+			}
+		})();
+		if (raw === undefined) return null;
 		if (raw == null) {
-			err(`${inspected.catalogPath}: catalog is required when authored entries exist`);
+			err(`${catalogPath}: catalog is required when authored entries exist`);
 			return null;
 		}
 		const parsed = Catalog.safeParse(raw);
 		if (!parsed.success) {
-			err(`${inspected.catalogPath}: ${parsed.error.issues.map((issue) =>
+			err(`${catalogPath}: ${parsed.error.issues.map((issue) =>
 				`${issue.path.join('.')} ${issue.message}`).join('; ')}`);
 			return null;
 		}
 		const compatible = checkFormatVersion(parsed.data.schemaVersion, layout);
 		if (!compatible.ok) {
-			err(`${inspected.catalogPath}: schemaVersion ${parsed.data.schemaVersion}: ${compatible.error}`);
+			err(`${catalogPath}: schemaVersion ${parsed.data.schemaVersion}: ${compatible.error}`);
 			return null;
 		}
 		if (compatible.warning) warn(compatible.warning);
 		return parsed.data;
 	})();
+	const authoredOverlaysEnabled =
+		(layout === 'namespaced' || layout === 'legacy') && catalog !== null;
 	const groupIds = new Set((catalog?.groups ?? []).map((group) => group.id));
 	let coverageCfg: CoverageConfig = (catalog?.coverage ?? {}) as CoverageConfig;
 	if (opts.strictCoverage) {
@@ -127,11 +143,19 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			err(`${id}: cannot inspect remote source; use a local ./ source or pre-generate in the source repository`);
 			return null;
 		}
-		const entryPath = entryPathForLayout(layout, plugin);
+		const entryPath = authoredOverlaysEnabled ? entryPathForLayout(layout, plugin) : null;
 		const presentationPath = entryPath ?? plugin.namespacedEntryPath;
 		const entry = (() => {
 			if (entryPath === null) return null;
-			const raw = loadYaml<unknown>(source, entryPath);
+			const raw = (() => {
+				try {
+					return loadYaml<unknown>(source, entryPath);
+				} catch (error) {
+					err(`${entryPath}: cannot parse YAML — ${error instanceof Error ? error.message : String(error)}`);
+					return undefined;
+				}
+			})();
+			if (raw === undefined) return null;
 			if (raw == null) return null;
 			const parsed = Entry.safeParse(raw);
 			if (!parsed.success) {
