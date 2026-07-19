@@ -20,3 +20,22 @@ export {
 } from './version.ts';
 export { normalizeInternalPath, resolveWithinRoot, PathPolicyError } from './path-policy.ts';
 export { OverlayFileSource } from './fs-source.ts';
+export {
+	CATALOG_PATH,
+	DIST_MANIFEST_PATH,
+	ENTRIES_DIR,
+	LEGACY_CATALOG_PATH,
+	LEGACY_MANIFEST_PATH,
+	SPEC_DIR,
+	SPEC_GITIGNORE_PATH,
+	entryPathForLayout,
+	entryPathForPlugin,
+	inspectLayout,
+	inspectLegacyCandidates,
+	resolveMarketplacePlugins,
+	type LayoutInspection,
+	type LayoutKind,
+	type LegacyInspection,
+	type PluginResolution,
+	type ResolvedPlugin
+} from './layout.ts';
