@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryFileSource, normalize } from '../src/fs-source.ts';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { MemoryFileSource, NodeFileSource, OverlayFileSource, normalize } from '../src/fs-source.ts';
 
 const fs = new MemoryFileSource({
 	'.claude-plugin/marketplace.json': '{"name":"mk"}',
@@ -54,4 +57,42 @@ test('list order is canonical regardless of insertion order', () => {
 test('unsafe paths are rejected instead of normalized outside the root', () => {
 	assert.throws(() => normalize('../outside'), /parent/i);
 	assert.throws(() => fs.read('../catalog.yaml'), /parent/i);
+});
+
+test('node source treats a nonexistent root as empty but still validates paths', () => {
+	const parent = mkdtempSync(join(tmpdir(), 'ccms-missing-root-'));
+	const source = new NodeFileSource(join(parent, 'missing'));
+	try {
+		assert.equal(source.read('catalog.yaml'), null);
+		assert.equal(source.exists('catalog.yaml'), false);
+		assert.equal(source.isDir('plugins'), false);
+		assert.deepEqual(source.list(''), []);
+		assert.throws(() => source.read('../outside'), /parent/i);
+	} finally {
+		rmSync(parent, { recursive: true, force: true });
+	}
+});
+
+test('overlay prefers overrides and returns a deterministic union listing', () => {
+	const base = new MemoryFileSource({ 'dir/base': 'base', 'dir/shared': 'base shared' });
+	const source = new OverlayFileSource(base, { 'dir/overlay': 'overlay', 'dir/shared': 'overlay shared' });
+	assert.equal(source.read('dir/shared'), 'overlay shared');
+	assert.equal(source.read('dir/base'), 'base');
+	assert.deepEqual(source.list('dir'), ['base', 'overlay', 'shared']);
+});
+
+test('overlay files and directories shadow exact base collisions coherently', () => {
+	const fileOverDir = new OverlayFileSource(new MemoryFileSource({ 'node/base-child': 'base' }), {
+		node: 'overlay file'
+	});
+	assert.equal(fileOverDir.read('node'), 'overlay file');
+	assert.equal(fileOverDir.isDir('node'), false);
+	assert.deepEqual(fileOverDir.list('node'), []);
+
+	const dirOverFile = new OverlayFileSource(new MemoryFileSource({ node: 'base file' }), {
+		'node/overlay-child': 'overlay'
+	});
+	assert.equal(dirOverFile.read('node'), null);
+	assert.equal(dirOverFile.isDir('node'), true);
+	assert.deepEqual(dirOverFile.list('node'), ['overlay-child']);
 });

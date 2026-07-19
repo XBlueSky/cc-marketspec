@@ -27,23 +27,27 @@ export class NodeFileSource implements FileSource {
 	constructor(root: string) {
 		this.root = resolve(root);
 	}
-	private abs(p: string): string {
-		return resolveWithinRoot(this.root, p, { allowRoot: true });
+	private abs(p: string): string | null {
+		const canonical = normalizeInternalPath(p, { allowRoot: true });
+		if (!existsSync(this.root)) return null;
+		return resolveWithinRoot(this.root, canonical, { allowRoot: true });
 	}
 	read(p: string): string | null {
 		const a = this.abs(p);
-		if (!existsSync(a) || !statSync(a).isFile()) return null;
+		if (a === null || !existsSync(a) || !statSync(a).isFile()) return null;
 		return readFileSync(a, 'utf8');
 	}
 	exists(p: string): boolean {
-		return existsSync(this.abs(p));
+		const a = this.abs(p);
+		return a !== null && existsSync(a);
 	}
 	isDir(p: string): boolean {
 		const a = this.abs(p);
-		return existsSync(a) && statSync(a).isDirectory();
+		return a !== null && existsSync(a) && statSync(a).isDirectory();
 	}
 	list(p: string): string[] {
-		return this.isDir(p) ? readdirSync(this.abs(p)).sort() : [];
+		const a = this.abs(p);
+		return a !== null && existsSync(a) && statSync(a).isDirectory() ? readdirSync(a).sort() : [];
 	}
 }
 
@@ -88,15 +92,18 @@ export class OverlayFileSource implements FileSource {
 		this.overlay = new MemoryFileSource(files);
 	}
 	read(path: string): string | null {
-		return this.overlay.read(path) ?? this.base.read(path);
+		return this.overlay.exists(path) ? this.overlay.read(path) : this.base.read(path);
 	}
 	exists(path: string): boolean {
 		return this.overlay.exists(path) || this.base.exists(path);
 	}
 	isDir(path: string): boolean {
-		return this.overlay.isDir(path) || this.base.isDir(path);
+		return this.overlay.exists(path) ? this.overlay.isDir(path) : this.base.isDir(path);
 	}
 	list(path: string): string[] {
-		return [...new Set([...this.base.list(path), ...this.overlay.list(path)])].sort();
+		if (this.overlay.exists(path) && !this.overlay.isDir(path)) return [];
+		const baseNames = this.base.isDir(path) ? this.base.list(path) : [];
+		const overlayNames = this.overlay.isDir(path) ? this.overlay.list(path) : [];
+		return [...new Set([...baseNames, ...overlayNames])].sort();
 	}
 }

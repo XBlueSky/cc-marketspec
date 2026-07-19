@@ -6,15 +6,18 @@ export class PathPolicyError extends Error {}
 export function normalizeInternalPath(raw: string, options: { allowRoot?: boolean } = {}): string {
 	if (typeof raw !== 'string') throw new PathPolicyError('path must be a string');
 	if (raw.includes('\\')) throw new PathPolicyError('internal paths must use POSIX separators');
-	if (isAbsolute(raw) || win32.isAbsolute(raw) || /^[A-Za-z]:/.test(raw) || raw.startsWith('//')) {
+	const stripped = raw.replace(/^(?:\.\/)+/, '').replace(/\/+$/, '');
+	if (isAbsolute(stripped) || win32.isAbsolute(stripped) || /^[A-Za-z]:/.test(stripped) || stripped.startsWith('//')) {
 		throw new PathPolicyError('path must be repository-relative; absolute, drive, and UNC paths are forbidden');
 	}
-	const stripped = raw.replace(/^\.\//, '').replace(/\/+$/, '');
 	const parts = stripped === '' || stripped === '.' ? [] : stripped.split('/');
 	if (parts.some((part) => part === '..')) throw new PathPolicyError('parent path segments are forbidden');
 	if (parts.some((part) => part === '')) throw new PathPolicyError('empty path segments are forbidden');
-	if (parts.length === 0 && !options.allowRoot) throw new PathPolicyError('path must not name the repository root');
-	return parts.filter((part) => part !== '.').join('/');
+	const canonicalParts = parts.filter((part) => part !== '.');
+	if (canonicalParts.length === 0 && !options.allowRoot) {
+		throw new PathPolicyError('path must not name the repository root');
+	}
+	return canonicalParts.join('/');
 }
 
 function assertContained(root: string, candidate: string): void {
