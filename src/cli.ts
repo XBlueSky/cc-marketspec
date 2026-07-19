@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // cc-marketspec — generate the marketplace manifest for a Claude Code plugin
-// marketplace repo. Reads <root>/.claude-plugin/marketplace.json, <root>/plugins/*,
-// <root>/catalog.yaml and per-plugin entry.yaml; writes <root>/manifest.json.
+// marketplace repo. Reads native marketplace/plugin metadata plus optional
+// cc-marketspec authoring files, then writes a generated manifest.
 //
-// Usage: cc-marketspec [root] [--check] [--help] [--version]   (root defaults to cwd)
+// Usage: cc-marketspec [root] [--check] [--output <path>] [--help] [--version]
 
 import { writeFileSync, readFileSync, realpathSync, mkdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -12,6 +12,7 @@ import { generateManifest } from './generate.ts';
 import { planInit } from './init.ts';
 import { NodeFileSource } from './fs-source.ts';
 import { startMcpServer } from './mcp.ts';
+import { defaultOutputPath, ensureNamespacedDistIgnore, writeManifestOutput } from './output.ts';
 
 const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
 
@@ -28,10 +29,55 @@ Commands:
   mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
 
 Options:
-  --check           Validate only; report errors/warnings but do not write manifest.json.
+  --check           Validate only; report errors/warnings but do not write output.
+  --output <path>   Write to a repository-relative path. Fresh/namespaced default:
+                    .cc-marketspec/dist/manifest.json; legacy default: manifest.json.
   --strict-coverage Promote all coverage warnings to errors for this run (stricter release gate).
   -h, --help        Show this help and exit.
   -v, --version     Print the version and exit.`;
+
+function optionValue(args: string[], name: string): { value?: string; error?: string } {
+	const index = args.indexOf(name);
+	if (index === -1) return {};
+	const value = args[index + 1];
+	if (!value || value.startsWith('-')) return { error: `${name} requires a value` };
+	if (args.indexOf(name, index + 1) !== -1) return { error: `${name} may be specified only once` };
+	return { value };
+}
+
+function positionalRoot(args: string[], optionsWithValues: Set<string>): string | undefined {
+	for (let index = 0; index < args.length; index += 1) {
+		const arg = args[index];
+		if (optionsWithValues.has(arg)) {
+			index += 1;
+			continue;
+		}
+		if (!arg.startsWith('-')) return arg;
+	}
+	return undefined;
+}
+
+function validateOptions(
+	args: string[],
+	flags: Set<string>,
+	optionsWithValues: Set<string>
+): string | undefined {
+	for (let index = 0; index < args.length; index += 1) {
+		const arg = args[index];
+		if (optionsWithValues.has(arg)) {
+			index += 1;
+			continue;
+		}
+		if (arg.startsWith('-') && !flags.has(arg)) return `unknown option ${arg}`;
+	}
+	return undefined;
+}
+
+function pluginCount(manifest: unknown): number {
+	if (manifest === null || typeof manifest !== 'object') return 0;
+	const plugins = (manifest as { plugins?: unknown }).plugins;
+	return Array.isArray(plugins) ? plugins.length : 0;
+}
 
 function version(): string {
 	try {
@@ -70,29 +116,52 @@ export function cli(argv: string[]): number {
 		return 0; // server keeps the process alive on stdio
 	}
 
+	const flags = new Set(['--check', '--strict-coverage']);
+	const optionsWithValues = new Set(['--output']);
+	const optionsError = validateOptions(args, flags, optionsWithValues);
+	if (optionsError) {
+		console.error('ERROR ' + optionsError);
+		return 1;
+	}
+	const outputOption = optionValue(args, '--output');
+	if (outputOption.error) {
+		console.error('ERROR ' + outputOption.error);
+		return 1;
+	}
 	const check = args.includes('--check');
+	if (check && outputOption.value) {
+		console.error('ERROR --check and --output cannot be combined');
+		return 1;
+	}
 	const strict = args.includes('--strict-coverage');
-	const root = resolve(args.find((a) => !a.startsWith('-')) ?? process.cwd());
+	const root = resolve(positionalRoot(args, optionsWithValues) ?? process.cwd());
+	const result = generateManifest(root, { strictCoverage: strict });
 
-	const { manifest, errors, warnings } = generateManifest(root, { strictCoverage: strict });
-
-	for (const w of warnings) console.warn('WARN ' + w);
-	if (errors.length) {
-		for (const e of errors) console.error('ERROR ' + e);
-		console.error(`\n${errors.length} error(s) — manifest NOT written.`);
+	for (const warning of result.warnings) console.warn('WARN ' + warning);
+	if (result.errors.length > 0) {
+		for (const error of result.errors) console.error('ERROR ' + error);
+		console.error(`\n${result.errors.length} error(s) — manifest NOT written.`);
 		return 1;
 	}
 
-	const count = (manifest as { plugins?: unknown[] }).plugins?.length ?? 0;
+	const count = pluginCount(result.manifest);
 	if (check) {
-		console.log(`cc-marketspec: OK — ${count} plugins, ${warnings.length} warning(s). (--check: nothing written)`);
+		console.log(`cc-marketspec: OK — ${count} plugins, ${result.warnings.length} warning(s). (--check: nothing written)`);
 		return 0;
 	}
 
-	const outPath = join(root, 'manifest.json');
-	writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n');
-	console.log(`cc-marketspec: wrote ${outPath} — ${count} plugins, ${warnings.length} warning(s).`);
-	return 0;
+	const output = outputOption.value ?? defaultOutputPath(result.layout);
+	try {
+		if (!outputOption.value && result.layout !== 'legacy') {
+			for (const warning of ensureNamespacedDistIgnore(root)) console.warn('WARN ' + warning);
+		}
+		writeManifestOutput(root, output, result.manifest);
+		console.log(`cc-marketspec: wrote ${output} — ${count} plugins, ${result.warnings.length} warning(s).`);
+		return 0;
+	} catch (error) {
+		console.error('ERROR ' + (error instanceof Error ? error.message : String(error)));
+		return 1;
+	}
 }
 
 // Run only when invoked as the bin entry, not when imported by tests.

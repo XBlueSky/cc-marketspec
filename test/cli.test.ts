@@ -52,25 +52,45 @@ test('--help prints usage and exits 0', () => {
 	assert.equal(code, 0);
 	assert.match(out, /cc-marketspec/);
 	assert.match(out, /--check/);
+	assert.match(out, /--output/);
 });
 
-test('default mode writes manifest.json and exits 0', () => {
+test('default fresh mode writes ignored namespaced output', () => {
 	const root = makeMarket(VALID);
 	try {
 		const { code } = capture(['node', 'cli', root]);
 		assert.equal(code, 0);
-		assert.equal(existsSync(join(root, 'manifest.json')), true, 'manifest.json should be written');
+		assert.equal(existsSync(join(root, '.cc-marketspec/dist/manifest.json')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/.gitignore')), true);
+		assert.equal(existsSync(join(root, 'manifest.json')), false);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}
 });
 
-test('--check validates but does NOT write manifest.json', () => {
+test('default legacy mode keeps the root manifest compatibility output', () => {
+	const root = makeMarket({
+		...VALID,
+		'catalog.yaml': 'schemaVersion: "1.0"\n',
+		'plugins/sample/entry.yaml': 'tagline: Legacy value\n'
+	});
+	try {
+		const { code } = capture(['node', 'cli', root]);
+		assert.equal(code, 0);
+		assert.equal(existsSync(join(root, 'manifest.json')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('--check validates but writes nothing', () => {
 	const root = makeMarket(VALID);
 	try {
 		const { code } = capture(['node', 'cli', '--check', root]);
 		assert.equal(code, 0);
 		assert.equal(existsSync(join(root, 'manifest.json')), false, 'manifest.json must not be written in --check');
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false, '.cc-marketspec must not be created in --check');
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}
@@ -82,10 +102,91 @@ test('errors exit 1 and write nothing', () => {
 		const { code } = capture(['node', 'cli', root]);
 		assert.equal(code, 1);
 		assert.equal(existsSync(join(root, 'manifest.json')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+test('--output before the root writes a safe custom repo-relative target', () => {
+	const root = makeMarket(VALID);
+	try {
+		const { code } = capture(['node', 'cli', '--output', 'site/public/marketplace.json', root]);
+		assert.equal(code, 0);
+		assert.equal(existsSync(join(root, 'site/public/marketplace.json')), true);
+		assert.equal(existsSync(join(root, 'manifest.json')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('--check --output is rejected and writes nothing', () => {
+	const root = makeMarket(VALID);
+	try {
+		const result = capture(['node', 'cli', root, '--check', '--output', 'out.json']);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /cannot.*--check.*--output|--check.*--output.*cannot/i);
+		assert.equal(existsSync(join(root, 'out.json')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('--output requires a value and writes nothing', () => {
+	const root = makeMarket(VALID);
+	try {
+		for (const args of [[root, '--output'], [root, '--output', '--check']]) {
+			const result = capture(['node', 'cli', ...args]);
+			assert.equal(result.code, 1);
+			assert.match(result.out, /--output requires a value/i);
+		}
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('--output may be specified only once', () => {
+	const root = makeMarket(VALID);
+	try {
+		const result = capture(['node', 'cli', root, '--output', 'one.json', '--output', 'two.json']);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /--output may be specified only once/i);
+		assert.equal(existsSync(join(root, 'one.json')), false);
+		assert.equal(existsSync(join(root, 'two.json')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('unknown generation options are rejected without writes', () => {
+	const root = makeMarket(VALID);
+	try {
+		const result = capture(['node', 'cli', root, '--outpt', 'out.json']);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /unknown option --outpt/i);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+for (const output of ['../outside.json', '/tmp/out.json', 'C:/out.json', 'C:out.json', '\\\\server\\out.json']) {
+	test(`--output rejects ${output}`, () => {
+		const root = makeMarket(VALID);
+		try {
+			const result = capture(['node', 'cli', root, '--output', output]);
+			assert.equal(result.code, 1);
+			assert.equal(existsSync(join(root, 'manifest.json')), false);
+			assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+}
 
 test('--strict-coverage turns a missing trigger into exit 1', () => {
 	const root = makeMarket({

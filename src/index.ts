@@ -19,6 +19,12 @@ export {
 	type VersionCheck
 } from './version.ts';
 export { normalizeInternalPath, resolveWithinRoot, PathPolicyError } from './path-policy.ts';
+export {
+	DIST_IGNORE_CONTENT,
+	defaultOutputPath,
+	ensureNamespacedDistIgnore,
+	writeManifestOutput
+} from './output.ts';
 export { OverlayFileSource } from './fs-source.ts';
 export {
 	CATALOG_PATH,
