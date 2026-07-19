@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryFileSource } from '../src/fs-source.ts';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { MemoryFileSource, NodeFileSource } from '../src/fs-source.ts';
 import {
 	CATALOG_PATH,
 	DIST_MANIFEST_PATH,
@@ -37,6 +40,43 @@ test('reports duplicate ids and duplicate resolved legacy entry paths', () => {
 	assert.ok(samePath.errors.some((error) => /same legacy entry path/i.test(error)));
 });
 
+test('duplicate ids prevent a strong legacy signature', () => {
+	const resolved = marketplace(
+		{ name: 'same', source: './plugins/a' },
+		{ name: 'same', source: './plugins/b' }
+	);
+	const layout = inspectLayout(
+		new MemoryFileSource({
+			'catalog.yaml': 'schemaVersion: "1.0"\n',
+			'plugins/a/entry.yaml': 'tagline: First\n',
+			'plugins/b/entry.yaml': 'tagline: Second\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'ambiguous');
+	assert.equal(layout.legacy.strong, false);
+	assert.ok(layout.legacy.errors.some((error) => /duplicate plugin id/i.test(error)));
+});
+
+test('duplicate legacy entry paths prevent a strong legacy signature', () => {
+	const resolved = marketplace(
+		{ name: 'a', source: './plugins/shared' },
+		{ name: 'b', source: './plugins/shared' }
+	);
+	const layout = inspectLayout(
+		new MemoryFileSource({
+			'catalog.yaml': 'schemaVersion: "1.0"\n',
+			'plugins/shared/entry.yaml': 'tagline: Shared\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'ambiguous');
+	assert.equal(layout.legacy.strong, false);
+	assert.ok(layout.legacy.errors.some((error) => /same legacy entry path/i.test(error)));
+});
+
 test('classifies namespaced authored candidates without reading generic files', () => {
 	const resolved = marketplace({ name: 'p', source: './plugins/p' });
 	const layout = inspectLayout(
@@ -49,6 +89,45 @@ test('classifies namespaced authored candidates without reading generic files', 
 	);
 	assert.equal(layout.kind, 'namespaced');
 	assert.equal(layout.catalogPath, '.cc-marketspec/catalog.yaml');
+});
+
+test('a malformed namespaced entry candidate still selects namespaced', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(
+		new MemoryFileSource({
+			'.cc-marketspec/entries/plugin-p.yaml': 'tagline: [unterminated\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'namespaced');
+	assert.equal(layout.catalogPath, '.cc-marketspec/catalog.yaml');
+});
+
+test('reports namespaced orphan entries in deterministic order', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(
+		new MemoryFileSource({
+			'.cc-marketspec/entries/plugin-z.yaml': '{}\n',
+			'.cc-marketspec/entries/plugin-p.yaml': '{}\n',
+			'.cc-marketspec/entries/plugin-a.yaml': '{}\n'
+		}),
+		resolved.plugins
+	);
+
+	assert.deepEqual(layout.warnings, [
+		'.cc-marketspec/entries/plugin-a.yaml: orphan entry has no marketplace plugin',
+		'.cc-marketspec/entries/plugin-z.yaml: orphan entry has no marketplace plugin'
+	]);
+});
+
+test('an empty child directory under namespaced entries stays fresh', (t) => {
+	const root = mkdtempSync(join(tmpdir(), 'cc-marketspec-layout-'));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	mkdirSync(join(root, '.cc-marketspec', 'entries', 'empty'), { recursive: true });
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+
+	assert.equal(inspectLayout(new NodeFileSource(root), resolved.plugins).kind, 'fresh');
 });
 
 test('requires a strong signature before auto-selecting legacy', () => {
@@ -84,6 +163,46 @@ test('root manifest alone is fresh, and dist-only namespace is fresh', () => {
 		).kind,
 		'fresh'
 	);
+});
+
+test('an unmapped root legacy entry is ambiguous rather than fresh', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(new MemoryFileSource({ 'entry.yaml': 'tagline: Orphan\n' }), resolved.plugins);
+
+	assert.equal(layout.kind, 'ambiguous');
+	assert.equal(layout.legacy.hasCandidates, true);
+	assert.ok(layout.legacy.errors.some((error) => /entry\.yaml.*not mapped/i.test(error)));
+});
+
+test('an unmapped plugins child legacy entry is ambiguous rather than fresh', () => {
+	const resolved = marketplace({ name: 'p', source: './plugins/p' });
+	const layout = inspectLayout(
+		new MemoryFileSource({ 'plugins/orphan/entry.yaml': 'tagline: Orphan\n' }),
+		resolved.plugins
+	);
+
+	assert.equal(layout.kind, 'ambiguous');
+	assert.equal(layout.legacy.hasCandidates, true);
+	assert.ok(layout.legacy.errors.some((error) => /plugins\/orphan\/entry\.yaml.*not mapped/i.test(error)));
+});
+
+test('implicit local sources retain their fallback path and warn', () => {
+	const result = marketplace({ name: 'implicit' });
+
+	assert.deepEqual(result.errors, []);
+	assert.equal(result.plugins[0].dir, 'plugins/implicit');
+	assert.equal(result.plugins[0].legacyEntryPath, 'plugins/implicit/entry.yaml');
+	assert.deepEqual(result.warnings, [
+		'implicit: implicit plugins/implicit source is deprecated; add source: "./plugins/implicit"'
+	]);
+});
+
+test('rejects invalid plugin ids at resolution and path mapping boundaries', () => {
+	const result = marketplace({ name: 'Bad_Name', source: './plugins/bad' });
+
+	assert.deepEqual(result.plugins, []);
+	assert.match(result.errors[0], /must be kebab-case/i);
+	assert.throws(() => entryPathForPlugin('Bad_Name'), /unsafe plugin id/i);
 });
 
 test('recognizes remote objects without inventing a local directory', () => {

@@ -130,11 +130,39 @@ function parseYaml(source: FileSource, path: string): unknown {
 
 export function inspectLegacyCandidates(source: FileSource, plugins: ResolvedPlugin[]): LegacyInspection {
 	const catalogRaw = source.read(LEGACY_CATALOG_PATH);
+	const errors: string[] = [];
+	const ids = new Set<string>();
+	const legacyPaths = new Map<string, string>();
+	const mappedPaths = new Set<string>();
+	for (const plugin of plugins) {
+		if (ids.has(plugin.id)) errors.push(`duplicate plugin id "${plugin.id}"`);
+		ids.add(plugin.id);
+		if (plugin.legacyEntryPath === null) continue;
+		const prior = legacyPaths.get(plugin.legacyEntryPath);
+		if (prior !== undefined) {
+			errors.push(`${prior} and ${plugin.id} resolve to the same legacy entry path ${plugin.legacyEntryPath}`);
+		}
+		legacyPaths.set(plugin.legacyEntryPath, plugin.id);
+		mappedPaths.add(plugin.legacyEntryPath);
+	}
+
 	const candidateEntries = plugins.filter(
 		(plugin) => plugin.legacyEntryPath !== null && source.read(plugin.legacyEntryPath) !== null
 	);
-	const hasCandidates = catalogRaw !== null || candidateEntries.length > 0;
-	const errors: string[] = [];
+	const unmappedPaths = new Set<string>();
+	const addUnmappedCandidate = (path: string) => {
+		if (!mappedPaths.has(path) && source.read(path) !== null) unmappedPaths.add(path);
+	};
+	addUnmappedCandidate('entry.yaml');
+	if (source.isDir('plugins')) {
+		for (const name of source.list('plugins')) {
+			addUnmappedCandidate(posix.join('plugins', name, 'entry.yaml'));
+		}
+	}
+	for (const path of unmappedPaths) {
+		errors.push(`${path} is not mapped to a marketplace plugin; add a matching source or remove the legacy entry`);
+	}
+	const hasCandidates = catalogRaw !== null || candidateEntries.length > 0 || unmappedPaths.size > 0;
 	const entries = new Map<string, { path: string; raw: string }>();
 	const catalog = catalogRaw === null ? null : parseYaml(source, LEGACY_CATALOG_PATH);
 	const catalogResult = Catalog.safeParse(catalog);
@@ -163,13 +191,14 @@ export function inspectLegacyCandidates(source: FileSource, plugins: ResolvedPlu
 
 export function inspectLayout(source: FileSource, plugins: ResolvedPlugin[]): LayoutInspection {
 	const legacy = inspectLegacyCandidates(source, plugins);
+	const namespacedEntryNames = source.isDir(ENTRIES_DIR) ? source.list(ENTRIES_DIR) : [];
 	const namespacedCandidates =
-		source.read(CATALOG_PATH) !== null || (source.isDir(ENTRIES_DIR) && source.list(ENTRIES_DIR).length > 0);
+		source.read(CATALOG_PATH) !== null ||
+		namespacedEntryNames.some((name) => source.read(posix.join(ENTRIES_DIR, name)) !== null);
 	if (namespacedCandidates) {
 		const expected = new Set(plugins.map((plugin) => posix.basename(plugin.namespacedEntryPath)));
-		const warnings = source.isDir(ENTRIES_DIR)
-			? source
-					.list(ENTRIES_DIR)
+		const warnings = namespacedEntryNames.length > 0
+			? namespacedEntryNames
 					.filter((name) => name.endsWith('.yaml') && !expected.has(name))
 					.map((name) => `${posix.join(ENTRIES_DIR, name)}: orphan entry has no marketplace plugin`)
 			: [];
