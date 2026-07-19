@@ -90,7 +90,7 @@ test('message for an array component carries the entry.yaml path and how-to-fix'
 	const f = facts({ skills: [{ name: 'greet', autoload: false }] });
 	const r = analyzeCoverage(f, null, {}, 'myplugin');
 	const m = r.findings[0].message;
-	assert.match(m, /plugins\/myplugin\/entry\.yaml/, 'has the file path');
+	assert.match(m, /\.cc-marketspec\/entries\/plugin-myplugin\.yaml/, 'has the canonical file path');
 	assert.match(m, /skill\.trigger/, 'has the rule id');
 	assert.match(m, /add "trigger:" under the skills entry/, 'has actionable how-to with plural key');
 });
@@ -114,10 +114,10 @@ test('finding message uses the provided entryPath (root-level plugin)', () => {
 	assert.doesNotMatch(finding.message, /plugins\/cortex/, 'must not point at a non-existent plugins/cortex path');
 });
 
-test('finding message falls back to plugins/<id>/entry.yaml when no entryPath given', () => {
+test('finding message falls back to the namespaced entry path when no entryPath given', () => {
 	const f = { plugin: {}, skills: [{ name: 's', autoload: false }], commands: [], agents: [], mcp: [], hooks: [] };
 	const r = analyzeCoverage(f, null, {}, 'myplugin');
 	const finding = r.findings.find((x) => x.ruleId === 'skill.trigger');
 	assert.ok(finding);
-	assert.match(finding.message, /^plugins\/myplugin\/entry\.yaml:/, 'unchanged fallback for 4-arg callers');
+	assert.match(finding.message, /^\.cc-marketspec\/entries\/plugin-myplugin\.yaml:/, 'canonical fallback for 4-arg callers');
 });

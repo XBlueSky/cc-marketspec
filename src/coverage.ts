@@ -6,6 +6,7 @@
 import type { NativeFacts } from './native.ts';
 import type { Entry } from './entry.ts';
 import { coverageTargets } from './entry.ts';
+import { entryPathForPlugin } from './layout.ts';
 
 export type Severity = 'error' | 'warn' | 'off';
 
@@ -107,7 +108,7 @@ export function analyzeCoverage(
 ): CoverageReport {
 	const findings: CoverageFinding[] = [];
 	const summary = { error: 0, warn: 0, off: 0 };
-	const path = entryPath ?? `plugins/${pluginId}/entry.yaml`;
+	const path = entryPath ?? entryPathForPlugin(pluginId);
 	for (const rule of RULES) {
 		const severity = resolve(rule.id, rule.defaultSeverity, config);
 		const hits = rule.scan(facts, entry);

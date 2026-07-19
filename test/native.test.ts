@@ -27,3 +27,27 @@ test('extractNativeFacts pulls plugin + derived components from native files', (
 	assert.equal(facts.hooks[0].event, 'SessionStart');
 	assert.equal(facts.hooks[0].matcher, 'startup');
 });
+
+test('extractNativeFacts sorts every discovered component and environment key', () => {
+	const source = new MemoryFileSource({
+		'plugins/p/.claude-plugin/plugin.json': '{"name":"p"}',
+		'plugins/p/skills/zeta/SKILL.md': '---\nname: zeta\n---\n',
+		'plugins/p/skills/alpha/SKILL.md': '---\nname: alpha\n---\n',
+		'plugins/p/commands/zeta.md': '---\nname: zeta\n---\n',
+		'plugins/p/commands/alpha.md': '---\nname: alpha\n---\n',
+		'plugins/p/agents/zeta.md': '---\nname: zeta\n---\n',
+		'plugins/p/agents/alpha.md': '---\nname: alpha\n---\n',
+		'plugins/p/.mcp.json': '{"mcpServers":{"zeta":{"command":"z","env":{"Z":"${Z}","A":"${A}"}},"alpha":{"url":"https://example.com"}}}',
+		'plugins/p/hooks/hooks.json': '{"hooks":{"Stop":[{}, {"matcher":"zeta"}],"SessionStart":[{"matcher":"alpha"}]}}'
+	});
+	const facts = extractNativeFacts(source, 'plugins/p');
+	assert.deepEqual(facts.skills.map(({ name }) => name), ['alpha', 'zeta']);
+	assert.deepEqual(facts.commands.map(({ name }) => name), ['alpha', 'zeta']);
+	assert.deepEqual(facts.agents.map(({ name }) => name), ['alpha', 'zeta']);
+	assert.deepEqual(facts.mcp.map(({ name }) => name), ['alpha', 'zeta']);
+	assert.deepEqual(facts.mcp[1].envKeys, ['A', 'Z']);
+	assert.deepEqual(
+		facts.hooks.map(({ event, matcher }) => [event, matcher]),
+		[['SessionStart', 'alpha'], ['Stop', undefined], ['Stop', 'zeta']]
+	);
+});

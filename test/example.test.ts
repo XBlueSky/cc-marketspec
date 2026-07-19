@@ -16,9 +16,10 @@ import { NodeFileSource } from '../src/fs-source.ts';
 const root = fileURLToPath(new URL('../examples/marketplace', import.meta.url));
 
 test('the example marketplace reproduces its committed golden manifest', () => {
-	const { manifest, errors, warnings } = generateManifest(new NodeFileSource(root));
+	const { manifest, errors, warnings, layout } = generateManifest(new NodeFileSource(root));
 	assert.deepEqual(errors, [], 'example must generate without errors');
-	assert.deepEqual(warnings, [], 'example must generate without warnings');
+	assert.equal(layout, 'legacy', 'example remains a legacy compatibility fixture until it is migrated');
+	assert.ok(warnings.some((warning) => /migrat|deprecat/i.test(warning)), 'legacy example must recommend migration');
 	const golden = JSON.parse(readFileSync(new URL('../examples/marketplace/manifest.json', import.meta.url), 'utf8'));
 	assert.deepEqual(manifest, golden, 'generator output drifted from examples/marketplace/manifest.json — regenerate it');
 });
