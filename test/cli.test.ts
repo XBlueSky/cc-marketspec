@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, lstatSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { cli } from '../src/cli.ts';
@@ -147,6 +147,62 @@ test('init rejects a namespaced symlink that escapes the marketplace root', () =
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 		rmSync(outside, { recursive: true, force: true });
+	}
+});
+
+test('init catches a file-level gitignore symlink escape before writing', () => {
+	const root = makeMarket(VALID);
+	const outside = mkdtempSync(join(tmpdir(), 'ccms-init-ignore-outside-'));
+	const outsideFile = join(outside, 'gitignore');
+	try {
+		writeFileSync(outsideFile, 'outside sentinel\n');
+		mkdirSync(join(root, '.cc-marketspec'), { recursive: true });
+		symlinkSync(outsideFile, join(root, '.cc-marketspec/.gitignore'), 'file');
+		let result: { code: number; out: string } | undefined;
+		assert.doesNotThrow(() => {
+			result = capture(['node', 'cli', 'init', root]);
+		});
+		assert.equal(result?.code, 1);
+		assert.match(result?.out ?? '', /ERROR .*escape/i);
+		assert.equal(readFileSync(outsideFile, 'utf8'), 'outside sentinel\n');
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec/entries/plugin-sample.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+		rmSync(outside, { recursive: true, force: true });
+	}
+});
+
+for (const collision of ['.cc-marketspec/catalog.yaml', '.cc-marketspec/entries/plugin-sample.yaml']) {
+	test(`init preflights the ${collision} directory before every write`, () => {
+		const root = makeMarket(VALID);
+		try {
+			mkdirSync(join(root, collision), { recursive: true });
+			const result = capture(['node', 'cli', 'init', root]);
+			assert.equal(result.code, 1);
+			assert.match(result.out, /ERROR .*directory/i);
+			assert.equal(existsSync(join(root, '.cc-marketspec/.gitignore')), false);
+			assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')) && !lstatSync(join(root, '.cc-marketspec/catalog.yaml')).isDirectory(), false);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+}
+
+test('init preflights a dangling catalog symlink before every write', () => {
+	const root = makeMarket(VALID);
+	const catalogPath = join(root, '.cc-marketspec/catalog.yaml');
+	try {
+		mkdirSync(dirname(catalogPath), { recursive: true });
+		symlinkSync(join(root, 'missing-catalog-target'), catalogPath, 'file');
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /ERROR .*symbolic link/i);
+		assert.equal(lstatSync(catalogPath).isSymbolicLink(), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/.gitignore')), false);
+		assert.equal(existsSync(join(root, '.cc-marketspec/entries/plugin-sample.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
 	}
 });
 

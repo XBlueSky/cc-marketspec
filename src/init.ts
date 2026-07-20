@@ -1,6 +1,7 @@
 // Detection-based, non-destructive scaffold. Pure over a FileSource: decides what
 // to create vs skip and returns the writes for the CLI to flush to disk.
 import { posix } from 'node:path';
+import { Catalog } from './catalog.ts';
 import type { FileSource } from './fs-source.ts';
 import {
 	CATALOG_PATH,
@@ -9,8 +10,8 @@ import {
 	inspectLayout,
 	resolveMarketplacePlugins
 } from './layout.ts';
-import { readJSON } from './native.ts';
-import { CURRENT_FORMAT_VERSION } from './version.ts';
+import { loadYaml, readJSON } from './native.ts';
+import { checkFormatVersion, CURRENT_FORMAT_VERSION } from './version.ts';
 
 export interface InitAction {
 	path: string;
@@ -28,6 +29,13 @@ export interface InitPlan {
 
 const compare = (left: string, right: string) => (left < right ? -1 : left > right ? 1 : 0);
 const MARKETPLACE_PATH = '.claude-plugin/marketplace.json';
+
+interface PlannedFile {
+	path: string;
+	content: string;
+}
+
+type PlannedTargetState = 'absent' | 'file';
 
 const CATALOG_TEMPLATE = `# Marketplace-level presentation data owned by cc-marketspec.
 # Native metadata (name/owner) remains in .claude-plugin/marketplace.json.
@@ -74,6 +82,80 @@ function failedPlan(errors: string[], warnings: string[] = []): InitPlan {
 	};
 }
 
+function errorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+function parentPaths(path: string): string[] {
+	const parents: string[] = [];
+	for (let parent = posix.dirname(path); parent !== '.' && parent !== ''; parent = posix.dirname(parent)) {
+		parents.push(parent);
+	}
+	return parents;
+}
+
+function preflightPlannedFiles(
+	source: FileSource,
+	plannedFiles: PlannedFile[]
+): { states: Map<string, PlannedTargetState>; errors: string[] } {
+	const states = new Map<string, PlannedTargetState>();
+	const errors: string[] = [];
+	const parents = [...new Set(plannedFiles.flatMap((file) => parentPaths(file.path)))].sort(compare);
+
+	for (const parent of parents) {
+		try {
+			if (source.isSymbolicLink?.(parent)) {
+				errors.push(`${parent}: parent component is a symbolic link`);
+				continue;
+			}
+			if (source.exists(parent) && !source.isDir(parent)) {
+				errors.push(`${parent}: parent component is not a directory`);
+			}
+		} catch (error) {
+			errors.push(`${parent}: inspection failed: ${errorMessage(error)}`);
+		}
+	}
+
+	for (const file of plannedFiles.slice().sort((left, right) => compare(left.path, right.path))) {
+		try {
+			if (source.isSymbolicLink?.(file.path)) {
+				errors.push(`${file.path}: planned file target is a symbolic link`);
+				continue;
+			}
+			if (!source.exists(file.path)) {
+				states.set(file.path, 'absent');
+				continue;
+			}
+			if (source.isDir(file.path)) {
+				errors.push(`${file.path}: planned file target is a directory`);
+				continue;
+			}
+			if (source.read(file.path) === null) {
+				errors.push(`${file.path}: planned file target is non-regular`);
+				continue;
+			}
+			states.set(file.path, 'file');
+		} catch (error) {
+			errors.push(`${file.path}: inspection failed: ${errorMessage(error)}`);
+		}
+	}
+
+	return { states, errors: errors.sort(compare) };
+}
+
+function validateNamespacedCatalog(source: FileSource): string | null {
+	let catalog: unknown;
+	try {
+		catalog = loadYaml(source, CATALOG_PATH);
+	} catch {
+		return `${CATALOG_PATH} could not be parsed as YAML`;
+	}
+	const parsed = Catalog.safeParse(catalog);
+	if (!parsed.success) return `${CATALOG_PATH} does not validate as a cc-marketspec catalog`;
+	const version = checkFormatVersion(parsed.data.schemaVersion, 'namespaced');
+	return version.ok ? null : `${CATALOG_PATH}: ${version.error}`;
+}
+
 export function planInit(source: FileSource): InitPlan {
 	let market: Record<string, unknown>;
 	try {
@@ -88,7 +170,7 @@ export function planInit(source: FileSource): InitPlan {
 		]);
 	}
 
-	const resolution = resolveMarketplacePlugins(market.plugins ?? []);
+	const resolution = resolveMarketplacePlugins(market.plugins);
 	let layout;
 	try {
 		layout = inspectLayout(source, resolution.plugins);
@@ -110,20 +192,11 @@ export function planInit(source: FileSource): InitPlan {
 		);
 	}
 
-	const actions: InitAction[] = [];
-	const writes: Record<string, string> = {};
 	const warnings = [...resolution.warnings, ...layout.warnings];
-	const planWrite = (path: string, content: string) => {
-		if (source.exists(path)) {
-			actions.push({ path, status: 'skipped', reason: 'already exists' });
-		} else {
-			writes[path] = content;
-			actions.push({ path, status: 'created' });
-		}
-	};
-
-	planWrite(SPEC_GITIGNORE_PATH, '/dist/\n');
-	planWrite(CATALOG_PATH, CATALOG_TEMPLATE);
+	const plannedFiles: PlannedFile[] = [
+		{ path: SPEC_GITIGNORE_PATH, content: '/dist/\n' },
+		{ path: CATALOG_PATH, content: CATALOG_TEMPLATE }
+	];
 	for (const plugin of resolution.plugins) {
 		if (plugin.sourceKind === 'remote' || plugin.dir === null) {
 			warnings.push(`${plugin.id}: remote source cannot be scaffolded without local native files`);
@@ -142,7 +215,28 @@ export function planInit(source: FileSource): InitPlan {
 			warnings.push(`${plugin.id}: local plugin.json is missing; entry was not scaffolded`);
 			continue;
 		}
-		planWrite(entryPathForPlugin(plugin.id), entryTemplate(plugin.id));
+		plannedFiles.push({
+			path: entryPathForPlugin(plugin.id),
+			content: entryTemplate(plugin.id)
+		});
+	}
+
+	const preflight = preflightPlannedFiles(source, plannedFiles);
+	if (preflight.errors.length > 0) return failedPlan(preflight.errors, warnings);
+	if (layout.kind === 'namespaced' && preflight.states.get(CATALOG_PATH) === 'file') {
+		const catalogError = validateNamespacedCatalog(source);
+		if (catalogError !== null) return failedPlan([catalogError], warnings);
+	}
+
+	const actions: InitAction[] = [];
+	const writes: Record<string, string> = {};
+	for (const file of plannedFiles) {
+		if (preflight.states.get(file.path) === 'file') {
+			actions.push({ path: file.path, status: 'skipped', reason: 'already exists' });
+		} else {
+			writes[file.path] = file.content;
+			actions.push({ path: file.path, status: 'created' });
+		}
 	}
 
 	return {

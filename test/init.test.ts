@@ -73,6 +73,18 @@ test('plugin resolution errors block every planned write', () => {
 	}
 });
 
+test('missing, null, and object plugin collections are resolution errors', () => {
+	for (const plugins of [undefined, null, {}]) {
+		const marketplace = plugins === undefined ? { name: 'mk' } : { name: 'mk', plugins };
+		const plan = planInit(new MemoryFileSource({
+			'.claude-plugin/marketplace.json': JSON.stringify(marketplace)
+		}));
+
+		assert.equal(Object.keys(plan.writes).length, 0);
+		assert.deepEqual(plan.errors, ['marketplace.json plugins must be an array']);
+	}
+});
+
 test('unreadable marketplace metadata produces an error and zero writes', () => {
 	for (const files of [
 		{},
@@ -126,6 +138,102 @@ test('local plugin metadata inspection errors block all planned writes', () => {
 
 	assert.equal(Object.keys(plan.writes).length, 0);
 	assert.match(plan.errors.join('\n'), /p:.*inspect.*escapes marketplace root/i);
+});
+
+test('every planned target and parent inspection error returns a zero-write plan', () => {
+	for (const failingPath of [
+		'.cc-marketspec',
+		'.cc-marketspec/.gitignore',
+		'.cc-marketspec/catalog.yaml',
+		'.cc-marketspec/entries',
+		'.cc-marketspec/entries/plugin-p.yaml'
+	]) {
+		const backing = new MemoryFileSource({
+			'.claude-plugin/marketplace.json': JSON.stringify({
+				name: 'mk',
+				plugins: [{ name: 'p', source: './plugins/p' }]
+			}),
+			'plugins/p/.claude-plugin/plugin.json': JSON.stringify({ name: 'p', version: '1.0.0' })
+		});
+		const source: FileSource = {
+			read: (path) => backing.read(path),
+			exists: (path) => {
+				if (path === failingPath) throw new Error(`inspection failed for ${failingPath}`);
+				return backing.exists(path);
+			},
+			isDir: (path) => backing.isDir(path),
+			list: (path) => backing.list(path),
+			isSymbolicLink: (path) => backing.isSymbolicLink(path)
+		};
+		let plan: ReturnType<typeof planInit> | undefined;
+
+		assert.doesNotThrow(() => {
+			plan = planInit(source);
+		}, failingPath);
+		assert.equal(Object.keys(plan?.writes ?? {}).length, 0, failingPath);
+		assert.match(plan?.errors.join('\n') ?? '', /inspection failed/i, failingPath);
+	}
+});
+
+test('predictable directory and non-regular target collisions block every planned write', () => {
+	for (const files of [
+		{ '.cc-marketspec': 'not a directory\n' },
+		{ '.cc-marketspec/entries': 'not a directory\n' },
+		{ '.cc-marketspec/catalog.yaml/marker': 'directory marker\n' },
+		{ '.cc-marketspec/entries/plugin-p.yaml/marker': 'directory marker\n' }
+	] as Record<string, string>[]) {
+		const plan = planInit(new MemoryFileSource({
+			'.claude-plugin/marketplace.json': JSON.stringify({
+				name: 'mk',
+				plugins: [{ name: 'p', source: './plugins/p' }]
+			}),
+			'plugins/p/.claude-plugin/plugin.json': JSON.stringify({ name: 'p', version: '1.0.0' }),
+			...files
+		}));
+
+		assert.equal(Object.keys(plan.writes).length, 0);
+		assert.ok(plan.errors.some((error) => /directory|non-regular/i.test(error)));
+	}
+});
+
+test('an exact non-regular target blocks every planned write', () => {
+	const backing = new MemoryFileSource({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] })
+	});
+	const nonRegularCatalog: FileSource = {
+		read: (path) => path === '.cc-marketspec/catalog.yaml' ? null : backing.read(path),
+		exists: (path) => path === '.cc-marketspec/catalog.yaml' || backing.exists(path),
+		isDir: (path) => backing.isDir(path),
+		list: (path) => backing.list(path),
+		isSymbolicLink: (path) => backing.isSymbolicLink(path)
+	};
+	const plan = planInit(nonRegularCatalog);
+	assert.equal(Object.keys(plan.writes).length, 0);
+	assert.match(plan.errors.join('\n'), /catalog.*non-regular/i);
+});
+
+test('existing namespaced catalog must parse and validate before scaffolding', () => {
+	for (const catalog of ['schemaVersion: [', 'schemaVersion: "1.1"\nunknown: true\n']) {
+		const plan = planInit(new MemoryFileSource({
+			'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] }),
+			'.cc-marketspec/catalog.yaml': catalog
+		}));
+
+		assert.equal(Object.keys(plan.writes).length, 0);
+		assert.match(plan.errors.join('\n'), /catalog.*(?:parse|validate)/i);
+	}
+});
+
+test('existing namespaced catalog must use current schemaVersion 1.1', () => {
+	for (const version of ['1.0', '1.2']) {
+		const plan = planInit(new MemoryFileSource({
+			'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] }),
+			'.cc-marketspec/catalog.yaml': `schemaVersion: "${version}"\n`
+		}));
+
+		assert.equal(Object.keys(plan.writes).length, 0);
+		assert.match(plan.errors.join('\n'), /schemaVersion|format minor/i);
+	}
 });
 
 test('entry stubs describe the namespaced authoring fields and guide', () => {
