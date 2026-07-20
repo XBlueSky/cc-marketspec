@@ -45,3 +45,10 @@ export {
 	type PluginResolution,
 	type ResolvedPlugin
 } from './layout.ts';
+export {
+	MIGRATION_RECEIPT_PATH,
+	planMigration,
+	type MigrationOptions,
+	type MigrationPlan,
+	type PlannedRemoval
+} from './migration.ts';
