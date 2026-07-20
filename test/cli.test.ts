@@ -162,6 +162,32 @@ test('--output may be specified only once', () => {
 	}
 });
 
+for (const flag of ['--check', '--strict-coverage']) {
+	test(`${flag} may be specified only once`, () => {
+		const root = makeMarket(VALID);
+		try {
+			const result = capture(['node', 'cli', root, flag, flag]);
+			assert.equal(result.code, 1);
+			assert.match(result.out, new RegExp(`${flag} may be specified only once`, 'i'));
+			assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+}
+
+test('more than one positional root is rejected before generation', () => {
+	const root = makeMarket(VALID);
+	try {
+		const result = capture(['node', 'cli', root, 'second-root']);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /at most one.*root|multiple.*root/i);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
 test('unknown generation options are rejected without writes', () => {
 	const root = makeMarket(VALID);
 	try {
@@ -187,6 +213,26 @@ for (const output of ['../outside.json', '/tmp/out.json', 'C:/out.json', 'C:out.
 		}
 	});
 }
+
+test('output-policy warnings are included in the final warning count', () => {
+	const root = makeMarket({
+		...VALID,
+		'plugins/sample/.claude-plugin/plugin.json': JSON.stringify({
+			name: 'sample',
+			version: '1.0.0',
+			description: 'Native summary'
+		}),
+		'.cc-marketspec/.gitignore': '# user rules\n'
+	});
+	try {
+		const result = capture(['node', 'cli', root]);
+		assert.equal(result.code, 0);
+		assert.match(result.out, /WARN .*\/dist\//);
+		assert.match(result.out, /1 warning\(s\)/);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
 
 test('--strict-coverage turns a missing trigger into exit 1', () => {
 	const root = makeMarket({

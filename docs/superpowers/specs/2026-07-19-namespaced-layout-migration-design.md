@@ -101,7 +101,20 @@ An explicit output remains available:
 Custom output must be repository-relative. Absolute, UNC, drive-relative, and
 parent-traversal paths are rejected. The resolved target must remain below the
 marketplace root. JSON is written to a sibling temporary file and renamed into
-place.
+place. Creation of the tool-owned .gitignore publishes the completed temporary
+file with an atomic no-clobber hard link, so an ordinary file, dangling symlink,
+or concurrently-created directory entry is preserved.
+
+Output safety has an explicit precondition: the repository directory structure
+must not be maliciously or concurrently renamed or replaced while a write is in
+progress. Pure Node does not expose a portable directory-fd/openat API that can
+bind path resolution and each filesystem mutation into one race-free operation.
+The implementation revalidates root containment after parent creation and again
+at the last safe points before temporary creation, link/rename publication, and
+temporary cleanup. These checks are best-effort hardening, not a guarantee
+against a hostile concurrent directory-replacement attack. Generation should
+therefore run in a trusted checkout with exclusive control of its directory
+structure for the duration of each write.
 
 Fresh generation may create .cc-marketspec/dist and a missing tool-owned
 .cc-marketspec/.gitignore. It does not create catalog or entries. An existing

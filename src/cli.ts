@@ -62,13 +62,22 @@ function validateOptions(
 	flags: Set<string>,
 	optionsWithValues: Set<string>
 ): string | undefined {
+	const seenFlags = new Set<string>();
+	let positionalRoots = 0;
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
 		if (optionsWithValues.has(arg)) {
 			index += 1;
 			continue;
 		}
-		if (arg.startsWith('-') && !flags.has(arg)) return `unknown option ${arg}`;
+		if (arg.startsWith('-')) {
+			if (!flags.has(arg)) return `unknown option ${arg}`;
+			if (seenFlags.has(arg)) return `${arg} may be specified only once`;
+			seenFlags.add(arg);
+			continue;
+		}
+		positionalRoots += 1;
+		if (positionalRoots > 1) return 'at most one marketplace root may be specified';
 	}
 	return undefined;
 }
@@ -152,11 +161,15 @@ export function cli(argv: string[]): number {
 
 	const output = outputOption.value ?? defaultOutputPath(result.layout);
 	try {
+		let outputWarningCount = 0;
 		if (!outputOption.value && result.layout !== 'legacy') {
-			for (const warning of ensureNamespacedDistIgnore(root)) console.warn('WARN ' + warning);
+			const outputWarnings = ensureNamespacedDistIgnore(root);
+			outputWarningCount = outputWarnings.length;
+			for (const warning of outputWarnings) console.warn('WARN ' + warning);
 		}
 		writeManifestOutput(root, output, result.manifest);
-		console.log(`cc-marketspec: wrote ${output} — ${count} plugins, ${result.warnings.length} warning(s).`);
+		const warningCount = result.warnings.length + outputWarningCount;
+		console.log(`cc-marketspec: wrote ${output} — ${count} plugins, ${warningCount} warning(s).`);
 		return 0;
 	} catch (error) {
 		console.error('ERROR ' + (error instanceof Error ? error.message : String(error)));
