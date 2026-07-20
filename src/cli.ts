@@ -6,13 +6,14 @@
 // Usage: cc-marketspec [root] [--check] [--output <path>] [--help] [--version]
 
 import { writeFileSync, readFileSync, realpathSync, mkdirSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateManifest } from './generate.ts';
 import { planInit } from './init.ts';
 import { NodeFileSource } from './fs-source.ts';
 import { startMcpServer } from './mcp.ts';
 import { defaultOutputPath, ensureNamespacedDistIgnore, writeManifestOutput } from './output.ts';
+import { resolveWithinRoot } from './path-policy.ts';
 
 const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
 
@@ -25,7 +26,7 @@ Arguments:
   root              Marketplace repo root (defaults to the current directory).
 
 Commands:
-  init [root]       Scaffold a new marketplace repo (creates catalog.yaml, plugin dirs, etc.).
+  init [root]       Scaffold namespaced authoring data under .cc-marketspec/.
   mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
 
 Options:
@@ -109,15 +110,34 @@ export function cli(argv: string[]): number {
 		return 0;
 	}
 	if (args[0] === 'init') {
-		const root = resolve(args.find((a, i) => i > 0 && !a.startsWith('-')) ?? process.cwd());
-		const { actions, writes, ciSnippet } = planInit(new NodeFileSource(root));
-		for (const [rel, content] of Object.entries(writes)) {
-			const abs = join(root, rel);
-			mkdirSync(dirname(abs), { recursive: true });
-			writeFileSync(abs, content);
+		const initArgs = args.slice(1);
+		const initOptionsError = validateOptions(initArgs, new Set(), new Set());
+		if (initOptionsError) {
+			console.error('ERROR ' + initOptionsError);
+			return 1;
 		}
-		for (const a of actions) console.log(`${a.status === 'created' ? 'CREATE' : 'SKIP  '} ${a.path}${a.reason ? ` (${a.reason})` : ''}`);
-		console.log('\n' + ciSnippet);
+		const root = resolve(positionalRoot(initArgs, new Set()) ?? process.cwd());
+		const plan = planInit(new NodeFileSource(root));
+		for (const warning of plan.warnings) console.warn('WARN ' + warning);
+		if (plan.errors.length > 0) {
+			for (const error of plan.errors) console.error('ERROR ' + error);
+			return 1;
+		}
+		try {
+			for (const [relativePath, content] of Object.entries(plan.writes)) {
+				const plannedPath = resolveWithinRoot(root, relativePath);
+				mkdirSync(dirname(plannedPath), { recursive: true });
+				const absolutePath = resolveWithinRoot(root, relativePath);
+				writeFileSync(absolutePath, content, { encoding: 'utf8', flag: 'wx' });
+			}
+		} catch (error) {
+			console.error('ERROR ' + (error instanceof Error ? error.message : String(error)));
+			return 1;
+		}
+		for (const action of plan.actions) {
+			console.log(`${action.status === 'created' ? 'CREATE' : 'SKIP  '} ${action.path}${action.reason ? ` (${action.reason})` : ''}`);
+		}
+		console.log('\n' + plan.ciSnippet);
 		return 0;
 	}
 	if (args[0] === 'mcp') {

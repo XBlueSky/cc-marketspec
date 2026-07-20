@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { cli } from '../src/cli.ts';
@@ -53,6 +53,122 @@ test('--help prints usage and exits 0', () => {
 	assert.match(out, /cc-marketspec/);
 	assert.match(out, /--check/);
 	assert.match(out, /--output/);
+});
+
+test('init writes namespaced authored files but no generated manifest', () => {
+	const root = makeMarket(VALID);
+	try {
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 0);
+		assert.equal(existsSync(join(root, '.cc-marketspec/.gitignore')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/entries/plugin-sample.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/dist/manifest.json')), false);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), false);
+		assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('init reports legacy migration guidance and performs no new writes', () => {
+	const root = makeMarket({
+		...VALID,
+		'catalog.yaml': 'schemaVersion: "1.0"\n',
+		'plugins/sample/entry.yaml': 'tagline: Legacy value\n'
+	});
+	try {
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /migrate/i);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('init prints remote-source warnings without fabricating entries', () => {
+	const root = makeMarket({
+		'.claude-plugin/marketplace.json': JSON.stringify({
+			name: 'mk',
+			plugins: [{ name: 'remote', source: { source: 'github', repo: 'o/r' } }]
+		})
+	});
+	try {
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 0);
+		assert.match(result.out, /WARN .*remote/i);
+		assert.equal(existsSync(join(root, '.cc-marketspec/entries/plugin-remote.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('init rejects extra roots and options before writing', () => {
+	for (const tail of [['second-root'], ['--output', 'out.json'], ['--unknown']]) {
+		const root = makeMarket(VALID);
+		try {
+			const result = capture(['node', 'cli', 'init', root, ...tail]);
+			assert.equal(result.code, 1, tail.join(' '));
+			assert.equal(existsSync(join(root, '.cc-marketspec')), false, tail.join(' '));
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}
+});
+
+test('init preserves existing namespaced files', () => {
+	const root = makeMarket({
+		...VALID,
+		'.cc-marketspec/.gitignore': '# custom\n',
+		'.cc-marketspec/catalog.yaml': 'schemaVersion: "1.1"\nlang: zh-TW\n',
+		'.cc-marketspec/entries/plugin-sample.yaml': 'tagline: Custom\n'
+	});
+	try {
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 0);
+		assert.equal(readFileSync(join(root, '.cc-marketspec/.gitignore'), 'utf8'), '# custom\n');
+		assert.equal(readFileSync(join(root, '.cc-marketspec/catalog.yaml'), 'utf8'), 'schemaVersion: "1.1"\nlang: zh-TW\n');
+		assert.equal(readFileSync(join(root, '.cc-marketspec/entries/plugin-sample.yaml'), 'utf8'), 'tagline: Custom\n');
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('init rejects a namespaced symlink that escapes the marketplace root', () => {
+	const root = makeMarket(VALID);
+	const outside = mkdtempSync(join(tmpdir(), 'ccms-init-outside-'));
+	try {
+		symlinkSync(outside, join(root, '.cc-marketspec'), 'dir');
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 1);
+		assert.equal(existsSync(join(outside, '.gitignore')), false);
+		assert.equal(existsSync(join(outside, 'catalog.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+		rmSync(outside, { recursive: true, force: true });
+	}
+});
+
+test('init reports an escaping local plugin source instead of throwing', () => {
+	const root = makeMarket({
+		'.claude-plugin/marketplace.json': JSON.stringify({
+			name: 'mk',
+			plugins: [{ name: 'sample', source: './plugins/sample' }]
+		})
+	});
+	const outside = mkdtempSync(join(tmpdir(), 'ccms-init-plugin-outside-'));
+	try {
+		mkdirSync(join(root, 'plugins'), { recursive: true });
+		symlinkSync(outside, join(root, 'plugins/sample'), process.platform === 'win32' ? 'junction' : 'dir');
+		const result = capture(['node', 'cli', 'init', root]);
+		assert.equal(result.code, 1);
+		assert.match(result.out, /sample.*inspect|escapes marketplace root/i);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+		rmSync(outside, { recursive: true, force: true });
+	}
 });
 
 test('default fresh mode writes ignored namespaced output', () => {
