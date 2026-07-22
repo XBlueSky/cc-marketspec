@@ -6,14 +6,14 @@ export const AUTHORING: AuthoringSection[] = [
   {
     "id": "overview",
     "title": "Overview: native vs presentation",
-    "when": "first time authoring an entry.yaml; understand what to fill vs leave to native",
-    "body": "`entry.yaml` is a **presentation overlay**. Native data (`plugin.json`,\n`commands/*.md`, `skills/*/SKILL.md`, `.mcp.json`, `hooks.json`) already yields a\nvalid manifest. Everything in `entry.yaml` is **optional enrichment** — write\nonly what native can't express, or where you want curated copy.\n\nRule: presentation never restates native facts. The generator joins the two by\nplugin id (= directory name). If a field has a native fallback (e.g. `tagline`\nfalls back to the plugin description), author it only when the curated wording\nbeats the native one.\n\nPoint your editor at the schema for completion:\n`# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`"
+    "when": "first time authoring .cc-marketspec/entries/plugin-<id>.yaml; understand what to fill vs leave to native",
+    "body": "`.cc-marketspec/entries/plugin-<id>.yaml` is a marketplace-owned presentation\noverlay. It is keyed by the native marketplace plugin id and stays outside the\nplugin source, so installing the plugin does not distribute marketplace-specific\ncopy. Native `plugin.json`, commands, skills, agents, MCP, and hooks still\nprovide fallbacks. Groups referenced by an entry are declared in\n`.cc-marketspec/catalog.yaml`.\n\nRule: presentation never restates native facts. The generator joins the two by\nnative marketplace plugin id. If a field has a native fallback (e.g. `tagline`\nfalls back to the plugin description), author it only when the curated wording\nbeats the native one.\n\nPoint your editor at the schema for completion:\n`# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`"
   },
   {
     "id": "tagline-intro",
     "title": "tagline & intro",
     "when": "writing the card summary and lede for a plugin",
-    "body": "- `tagline` — one line for cards and meta. Falls back to the native plugin\n  description. Write one only if you can beat it: concrete, benefit-first, no\n  trailing period needed. ~60–80 chars reads best on a card.\n- `intro` — the full lede (a short paragraph). Falls back to native description.\n  Use YAML block scalar (`>`) for multi-line. Say what it does and who it's for;\n  don't repeat the tagline verbatim.\n\n```yaml\ntagline: Headless data standard + generator for a marketplace's presentation\nintro: >\n  Describe your marketplace as data; cc-marketspec joins it with native plugin\n  manifests, validates, and emits one render-agnostic manifest.json.\n```"
+    "body": "- `tagline` — one line for cards and meta. Falls back to the native plugin\n  description. Write one only if you can beat it: concrete, benefit-first, no\n  trailing period needed. ~60–80 chars reads best on a card.\n- `intro` — the full lede (a short paragraph). Falls back to native description.\n  Use YAML block scalar (`>`) for multi-line. Say what it does and who it's for;\n  don't repeat the tagline verbatim.\n\n```yaml\ntagline: Headless data standard + generator for a marketplace's presentation\nintro: >\n  Describe your marketplace as data; cc-marketspec joins it with native plugin\n  manifests, validates, and emits one render-agnostic manifest.\n```"
   },
   {
     "id": "tips-traps",
@@ -25,7 +25,7 @@ export const AUTHORING: AuthoringSection[] = [
     "id": "group-ccVersion",
     "title": "group & ccVersion",
     "when": "classifying a plugin into a catalog group or stating a min Claude Code version",
-    "body": "- `group` — the id of a `catalog.yaml` group (you author the group taxonomy\n  there). Distinct from the native `category` in `marketplace.json`. Must match a\n  declared group or the build errors.\n- `ccVersion` — minimum Claude Code version. No native source, so author it if\n  the plugin depends on a recent feature."
+    "body": "- `group` — the id of a `.cc-marketspec/catalog.yaml` group (you author the group taxonomy\n  there). Distinct from the native `category` in `marketplace.json`. Must match a\n  declared group or the build errors.\n- `ccVersion` — minimum Claude Code version. No native source, so author it if\n  the plugin depends on a recent feature."
   },
   {
     "id": "skills",
@@ -43,7 +43,7 @@ export const AUTHORING: AuthoringSection[] = [
     "id": "agents",
     "title": "agents",
     "when": "enriching an agent entry (returns, not, summary)",
-    "body": "Per-agent overlay. `name` must match an `agents/*.md` on disk. Tools are derived\nnatively from frontmatter — don't restate them.\n\n- `description` — curated summary; falls back to native.\n- `returns` — what the agent hands back (its output contract). No native source.\n- `not` — explicit non-goals / what it won't do. Sets expectations; prevents\n  misuse.\n- `examples` — when to reach for it.\n\n```yaml\nagents:\n  - name: coverage-auditor\n    returns: A list of plugins missing presentation metadata, by dot-path.\n    not:\n      - It does not edit your entry.yaml — it only reports.\n```"
+    "body": "Per-agent overlay. `name` must match an `agents/*.md` on disk. Tools are derived\nnatively from frontmatter — don't restate them.\n\n- `description` — curated summary; falls back to native.\n- `returns` — what the agent hands back (its output contract). No native source.\n- `not` — explicit non-goals / what it won't do. Sets expectations; prevents\n  misuse.\n- `examples` — when to reach for it.\n\n```yaml\nagents:\n  - name: coverage-auditor\n    returns: A list of plugins missing presentation metadata, by dot-path.\n    not:\n      - It does not edit your entry overlay — it only reports.\n```"
   },
   {
     "id": "mcp",

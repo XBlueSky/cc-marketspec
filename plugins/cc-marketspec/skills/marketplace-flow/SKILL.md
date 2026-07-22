@@ -1,147 +1,139 @@
 ---
 name: marketplace-flow
-description: This skill should be used when the user asks to "turn this repo into a Claude Code plugin marketplace", "set up a marketplace", "add presentation data to my plugins", "generate the marketplace manifest", "automate the manifest in CI", or mentions catalog.yaml / entry.yaml / manifest.json in a marketplace context. It walks the user end to end through scaffolding, filling presentation data, validating, generating, and wiring CI.
+description: Use when a user asks to turn a repo into a Claude Code plugin marketplace, set up marketplace presentation data, migrate legacy marketplace YAML, generate a marketplace manifest, automate marketplace validation in CI, or mentions .cc-marketspec catalog, entry, or manifest files.
 ---
 
 # Marketplace flow
 
-Drive a downstream user from an ordinary plugin repo to a fully automated
-marketplace: scaffold presentation data, fill it, validate, generate the
-manifest, and wire CI so it regenerates on every push to main. Stay hands-on —
-do each step directly and only stop to ask when a choice is genuinely the
-user's (which persist strategy; what a tagline should say).
+Drive a downstream repo from native Claude Code marketplace data to namespaced
+authoring, validation, and a consumer build. Keep git history source-only:
+`.cc-marketspec/catalog.yaml` and
+`.cc-marketspec/entries/plugin-<id>.yaml` are authored source;
+`.cc-marketspec/dist/manifest.json` is ignored generated output.
 
 ## How to know which step the user is on
 
-This skill is stateless. Do not keep a settings file. Each time, inspect the
-repo's files and infer the current step. The list below is numbered to match the
-Step headings under `## Step actions`:
+This skill is stateless. Do not keep a settings file. Inspect the repo each time
+and use the first matching state:
 
-0. No `.claude-plugin/marketplace.json` → not a marketplace repo yet.
-1. No `catalog.yaml` → presentation data not scaffolded.
-2. Any `entry.yaml` still all-comment (only `# ...` TODO lines) → not filled.
-3. `/cc-check` reports errors → not valid. (Warnings are advisory and do not
-   block — surface them, but do not get stuck here on warnings alone.)
-4. No `manifest.json`, or regenerating it would produce a `git diff` → not generated.
-5. No CI workflow that runs `cc-marketspec` (e.g. `.github/workflows/*.yml` or
-   `.gitlab-ci.yml`) → CI not wired.
-6. All of the above satisfied → done; explain how the site consumes the manifest.
+0. No `.claude-plugin/marketplace.json` → bootstrap the native marketplace.
+1. Generic `catalog.yaml` or expected legacy `entry.yaml` exists without a
+   namespaced bundle → run `/cc-migrate`; use `--from legacy` only after the
+   user explicitly confirms ambiguous files are cc-marketspec data.
+2. No `.cc-marketspec/catalog.yaml` → run `/cc-init`.
+3. Any `.cc-marketspec/entries/plugin-<id>.yaml` is still an all-comment
+   scaffold → fill the presentation overlay.
+4. `/cc-check` reports errors → fix and rerun; warnings remain advisory.
+5. `.cc-marketspec/dist/manifest.json` is absent for a local build → run
+   `/cc-generate`.
+6. No CI validation/build step runs cc-marketspec → install the read-only
+   platform template.
+7. Validation and the consumer build are wired → done.
 
-Advance one step at a time. After running a command or writing a file,
-re-inspect and move to the next step.
+After every command or file edit, re-inspect and continue from the first
+matching state.
 
 ## Step actions
 
-### Step 0 — not a marketplace repo
+### Step 0 — bootstrap native marketplace data
 
-If `.claude-plugin/marketplace.json` is missing, bootstrap it. Read the starter
-template at `${CLAUDE_SKILL_DIR}/assets/marketplace.json.example`, fill it from
-what you can see in the user's repo (the marketplace name, the owner, and a
-`plugins[]` entry per plugin directory found under `plugins/` — each with `name`
-and `source: ./plugins/<id>`), and write it to `.claude-plugin/marketplace.json`.
-Confirm the owner name/url with the user if not inferable. Then re-inspect and
-proceed to scaffolding.
+If `.claude-plugin/marketplace.json` is missing, read
+`${CLAUDE_SKILL_DIR}/assets/marketplace.json.example`, infer the marketplace
+name, owner, and one `plugins[]` item per directory under `plugins/`, then write
+`.claude-plugin/marketplace.json`. Each local plugin uses `name` and
+`source: ./plugins/<id>`. Ask only for owner details that cannot be inferred.
 
-### Step 1 — scaffold (no catalog.yaml)
+### Step 1 — migrate recognized legacy YAML
 
-Run `/cc-init`. It scaffolds `catalog.yaml` and a per-plugin `entry.yaml`
-template. Then re-inspect and proceed to filling.
+Run `/cc-migrate`. It first runs
+`npx @xbluesky/cc-marketspec@latest migrate --dry-run` and reports every planned
+write and removal. Apply the ordinary migration only when that plan is valid.
 
-### Step 2 — fill entry.yaml (templates are all-comment TODO)
+If generic candidates are ambiguous, explain which files would be claimed and
+require explicit user confirmation before dry-running and applying
+`migrate --from legacy`. Never bypass the dry-run. Migration performs no git
+operations. If cleanup reports a remaining legacy path, report it and rerun the
+migration; cleanup is resumable.
 
-Help fill each plugin's `entry.yaml`: uncomment and write `tagline` and `intro`
-(the template scaffolds these as commented lines), and author skill triggers and
-command/agent descriptions from scratch where useful. Use the JSON Schema referenced in
-the file's `yaml-language-server` line for field meanings. If the plugin ships
-skills, add a `skills:` entry with a `trigger` for each — the coverage gate warns
-on skills with no authored trigger, so this is the common source of the warnings
-seen in Step 3. Write what can be inferred from the plugin's own files; stop and
-ask the user only for values that require their judgment (the exact tagline
-wording, intro copy). If `entry.yaml`
-carries a `# yaml-language-server: $schema=` line for editor validation, point
-it at the published schema — `node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`
-— not a repo-relative path (a downstream repo's schemas live in node_modules).
-Then re-inspect.
+### Step 2 — scaffold authored files
 
-For anything beyond `tagline`/`intro` — `tips`/`traps`, per-component fields
-(skill `trigger`, agent `returns`/`not`, mcp `provides`/`auth`/`setup`, hook
-`why`) — pull the field guide from the cc-marketspec MCP: call
-`list_authoring_sections`, then `get_authoring_guide` for the section you need.
-Prefer the MCP: it is hosted, so it returns the current guide even if the
-installed plugin is an older version, and it ships with this plugin (the
-`.mcp.json` next to this skill registers it on install — no extra setup). If the
-MCP is unreachable (offline, or the endpoint is down), fall back to the same
-guide bundled at `${CLAUDE_SKILL_DIR}/references/entry-authoring.md`. Read one or
-the other before authoring those fields.
+Run `/cc-init`. It creates authored `.cc-marketspec/catalog.yaml` and one
+`.cc-marketspec/entries/plugin-<id>.yaml` scaffold per marketplace plugin. It
+does not generate `.cc-marketspec/dist/manifest.json`.
 
-### Step 3 — validate (--check is red)
+### Step 3 — fill the presentation overlays
 
-Run `/cc-check`. Errors block — interpret each against the schema and apply or
-propose a concrete fix in the right file (do not just echo raw output), then
-re-run until errors clear. Warnings are advisory (the coverage gate lets them
-through, exit 0): surface them and offer to address them, but do not block
-progress on warnings alone. Once there are no errors, proceed.
+For each `.cc-marketspec/entries/plugin-<id>.yaml`, uncomment and author
+`tagline` and `intro`, then add useful skill triggers and command/agent copy.
+Infer what is supported by native plugin files; ask the user only for editorial
+choices that require judgment.
 
-### Step 4 — generate manifest (--check is clean, manifest missing or out of date)
+If the plugin has skills, add a `skills:` item with a `trigger` for each. The
+coverage gate warns when a native skill has no authored trigger. A
+`yaml-language-server` line must point to the published schema:
+`node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`.
 
-To tell whether the committed `manifest.json` is out of date, regenerate and check for a diff (do not compare file mtimes — git does not preserve them). Run `/cc-generate`. It writes `manifest.json` from the marketplace data. Report
-how many plugins were emitted and surface any warnings, then proceed to wiring CI
-so this regenerates automatically.
+Before authoring `tips`, `traps`, or per-component fields, call
+`list_authoring_sections`, then `get_authoring_guide` for the relevant section.
+The hosted MCP is the preferred current guide. If it is unavailable, read
+`${CLAUDE_SKILL_DIR}/references/entry-authoring.md` instead.
 
-### Step 5 — wire CI (no manifest workflow)
+Groups referenced by an entry must be declared in
+`.cc-marketspec/catalog.yaml`.
 
-This is the only step with no command — write the CI workflow directly.
+### Step 4 — validate authored data
 
-First detect the platform: GitHub if `.github/` exists or the git remote points
-at github; GitLab if `.gitlab-ci.yml` exists or the remote points at gitlab. If
-ambiguous, ask.
+Run `/cc-check`, which executes `cc-marketspec --check` without writing any
+file. Interpret each error against the schema, make or propose a concrete fix in
+the named authored file, and rerun until errors clear. Surface warnings and
+offer to address them, but do not block progress on warnings alone.
 
-Then ask the one decision only the user can make: **commit the manifest to git,
-or keep it as a build artifact?**
-- Independent / third-party site repo → commit to git (a stable raw URL any
-  site can fetch without running your CI).
-- Site in the same repo/pipeline → artifact (keep git to source only; a
-  downstream job consumes the artifact).
+### Step 5 — build for a consumer
 
-Read the matching template from this skill's bundled assets and write it into
-the user's repo. Use the `${CLAUDE_SKILL_DIR}` variable — it resolves to this
-skill's own directory regardless of the user's working directory (the plugin is
-installed in a managed cache, NOT the user's repo, so a bare relative path would
-fail):
-- GitHub → Read `${CLAUDE_SKILL_DIR}/assets/github-manifest.yml`, write to `.github/workflows/manifest.yml`
-- GitLab → Read `${CLAUDE_SKILL_DIR}/assets/gitlab-manifest.yml`, merge into `.gitlab-ci.yml`
+Run `/cc-generate`. It writes ignored output to
+`.cc-marketspec/dist/manifest.json` by default. Report how many plugins were
+emitted and surface warnings. `--output` is only an explicit consumer-build
+escape hatch when the consumer requires another destination; it is not an
+authoring or persistence mechanism.
 
-Keep only the block (git path vs artifact path) for the chosen strategy; delete
-the other, per the comments in the template. Tell the user about any required
-secret (GitLab git path needs a `GIT_PUSH_TOKEN` project access token).
+### Step 6 — install read-only CI
 
-### Step 6 — done
+Detect GitHub from `.github/` or a GitHub remote and GitLab from
+`.gitlab-ci.yml` or a GitLab remote. Ask which platform only when ambiguous.
 
-Explain how the site consumes `manifest.json`: for the git path, fetch the
-committed file (raw URL / submodule / checkout); for the artifact path, a
-downstream pipeline job or cross-repo artifact download reads it. The validate
-gate (`cc-marketspec --check` on PRs/MRs) keeps contributors honest; remind the
-user to add it to PR/MR CI if not present.
+Default to source-only git history. Pull requests run `--check`. A same-pipeline
+site job consumes `.cc-marketspec/dist/manifest.json` directly or via a
+short-lived workflow artifact. If another repository or public client needs the
+manifest, publish it with the site to Pages, a CDN, or object storage; a workflow
+artifact is not a stable public endpoint.
+
+Read the platform template from this skill and install or merge it:
+
+- GitHub: read `${CLAUDE_SKILL_DIR}/assets/github-manifest.yml`, write
+  `.github/workflows/manifest.yml`.
+- GitLab: read `${CLAUDE_SKILL_DIR}/assets/gitlab-manifest.yml`, merge it into
+  `.gitlab-ci.yml` without replacing unrelated jobs or stages.
+
+The templates validate read-only, generate only ignored output, and transfer it
+as a short-lived artifact. Do not add repository-write permissions or git
+operations.
+
+### Step 7 — hand off the consumer contract
+
+Explain that authored `.cc-marketspec/catalog.yaml` and
+`.cc-marketspec/entries/plugin-<id>.yaml` remain source-controlled, while the
+site or deployment pipeline consumes the generated
+`.cc-marketspec/dist/manifest.json`. External consumers require a stable deploy
+endpoint such as Pages, a CDN, or object storage.
 
 ## Division of labor
 
-This skill decides which step the user is on and drives it. The commands do the
-single-step work: `/cc-init` (scaffold), `/cc-check` (validate + explain),
-`/cc-generate` (write manifest). Do not re-implement their `npx` calls here —
-invoke the command. The cc-marketspec MCP is the knowledge source: `get_schema`
-for field meanings and `list_authoring_sections` / `get_authoring_guide` for the
-authoring guide (Step 2). It ships with this plugin via the adjacent `.mcp.json`,
-so prefer it over the bundled copy — a hosted guide stays current even against an
-older installed plugin.
+Use `/cc-migrate`, `/cc-init`, `/cc-check`, and `/cc-generate` for repository
+actions. The hosted MCP is the knowledge source: `get_schema`,
+`list_authoring_sections`, and `get_authoring_guide` explain the contract. Its
+`scaffold_entry` and `check_coverage` tools exist for bare HTTP MCP clients; when
+this plugin is installed, use commands for actions and MCP tools for knowledge.
 
-Do not confuse the MCP's action tools with the commands. The MCP also exposes
-`scaffold_entry` and `check_coverage`, which overlap `/cc-init` and `/cc-check`
-in purpose — but they exist for clients with no plugin installed (a bare
-Streamable-HTTP MCP connection), where the file-writing commands are unavailable.
-In this skill the plugin *is* installed, so always drive the doing-steps with the
-commands (they read and write files in the repo) and use the MCP only for
-knowledge (schema, authoring guide). Never call `scaffold_entry` / `check_coverage`
-here.
-
-Writing the CI workflow in Step 5 is the one action no
-command or MCP tool covers, so do it directly by reading `${CLAUDE_SKILL_DIR}/assets/`.
+Writing the CI workflow is the only doing-step without a command. Copy the
+matching `${CLAUDE_SKILL_DIR}/assets/` template and preserve unrelated platform
+configuration.

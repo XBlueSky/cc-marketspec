@@ -8,6 +8,7 @@ import yaml from 'js-yaml';
 import { MemoryFileSource } from './fs-source.ts';
 import { extractNativeFacts } from './native.ts';
 import { analyzeCoverage, type CoverageReport } from './coverage.ts';
+import { entryPathForPlugin } from './layout.ts';
 import { AUTHORING } from './authoring.generated.ts';
 import { SCHEMAS, VERSION } from './schemas.generated.ts';
 
@@ -41,25 +42,28 @@ export function getAuthoringGuide(section: string): { section: string; title?: s
 export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport & { needsMoreWork: boolean } {
 	const source = new MemoryFileSource(args.files);
 	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
-	// entry.yaml content, if pasted, is parsed separately and passed as the entry overlay
-	const entryRaw = args.files[`plugins/${args.pluginId}/entry.yaml`];
+	// The canonical namespaced entry, if pasted, is parsed separately and passed
+	// as the presentation overlay.
+	const path = entryPathForPlugin(args.pluginId);
+	const entryRaw = args.files[path];
 	const entry = entryRaw ? (yaml.load(entryRaw) as never) : null;
-	const report = analyzeCoverage(facts, entry, {}, args.pluginId);
+	const report = analyzeCoverage(facts, entry, {}, args.pluginId, path);
 	return { ...report, needsMoreWork: report.findings.length > 0 };
 }
 
 export function scaffoldEntry(args: { files: Record<string, string>; pluginId: string }): string {
 	const source = new MemoryFileSource(args.files);
 	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
-	const lines = [`# entry.yaml skeleton for ${args.pluginId} (generated)`];
-	if (!facts.plugin.description) lines.push('# tagline: TODO');
+	const lines = [`# ${entryPathForPlugin(args.pluginId)} skeleton (generated)`];
+	if (!facts.plugin.description) lines.push('# tagline: add a concise card summary');
 	for (const s of facts.skills) lines.push(`# skill ${s.name}: add trigger/examples`);
-	for (const m of facts.mcp) for (const k of m.envKeys) lines.push(`# mcp ${m.name} env ${k}: describe`);
+	for (const m of facts.mcp) for (const k of m.envKeys) lines.push(`# mcp ${m.name} env ${k}: add a human description`);
 	return lines.join('\n') + '\n';
 }
 
 // Transport-free tool dispatch shared by the stdio server (and any future HTTP
-// transport). Any thrown error from a handler — e.g. malformed pasted entry.yaml
+// transport). Any thrown error from a handler — e.g. a malformed pasted
+// .cc-marketspec/entries/plugin-<id>.yaml
 // in check_coverage — is caught and returned as a structured { error } payload so
 // the tool never crashes the connection (spec §5.2). Returns an MCP tool result.
 export function callTool(name: string, args: Record<string, unknown>): { content: { type: 'text'; text: string }[] } {
@@ -86,10 +90,10 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 
 export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
-	{ name: 'list_authoring_sections', description: 'List entry.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
+	{ name: 'list_authoring_sections', description: 'List .cc-marketspec/entries/plugin-<id>.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
 	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
-	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin (paste file contents). Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
-	{ name: 'scaffold_entry', description: 'Produce an entry.yaml skeleton from native files (paste contents)', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin from pasted native files and .cc-marketspec/entries/plugin-<id>.yaml. Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
+	{ name: 'scaffold_entry', description: 'Produce a .cc-marketspec/entries/plugin-<id>.yaml skeleton from pasted native files.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
 ];
 
 /** Build the MCP server with the shared tool table. Transport-agnostic — the

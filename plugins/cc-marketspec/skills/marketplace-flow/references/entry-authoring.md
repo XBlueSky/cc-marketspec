@@ -1,13 +1,15 @@
-<!-- section: overview | when: first time authoring an entry.yaml; understand what to fill vs leave to native -->
+<!-- section: overview | when: first time authoring .cc-marketspec/entries/plugin-<id>.yaml; understand what to fill vs leave to native -->
 ## Overview: native vs presentation
 
-`entry.yaml` is a **presentation overlay**. Native data (`plugin.json`,
-`commands/*.md`, `skills/*/SKILL.md`, `.mcp.json`, `hooks.json`) already yields a
-valid manifest. Everything in `entry.yaml` is **optional enrichment** — write
-only what native can't express, or where you want curated copy.
+`.cc-marketspec/entries/plugin-<id>.yaml` is a marketplace-owned presentation
+overlay. It is keyed by the native marketplace plugin id and stays outside the
+plugin source, so installing the plugin does not distribute marketplace-specific
+copy. Native `plugin.json`, commands, skills, agents, MCP, and hooks still
+provide fallbacks. Groups referenced by an entry are declared in
+`.cc-marketspec/catalog.yaml`.
 
 Rule: presentation never restates native facts. The generator joins the two by
-plugin id (= directory name). If a field has a native fallback (e.g. `tagline`
+native marketplace plugin id. If a field has a native fallback (e.g. `tagline`
 falls back to the plugin description), author it only when the curated wording
 beats the native one.
 
@@ -28,7 +30,7 @@ Point your editor at the schema for completion:
 tagline: Headless data standard + generator for a marketplace's presentation
 intro: >
   Describe your marketplace as data; cc-marketspec joins it with native plugin
-  manifests, validates, and emits one render-agnostic manifest.json.
+  manifests, validates, and emits one render-agnostic manifest.
 ```
 
 <!-- section: tips-traps | when: adding power-moves (tips) or pitfalls/gotchas (traps) to a plugin -->
@@ -61,7 +63,7 @@ keeps the file readable. `label` (≤ 120 chars) is the link text.
 <!-- section: group-ccVersion | when: classifying a plugin into a catalog group or stating a min Claude Code version -->
 ## group & ccVersion
 
-- `group` — the id of a `catalog.yaml` group (you author the group taxonomy
+- `group` — the id of a `.cc-marketspec/catalog.yaml` group (you author the group taxonomy
   there). Distinct from the native `category` in `marketplace.json`. Must match a
   declared group or the build errors.
 - `ccVersion` — minimum Claude Code version. No native source, so author it if
@@ -123,7 +125,7 @@ agents:
   - name: coverage-auditor
     returns: A list of plugins missing presentation metadata, by dot-path.
     not:
-      - It does not edit your entry.yaml — it only reports.
+      - It does not edit your entry overlay — it only reports.
 ```
 
 <!-- section: mcp | when: enriching an MCP server entry (provides, install, auth, setup, env) -->

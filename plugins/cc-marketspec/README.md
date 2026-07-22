@@ -1,6 +1,6 @@
 # cc-marketspec
 
-Scaffold, validate, and generate the presentation `manifest.json` for a Claude
+Scaffold, validate, migrate, and build marketplace presentation data for a Claude
 Code plugin marketplace — driven end to end by the `marketplace-flow` skill.
 
 ## Install
@@ -15,22 +15,28 @@ claude plugin install cc-marketspec
 A Claude Code plugin marketplace is described by **native** files your plugins
 already have: `.claude-plugin/marketplace.json`, each plugin's
 `.claude-plugin/plugin.json`, its `commands/*.md`, `.mcp.json`, and skills.
-Those alone already produce a valid `manifest.json`.
+Those alone already produce a valid generated manifest.
 
-`entry.yaml` (per plugin) and `catalog.yaml` (marketplace-wide) are an optional
+`.cc-marketspec/entries/plugin-<id>.yaml` (per plugin) and
+`.cc-marketspec/catalog.yaml` (marketplace-wide) are optional authored
 **presentation overlay** on top of that native data — taglines, intros, group
 labels, skill triggers. cc-marketspec joins native + overlay, validates the
-result, and emits one render-agnostic `manifest.json` that any site can consume.
-It ships data, not design.
+result, and emits the ignored generated output
+`.cc-marketspec/dist/manifest.json` that a site build can consume. Authored files
+stay in git; generated output does not. It ships data, not design.
 
 ## What it provides
 
 - **`marketplace-flow` skill** — auto-triggers when you want to turn a repo into
   a marketplace; walks you through the whole flow (bootstrap → fill → validate →
   generate → wire CI), inferring each step from your repo's files.
-- **`/cc-init`** — scaffold `catalog.yaml` and per-plugin `entry.yaml` templates.
+- **`/cc-init`** — scaffold authored `.cc-marketspec/catalog.yaml` and
+  `.cc-marketspec/entries/plugin-<id>.yaml` templates only.
+- **`/cc-migrate`** — safely migrate recognized legacy authoring YAML into
+  `.cc-marketspec/` with a dry-run and resumable cleanup.
 - **`/cc-check`** — validate the marketplace without writing; explains errors.
-- **`/cc-generate`** — generate `manifest.json` from your marketplace data.
+- **`/cc-generate`** — build ignored `.cc-marketspec/dist/manifest.json`; use
+  `--output` only as an explicit consumer-build escape hatch.
 - **`cc-marketspec` MCP** — hosted tools for schema lookup, field explanation,
   coverage checks, and entry scaffolding.
 
@@ -38,7 +44,7 @@ It ships data, not design.
 
 Just say what you want — e.g. "turn this repo into a Claude Code marketplace" —
 and the `marketplace-flow` skill takes over, figuring out which step you're on
-and driving it. The three commands are the single-step workers it invokes; you
+and driving it. The four commands are the single-step workers it invokes; you
 can also run them directly.
 
 The commands shell out to `npx @xbluesky/cc-marketspec`, so the published CLI is

@@ -88,3 +88,77 @@ test('SKILL.md Step 2 points to the entry-authoring reference and the MCP author
   assert.match(skill, /entry-authoring/);
   assert.match(skill, /list_authoring_sections|get_authoring_guide/);
 });
+
+test('workflow guidance uses namespaced paths and never commits generated output', () => {
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  assert.match(skill, /\.cc-marketspec\/catalog\.yaml/);
+  assert.match(skill, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+  assert.match(skill, /\.cc-marketspec\/dist\/manifest\.json/);
+  assert.match(skill, /migrate --from legacy/);
+  assert.doesNotMatch(skill, /commit (the )?manifest|git path|push.*manifest/i);
+  assert.doesNotMatch(skill, /--force/);
+
+  for (const name of ['github-manifest.yml', 'gitlab-manifest.yml']) {
+    const body = readFileSync(new URL(`assets/${name}`, `file://${SKILL_DIR}`), 'utf8');
+    assert.match(body, /--check/);
+    assert.match(body, /\.cc-marketspec\/dist\/manifest\.json/);
+    assert.doesNotMatch(body, /git add|git commit|git push|contents:\s*write/);
+  }
+});
+
+test('CI assets validate before generating source-only build artifacts', () => {
+  const github = readFileSync(new URL('assets/github-manifest.yml', `file://${SKILL_DIR}`), 'utf8');
+  assert.match(github, /permissions:\s*\n\s*contents: read/);
+  assert.match(github, /pull_request:/);
+  assert.match(github, /needs: validate/);
+
+  const gitlab = readFileSync(new URL('assets/gitlab-manifest.yml', `file://${SKILL_DIR}`), 'utf8');
+  assert.match(gitlab, /stages: \[validate, build\]/);
+  assert.match(gitlab, /validate-marketplace:/);
+  assert.match(gitlab, /generate-marketplace:/);
+
+  for (const body of [github, gitlab]) {
+    assert.doesNotMatch(body, /\bgit\s+(?:add|commit|push)\b/);
+    assert.doesNotMatch(body, /(?:^|\s)(?:>|>>).*\.cc-marketspec\//m);
+  }
+});
+
+test('plugin exposes a safe, resumable migration command', () => {
+  const path = new URL('../plugins/cc-marketspec/commands/cc-migrate.md', import.meta.url);
+  assert.equal(existsSync(path), true);
+  const body = readFileSync(path, 'utf8');
+  assert.match(body, /cc-marketspec@latest migrate/);
+  assert.match(body, /--dry-run/);
+  assert.match(body, /explicit(?:ly)? (?:confirm|confirmation)/i);
+  assert.match(body, /rerun safely resumes cleanup/i);
+  assert.doesNotMatch(body, /--force|git add|git commit|git push/i);
+});
+
+test('all plugin command docs distinguish authored inputs from ignored generated output', () => {
+  const commandDir = new URL('../plugins/cc-marketspec/commands/', import.meta.url);
+  const init = readFileSync(new URL('cc-init.md', commandDir), 'utf8');
+  const check = readFileSync(new URL('cc-check.md', commandDir), 'utf8');
+  const generate = readFileSync(new URL('cc-generate.md', commandDir), 'utf8');
+  const migrate = readFileSync(new URL('cc-migrate.md', commandDir), 'utf8');
+  const readme = readFileSync(new URL('../plugins/cc-marketspec/README.md', import.meta.url), 'utf8');
+
+  for (const body of [init, check, generate, readme]) {
+    assert.match(body, /\.cc-marketspec\/catalog\.yaml/);
+    assert.match(body, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+    assert.match(body, /\.cc-marketspec\/dist\/manifest\.json/);
+  }
+  assert.match(init, /authored files only/i);
+  assert.match(check, /without writing any file/i);
+  assert.match(generate, /ignored output by default/i);
+  assert.match(generate, /--output.*explicit consumer-build escape hatch/is);
+  assert.doesNotMatch([init, check, generate, migrate, readme].join('\n'), /--force|git add|git commit|git push/i);
+});
+
+test('authoring source defines canonical marketplace-owned overlay paths', () => {
+  const authoring = readFileSync(new URL('../src/authoring.md', import.meta.url), 'utf8');
+  const prose = authoring.replace(/```yaml[\s\S]*?```/g, '');
+  assert.match(authoring, /^`\.cc-marketspec\/entries\/plugin-<id>\.yaml` is a marketplace-owned presentation/m);
+  assert.match(authoring, /\.cc-marketspec\/catalog\.yaml/);
+  assert.doesNotMatch(prose, /(?<![\w/.`-])entry\.yaml/);
+  assert.doesNotMatch(prose, /(?<![\w/.`-])catalog\.yaml/);
+});
