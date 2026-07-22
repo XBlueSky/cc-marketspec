@@ -932,6 +932,68 @@ test('last-safe-point target recheck runs after staging and before rename', () =
 	}
 });
 
+test('published target is authoritatively revalidated before legacy cleanup', () => {
+	const root = materialize(legacy());
+	const corrupting: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		rename: (from, to) => {
+			NODE_MIGRATION_FILE_OPS.rename(from, to);
+			writeFileSync(join(to, 'catalog.yaml'), 'schemaVersion: "9.9"\n');
+		}
+	};
+	try {
+		const result = applyMigration(
+			root,
+			planMigration(new NodeFileSource(root)),
+			corrupting
+		);
+		assert.equal(result.changed, true);
+		assert.match(result.errors.join('\n'), /authoritative|cleanup|schemaVersion/i);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), true);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('successful rename consumes staging ownership before postcheck failure', () => {
+	const root = materialize(legacy());
+	let renamed = false;
+	let oldStaging = '';
+	const misleading: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		isSymbolicLink: (path) => renamed && path.endsWith('.cc-marketspec')
+			? true
+			: NODE_MIGRATION_FILE_OPS.isSymbolicLink(path),
+		rename: (from, to) => {
+			oldStaging = from;
+			NODE_MIGRATION_FILE_OPS.rename(from, to);
+			mkdirSync(from);
+			writeFileSync(join(from, 'sentinel'), 'not owned by migration\n');
+			renamed = true;
+		}
+	};
+	try {
+		const result = applyMigration(
+			root,
+			planMigration(new NodeFileSource(root)),
+			misleading
+		);
+		assert.equal(result.changed, true);
+		assert.match(result.errors.join('\n'), /cutover did not publish/i);
+		assert.equal(
+			readFileSync(join(oldStaging, 'sentinel'), 'utf8'),
+			'not owned by migration\n'
+		);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), true);
+	} finally {
+		if (oldStaging !== '') rmSync(oldStaging, { recursive: true, force: true });
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
 test('staging cleanup failure does not mask the primary cutover error', () => {
 	const root = materialize(legacy());
 	const failing: MigrationFileOps = {

@@ -917,10 +917,22 @@ function applyMigrationUnchecked(
 		}
 		resolveWithinRoot(root, SPEC_DIR);
 		fileOps.rename(ownedStaging, target);
+		cutOver = true;
+		ownedStaging = undefined;
 		if (!fileOps.exists(target) || fileOps.isSymbolicLink(target)) {
 			throw new Error(SPEC_DIR + ': cutover did not publish a safe complete target');
 		}
-		cutOver = true;
+		const published = planMigration(new NodeFileSource(root));
+		if (
+			published.kind !== 'cleanup'
+			|| published.errors.length > 0
+			|| !sameRemovals(published.removals, plan.removals)
+		) {
+			throw new Error([
+				'published target failed authoritative cleanup revalidation',
+				...published.errors
+			].join(': '));
+		}
 	} catch (error) {
 		const errors = ['migration cutover failed: ' + describe(error)];
 		if (!cutOver && ownedStaging !== undefined) {
@@ -930,7 +942,7 @@ function applyMigrationUnchecked(
 				errors.push('staging cleanup failed: ' + describe(cleanupError));
 			}
 		}
-		return { changed: false, errors, warnings: plan.warnings };
+		return { changed: cutOver, errors, warnings: plan.warnings };
 	}
 
 	const cleanup = finishCleanup(root, plan.removals, fileOps);
