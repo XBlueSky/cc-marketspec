@@ -40,6 +40,19 @@ test('tools/list returns exactly the five tools', async () => {
 	assert.deepEqual(names, ['check_coverage', 'get_authoring_guide', 'get_schema', 'list_authoring_sections', 'scaffold_entry']);
 });
 
+test('tools/list advertises pasted files as a string-valued map', async () => {
+	const res = await handleHttpRequest(rpc('tools/list'));
+	const body = await res.json() as { result: { tools: { name: string; inputSchema: { properties?: Record<string, unknown> } }[] } };
+	for (const name of ['check_coverage', 'scaffold_entry']) {
+		const tool = body.result.tools.find((candidate) => candidate.name === name);
+		assert.ok(tool, `${name} must remain hosted`);
+		assert.deepEqual(tool.inputSchema.properties?.files, {
+			type: 'object',
+			additionalProperties: { type: 'string' }
+		});
+	}
+});
+
 test('tools/call get_schema returns the entry schema as JSON text', async () => {
 	const res = await handleHttpRequest(rpc('tools/call', { name: 'get_schema', arguments: { which: 'entry' } }));
 	assert.equal(res.status, 200);

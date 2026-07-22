@@ -47,8 +47,25 @@ and the `marketplace-flow` skill takes over, figuring out which step you're on
 and driving it. The four commands are the single-step workers it invokes; you
 can also run them directly.
 
-The commands shell out to `npx @xbluesky/cc-marketspec`, so the published CLI is
-fetched on first use.
+Interactive commands shell out to `npx @xbluesky/cc-marketspec`, so the
+published CLI is fetched on first use. CLI use through `npx` works without a
+repository-local dependency.
+
+The generated entry contains this editor directive:
+
+```yaml
+# yaml-language-server: $schema=../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
+```
+
+Editor completion through that path requires an exact devDependency in the
+marketplace repository. Install it once (this also prepares reproducible CI),
+then commit `package.json` and `package-lock.json`:
+
+```bash
+npm install --save-dev --save-exact @xbluesky/cc-marketspec@latest
+```
+
+This repository-local package is separate from Claude's plugin runtime.
 
 ## MCP server
 

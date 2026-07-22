@@ -148,6 +148,10 @@ test('MCP preserves exactly five hosted tools and canonical pasted-file guidance
 	]);
 	for (const tool of TOOLS.filter(({ name }) => name === 'check_coverage' || name === 'scaffold_entry')) {
 		assert.match(tool.description, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+		assert.deepEqual(tool.inputSchema.properties.files, {
+			type: 'object',
+			additionalProperties: { type: 'string' }
+		});
 	}
 });
 
@@ -169,12 +173,12 @@ test('MCP public tool input schemas remain transport-compatible', () => {
 		},
 		check_coverage: {
 			type: 'object',
-			properties: { pluginId: { type: 'string' }, files: { type: 'object' } },
+			properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } },
 			required: ['pluginId', 'files']
 		},
 		scaffold_entry: {
 			type: 'object',
-			properties: { pluginId: { type: 'string' }, files: { type: 'object' } },
+			properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } },
 			required: ['pluginId', 'files']
 		}
 	});

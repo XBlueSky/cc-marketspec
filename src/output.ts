@@ -72,7 +72,9 @@ type PublishMode = 'replace' | 'no-clobber';
  * no portable directory-fd/openat API that can bind every lookup and mutation.
  * We therefore revalidate containment immediately before open, publish, and
  * cleanup as best-effort hardening, but those checks are not a hostile-race
- * guarantee.
+ * guarantee. Publication is atomic to readers and the temporary file is
+ * fsynced, but the parent directory is not: this is not a power-loss durability
+ * guarantee on every filesystem.
  */
 function writeTextAtomic(
 	root: string,

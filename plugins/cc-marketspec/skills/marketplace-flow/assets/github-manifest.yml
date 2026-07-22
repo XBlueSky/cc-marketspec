@@ -19,7 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx @xbluesky/cc-marketspec --check
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install cc-marketspec --check
 
   generate:
     needs: validate
@@ -30,7 +32,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx @xbluesky/cc-marketspec
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install cc-marketspec
       - uses: actions/upload-artifact@v4
         with:
           name: cc-marketspec-manifest

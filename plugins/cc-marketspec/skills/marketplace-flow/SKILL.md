@@ -72,6 +72,9 @@ If the plugin has skills, add a `skills:` item with a `trigger` for each. The
 coverage gate warns when a native skill has no authored trigger. A
 `yaml-language-server` line must point to the published schema:
 `../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`.
+That editor directive requires the package to be installed in this repository;
+use the exact devDependency setup in Step 6. The CLI can still run through
+`npx` without a local dependency when CI/editor integration is not requested.
 
 Before authoring `tips`, `traps`, or per-component fields, call
 `list_authoring_sections`, then `get_authoring_guide` for the relevant section.
@@ -107,16 +110,32 @@ short-lived workflow artifact. If another repository or public client needs the
 manifest, publish it with the site to Pages, a CDN, or object storage; a workflow
 artifact is not a stable public endpoint.
 
+Before copying a template, inspect `package.json`. Ensure
+`@xbluesky/cc-marketspec` appears once, under `devDependencies`, with an exact
+version. If it is missing or uses a range, run:
+
+```bash
+npm install --save-dev --save-exact @xbluesky/cc-marketspec@latest
+```
+
+This resolves the current published version once during interactive setup.
+Remove any duplicate declaration elsewhere, then commit both `package.json` and
+`package-lock.json`. CI must install that committed graph with `npm ci`; it must
+not resolve a package version at workflow runtime.
+
 Read the platform template from this skill and install or merge it:
 
 - GitHub: read `${CLAUDE_SKILL_DIR}/assets/github-manifest.yml`, write
   `.github/workflows/manifest.yml`.
 - GitLab: read `${CLAUDE_SKILL_DIR}/assets/gitlab-manifest.yml`, merge it into
-  `.gitlab-ci.yml` without replacing unrelated jobs or stages.
+  `.gitlab-ci.yml` while preserving unrelated configuration. Inspect the
+  existing `stages` list first and map both jobs to the same existing stage.
+  The asset uses the conventional `test` stage; for a custom stage name, change
+  both `stage:` values together. Do not add a new top-level `stages:` key.
 
-The templates validate read-only, generate only ignored output, and transfer it
-as a short-lived artifact. Do not add repository-write permissions or git
-operations.
+The templates run `npm ci` and `npx --no-install cc-marketspec`, validate
+read-only, generate only ignored output, and transfer it as a short-lived
+artifact. Do not add repository-write permissions or git operations.
 
 ### Step 7 — hand off the consumer contract
 

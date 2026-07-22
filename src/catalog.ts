@@ -16,6 +16,24 @@ const group = z
 	})
 	.strict();
 
+const groups = z
+	.array(group)
+	.superRefine((values, context) => {
+		const seen = new Set<string>();
+		for (const [index, value] of values.entries()) {
+			if (seen.has(value.id)) {
+				context.addIssue({
+					code: 'custom',
+					path: [index, 'id'],
+					message: `duplicate group id "${value.id}"`
+				});
+				break;
+			}
+			seen.add(value.id);
+		}
+	})
+	.describe('Group taxonomy; array order is the canonical display order.');
+
 const severity = z.enum(['error', 'warn', 'off']);
 const validKeys = new Set(['*', ...coverageTargets().map((t) => `${t.component}.${t.field}`)]);
 
@@ -36,10 +54,7 @@ export const Catalog = z
 			.string()
 			.describe('BCP-47 primary language of all authored text (e.g. zh-TW). Defaults to en.')
 			.optional(),
-		groups: z
-			.array(group)
-			.describe('Group taxonomy; array order is the canonical display order.')
-			.optional(),
+		groups: groups.optional(),
 		coverage: coverage.optional()
 	})
 	.strict();

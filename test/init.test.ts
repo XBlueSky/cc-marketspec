@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planInit } from '../src/init.ts';
+import { planInit, type InitPlan } from '../src/index.ts';
 import { MemoryFileSource } from '../src/fs-source.ts';
 import type { FileSource } from '../src/fs-source.ts';
 
@@ -16,7 +16,7 @@ test('fresh init creates only namespaced authored files at version 1.1', () => {
 		'.claude-plugin/plugin.json': JSON.stringify({ name: 'root', version: '1.0.0' }),
 		'plugins/con/.claude-plugin/plugin.json': JSON.stringify({ name: 'con', version: '1.0.0' })
 	});
-	const plan = planInit(source);
+	const plan: InitPlan = planInit(source);
 	assert.deepEqual(plan.errors, []);
 	assert.equal(plan.writes['.cc-marketspec/.gitignore'], '/dist/\n');
 	assert.match(plan.writes['.cc-marketspec/catalog.yaml'], /schemaVersion: "1\.1"/);

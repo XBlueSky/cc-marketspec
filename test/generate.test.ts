@@ -114,6 +114,24 @@ test('coverage: catalog can promote skill.trigger to a build error', () => {
 	assert.ok(errors.some((e) => e.includes('skill.trigger')));
 });
 
+for (const [label, groups] of [
+	['omitted', ''],
+	['empty', 'groups: []\n']
+] as const) {
+	test(`entry group is rejected when catalog groups is ${label}`, () => {
+		const { errors } = run({
+			'.claude-plugin/marketplace.json': market({ name: 'p', source: './plugins/p' }),
+			'.cc-marketspec/catalog.yaml': catalog(groups),
+			'.cc-marketspec/entries/plugin-p.yaml': 'group: build\n',
+			'plugins/p/.claude-plugin/plugin.json': plugin({ name: 'p', version: '1.0.0' })
+		});
+		assert.ok(
+			errors.some((error) => /plugin-p\.yaml: group "build" not declared.*catalog\.yaml.*groups\[\]/i.test(error)),
+			`expected missing group declaration error, got: ${errors.join(' | ')}`
+		);
+	});
+}
+
 // ---- plugin.json shape validation -------------------------------------------
 
 test('author as a string is an error (Claude Code rejects string authors)', () => {

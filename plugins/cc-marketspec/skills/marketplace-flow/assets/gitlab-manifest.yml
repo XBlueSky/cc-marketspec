@@ -1,21 +1,24 @@
 # Source-only workflow. Artifacts are for same-pipeline transfer or inspection,
 # not a stable public endpoint. Deploy external consumer output with the site to
-# Pages, a CDN, or object storage.
-stages: [validate, build]
+# Pages, a CDN, or object storage. Both jobs intentionally use GitLab's
+# conventional `test` stage so this snippet composes without declaring `stages`.
 
 validate-marketplace:
-  stage: validate
+  stage: test
   image: node:22
   script:
-    - npx @xbluesky/cc-marketspec --check
+    - npm ci
+    - npx --no-install cc-marketspec --check
 
 generate-marketplace:
-  stage: build
+  stage: test
+  needs: [validate-marketplace]
   image: node:22
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
   script:
-    - npx @xbluesky/cc-marketspec
+    - npm ci
+    - npx --no-install cc-marketspec
   artifacts:
     paths:
       - .cc-marketspec/dist/manifest.json

@@ -177,7 +177,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		}
 		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != marketplace entry name "${id}" — both must be the canonical install id`);
 
-		if (entry?.group && pluginGroupIds.size && !pluginGroupIds.has(entry.group)) {
+		if (entry?.group && !pluginGroupIds.has(entry.group)) {
 			err(`${presentationPath}: group "${entry.group}" not declared in ${inspected.catalogPath ?? CATALOG_PATH} groups[]`);
 		}
 

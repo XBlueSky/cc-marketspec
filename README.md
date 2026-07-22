@@ -118,11 +118,28 @@ Workflow artifacts are temporary job-transfer objects, not stable public APIs.
 Programmatic:
 
 ```ts
-import { generateManifest, Manifest, Entry } from '@xbluesky/cc-marketspec';
+import {
+  checkManifestFormatVersion,
+  generateManifest,
+  Manifest,
+  Entry,
+} from '@xbluesky/cc-marketspec';
 
 const { manifest, errors, warnings } = generateManifest(process.cwd());
 // Entry / Catalog / Manifest are Zod schemas; their z.infer types are exported too.
+
+const parsed = Manifest.safeParse(manifest);
+if (parsed.success) {
+  const compatibility = checkManifestFormatVersion(parsed.data.schemaVersion);
+  if (!compatibility.ok) throw new Error(compatibility.error);
+}
 ```
+
+`Manifest` and its published JSON Schema intentionally validate document shape
+and any syntactically valid `MAJOR.MINOR` value. Consumers must then call
+`checkManifestFormatVersion` before interpreting the document: it accepts legacy
+format `1.0` with a deprecation warning and current format `1.1`, while rejecting
+unsupported or future versions.
 
 ### Editor support while authoring
 
@@ -226,7 +243,8 @@ Creates:
 
 The `--check` flag validates without writing anything — use it on PRs.
 
-**GitHub Actions** (`.github/workflows/manifest.yml`):
+**GitHub Actions** (standalone workflow, or merge this job into the existing
+`.github/workflows/ci.yml`):
 ```yaml
 on: [pull_request, push]
 jobs:

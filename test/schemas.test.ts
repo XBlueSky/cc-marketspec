@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Entry } from '../src/entry.ts';
 import { Catalog } from '../src/catalog.ts';
 import { Manifest } from '../src/manifest.ts';
@@ -33,6 +34,25 @@ test('catalog: full with groups', () =>
 		'full'
 	));
 test('catalog: group id pattern', () => bad(Catalog, { schemaVersion: '1.1', groups: [{ id: 'Bad ID', label: 'x' }] }, 'bad id'));
+
+test('catalog: duplicate group ids report the first duplicate at its id path', () => {
+	assert.ok(Catalog.shape.groups, 'Catalog must remain a ZodObject with a public shape');
+	const result = Catalog.safeParse({
+		schemaVersion: '1.1',
+		groups: [
+			{ id: 'build', label: 'Build' },
+			{ id: 'debug', label: 'Debug' },
+			{ id: 'build', label: 'Build again' },
+			{ id: 'debug', label: 'Debug again' }
+		]
+	});
+	assert.equal(result.success, false);
+	if (!result.success) {
+		assert.deepEqual(result.error.issues[0]?.path, ['groups', 2, 'id']);
+		assert.match(result.error.issues[0]?.message ?? '', /duplicate group id "build"/i);
+		assert.equal(result.error.issues.length, 1, 'report only the deterministic first duplicate');
+	}
+});
 
 test('catalog: valid coverage block parses', () => {
 	const r = Catalog.safeParse({ schemaVersion: '1.1', coverage: { 'skill.trigger': 'error', '*': 'off' } });
@@ -112,6 +132,16 @@ test('entry: env key pattern enforced', () => bad(Entry, { mcp: [{ name: 'm', en
 
 test('manifest current fixture carries format 1.1', () =>
 	ok(Manifest, { schemaVersion: '1.1', marketplace: { name: 'mk' }, plugins: [] }, 'current manifest'));
+test('manifest schema remains shape-only for syntactically valid future versions', () =>
+	ok(Manifest, { schemaVersion: '2.0', marketplace: { name: 'mk' }, plugins: [] }, 'consumer checks compatibility separately'));
+test('published manifest JSON Schema also constrains version syntax, not compatibility', () => {
+	const schema = JSON.parse(readFileSync(new URL('../schemas/manifest.schema.json', import.meta.url), 'utf8')) as {
+		properties: { schemaVersion: Record<string, unknown> };
+	};
+	assert.equal(schema.properties.schemaVersion.pattern, '^\\d+\\.\\d+$');
+	assert.equal('enum' in schema.properties.schemaVersion, false);
+	assert.equal('const' in schema.properties.schemaVersion, false);
+});
 test('manifest: plugin carries derived native category', () =>
 	ok(
 		Manifest,

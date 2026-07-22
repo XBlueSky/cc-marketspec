@@ -92,8 +92,8 @@ export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
 	{ name: 'list_authoring_sections', description: 'List .cc-marketspec/entries/plugin-<id>.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
 	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
-	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin from pasted native files and .cc-marketspec/entries/plugin-<id>.yaml. Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } },
-	{ name: 'scaffold_entry', description: 'Produce a .cc-marketspec/entries/plugin-<id>.yaml skeleton from pasted native files.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object' } }, required: ['pluginId', 'files'] } }
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin from pasted native files and .cc-marketspec/entries/plugin-<id>.yaml. Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } },
+	{ name: 'scaffold_entry', description: 'Produce a .cc-marketspec/entries/plugin-<id>.yaml skeleton from pasted native files.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } }
 ];
 
 /** Build the MCP server with the shared tool table. Transport-agnostic — the
