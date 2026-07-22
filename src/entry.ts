@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { examples, note, slug, envKey, hookEvent } from './common.ts';
 import type { Severity } from './coverage.ts';
 
-// Per-plugin presentation overlay (entry.yaml). EVERY field is optional: the
-// generator derives missing values from the native plugin (plugin.json,
+// Per-plugin presentation overlay (.cc-marketspec/entries/plugin-<id>.yaml).
+// EVERY field is optional: the generator derives missing values from the native plugin (plugin.json,
 // skills/*/SKILL.md, commands/*.md, agents/*.md frontmatter, .mcp.json,
 // hooks/hooks.json) and falls back as documented. Authored entries are keyed by
 // name and validated against the on-disk component (referential integrity, done
@@ -108,7 +108,7 @@ export const Entry = z
 		group: z
 			.string()
 			.max(64)
-			.describe('id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.')
+			.describe('id of a .cc-marketspec/catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.')
 			.meta({ coverage: { component: 'plugin', field: 'group', severity: 'off' } })
 			.optional(),
 		tagline: z

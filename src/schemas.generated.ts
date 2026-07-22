@@ -10,7 +10,7 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
       "group": {
         "type": "string",
         "maxLength": 64,
-        "description": "id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.",
+        "description": "id of a .cc-marketspec/catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.",
         "coverage": {
           "component": "plugin",
           "field": "group",
@@ -447,7 +447,7 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
       "schemaVersion": {
         "type": "string",
         "pattern": "^\\d+\\.\\d+$",
-        "description": "MAJOR.MINOR of the standard this catalog targets. Consumers gate on MAJOR."
+        "description": "MAJOR.MINOR format compatibility version. This is not package SemVer; runtime compatibility is enforced by version.ts."
       },
       "lang": {
         "type": "string",
@@ -513,7 +513,7 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
       "schemaVersion": {
         "type": "string",
         "pattern": "^\\d+\\.\\d+$",
-        "description": "MAJOR.MINOR of the standard this manifest was generated against."
+        "description": "MAJOR.MINOR format compatibility version. This is not package SemVer; runtime compatibility is enforced by version.ts."
       },
       "marketplace": {
         "type": "object",

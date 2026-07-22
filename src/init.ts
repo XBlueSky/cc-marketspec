@@ -58,7 +58,7 @@ const CI_SNIPPET = `# Read-only pull-request gate:
 
 function entryTemplate(pluginId: string): string {
 	return `# Marketplace presentation overlay for ${pluginId}. Every field is optional.
-# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
+# yaml-language-server: $schema=../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
 # Groups are declared in .cc-marketspec/catalog.yaml.
 # Field guide: marketplace-flow/references/entry-authoring.md or the hosted MCP.
 #

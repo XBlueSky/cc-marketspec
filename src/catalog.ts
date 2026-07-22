@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { slug } from './common.ts';
 import { coverageTargets } from './entry.ts';
 
-// Marketplace-level presentation data (catalog.yaml). DATA only — no site design
+// Marketplace-level authored presentation data (.cc-marketspec/catalog.yaml).
+// DATA only — no site design
 // (theme/hero/nav/layout are the consumer's). Native marketplace metadata
 // (name/description/owner) comes from .claude-plugin/marketplace.json and is NOT
 // restated here.
@@ -30,7 +31,7 @@ export const Catalog = z
 		schemaVersion: z
 			.string()
 			.regex(/^\d+\.\d+$/)
-			.describe('MAJOR.MINOR of the standard this catalog targets. Consumers gate on MAJOR.'),
+			.describe('MAJOR.MINOR format compatibility version. This is not package SemVer; runtime compatibility is enforced by version.ts.'),
 		lang: z
 			.string()
 			.describe('BCP-47 primary language of all authored text (e.g. zh-TW). Defaults to en.')

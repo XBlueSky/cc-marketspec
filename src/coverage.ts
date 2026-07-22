@@ -81,10 +81,11 @@ const RULES: Rule[] = coverageTargets().map((t) => ({
 }));
 
 // agent.summary is the only rule whose id field ("summary", the native field it
-// maps to) differs from the entry.yaml key the user must author ("description").
+// maps to) differs from the .cc-marketspec/entries/plugin-<id>.yaml key the user
+// must author ("description").
 const FIELD_ALIASES: Record<string, string> = { 'agent.summary': 'description' };
 
-// Map a rule id ("<component>.<field>") to the entry.yaml key and an actionable
+// Map a rule id ("<component>.<field>") to the namespaced entry key and an actionable
 // "how to fix" clause. Array components (skill/command/agent/mcp/hook) are
 // authored under a plural array key; `plugin.*` fields live at the top level.
 function howToFix(ruleId: string): string {

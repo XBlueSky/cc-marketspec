@@ -71,7 +71,7 @@ choices that require judgment.
 If the plugin has skills, add a `skills:` item with a `trigger` for each. The
 coverage gate warns when a native skill has no authored trigger. A
 `yaml-language-server` line must point to the published schema:
-`node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`.
+`../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`.
 
 Before authoring `tips`, `traps`, or per-component fields, call
 `list_authoring_sections`, then `get_authoring_guide` for the relevant section.

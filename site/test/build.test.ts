@@ -145,7 +145,7 @@ test('repository workflows keep generated output read-only', () => {
 	assert.match(ci, /portable-core:/);
 	assert.match(ci, /os: \[ubuntu-latest, windows-latest\]/);
 	assert.match(ci, /test\/migration\.test\.ts/);
-	assert.match(site, /^permissions:\n  contents: read$/m);
+	assert.match(site, /^permissions:\n {2}contents: read$/m);
 	assert.doesNotMatch(site, /permissions:\s*[\s\S]*contents:\s*write/);
 	assert.doesNotMatch(site, /git (?:add|commit|push)/);
 	assert.equal(existsSync(`${repoRoot}/.github/workflows/manifest.yml`), false);

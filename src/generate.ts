@@ -1,9 +1,10 @@
 // The framework: join native Claude Code plugin data with presentation
-// (entry.yaml / catalog.yaml), derive what native already encodes, validate, and
+// (.cc-marketspec/entries/plugin-<id>.yaml and .cc-marketspec/catalog.yaml),
+// derive what native already encodes, validate, and
 // return the consolidated manifest. Reads through a FileSource so it runs against
 // the OS filesystem (CLI) or an in-memory map (Worker, tests).
 //
-// Native alone yields a valid (plainer) manifest; entry.yaml/catalog.yaml enrich.
+// Native alone yields a valid (plainer) manifest; namespaced authored YAML enriches it.
 // Referential integrity (entry <-> on-disk components, group <-> catalog, env <->
 // .mcp.json) is enforced here — it cannot live in declarative schema.
 

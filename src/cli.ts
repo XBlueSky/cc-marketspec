@@ -16,7 +16,7 @@ import { startMcpServer } from './mcp.ts';
 import { defaultOutputPath, ensureNamespacedDistIgnore, writeManifestOutput } from './output.ts';
 import { resolveWithinRoot } from './path-policy.ts';
 
-const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin marketplace.
+const USAGE = `cc-marketspec — generate a presentation manifest for a Claude Code plugin marketplace.
 
 Usage:
   cc-marketspec [root] [options]

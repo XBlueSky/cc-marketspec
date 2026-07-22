@@ -83,6 +83,33 @@ test('repo README $schema example uses the scoped package path', () => {
   assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
 });
 
+test('repo README publishes the complete namespaced format 1.1 contract', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  for (const value of [
+    '.cc-marketspec/catalog.yaml',
+    '.cc-marketspec/entries/plugin-<id>.yaml',
+    '.cc-marketspec/dist/manifest.json',
+    'migrate --dry-run',
+    'migrate --from legacy',
+    '--output site/public/manifest.json',
+    'Format `1.0`',
+    'format `1.1`',
+    'npm package versions',
+  ]) assert.match(readme, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(readme, /workflow artifacts? (?:are|is) temporary/i);
+  assert.match(readme, /remote source objects?.*not fetched/is);
+  assert.match(readme, /do not .*commit.*\.cc-marketspec\/dist\/manifest\.json/i);
+  assert.doesNotMatch(readme, /generated `manifest\.json` can be committed/i);
+});
+
+test('tracked dogfood presentation teaches only canonical bundle paths', () => {
+  const entry = readFileSync(new URL('../.cc-marketspec/entries/plugin-cc-marketspec.yaml', import.meta.url), 'utf8');
+  assert.match(entry, /\.cc-marketspec\/dist\/manifest\.json/);
+  assert.match(entry, /\.cc-marketspec\/catalog\.yaml/);
+  assert.match(entry, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+  assert.doesNotMatch(entry, /description: (?:Generate|Scaffold) (?:manifest\.json|catalog\.yaml)/);
+});
+
 test('SKILL.md Step 2 points to the entry-authoring reference and the MCP authoring tools', () => {
   const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
   assert.match(skill, /entry-authoring/);
@@ -161,4 +188,13 @@ test('authoring source defines canonical marketplace-owned overlay paths', () =>
   assert.match(authoring, /\.cc-marketspec\/catalog\.yaml/);
   assert.doesNotMatch(prose, /(?<![\w/.`-])entry\.yaml/);
   assert.doesNotMatch(prose, /(?<![\w/.`-])catalog\.yaml/);
+  assert.doesNotMatch(authoring, /(?<![\w/.`-])entry\.yaml/);
+});
+
+test('canonical entry guidance resolves the published schema from the entry directory', () => {
+  const directive = '../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json';
+  const init = readFileSync(new URL('../src/init.ts', import.meta.url), 'utf8');
+  const authoring = readFileSync(new URL('../src/authoring.md', import.meta.url), 'utf8');
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  for (const body of [init, authoring, skill]) assert.match(body, new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });

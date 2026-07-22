@@ -14,7 +14,7 @@ falls back to the plugin description), author it only when the curated wording
 beats the native one.
 
 Point your editor at the schema for completion:
-`# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`
+`# yaml-language-server: $schema=../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json`
 
 <!-- section: tagline-intro | when: writing the card summary and lede for a plugin -->
 ## tagline & intro
@@ -53,7 +53,7 @@ tips:
     href: https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server
     label: Hosted MCP guide
 traps:
-  - entry.yaml never restates native facts — a skill trigger that just repeats
+  - .cc-marketspec/entries/plugin-<id>.yaml never restates native facts — a skill trigger that just repeats
     the SKILL.md description adds nothing and clutters the card.
 ```
 

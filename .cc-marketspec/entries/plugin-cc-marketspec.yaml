@@ -1,22 +1,23 @@
 # Presentation overlay for the cc-marketspec plugin. Native data (plugin.json,
-# commands/*.md, .mcp.json) already yields a valid manifest; this enriches it.
+# commands/*.md, .mcp.json) already yields a valid manifest; this namespaced
+# entry enriches it.
 # yaml-language-server: $schema=../../schemas/entry.schema.json
 group: tools
 tagline: Headless data standard + generator for a Claude Code marketplace's presentation
 intro: >
   Describe your marketplace as data; cc-marketspec joins it with the native plugin
-  manifests, validates, and emits a single render-agnostic manifest.json. Ships
-  data, not design.
+  manifests, validates, and emits the ignored, render-agnostic
+  .cc-marketspec/dist/manifest.json. Ships data, not design.
 skills:
   - name: marketplace-flow
     trigger: When a user wants to turn a repo into a Claude Code plugin marketplace, fill presentation data, generate the manifest, or wire CI — the skill walks the whole flow.
 commands:
   - name: cc-generate
-    description: Generate manifest.json from your marketplace data.
+    description: Generate the ignored .cc-marketspec/dist/manifest.json from your marketplace data.
   - name: cc-check
     description: Validate the marketplace without writing; explains any errors.
   - name: cc-init
-    description: Scaffold catalog.yaml and entry.yaml templates from existing plugins.
+    description: Scaffold .cc-marketspec/catalog.yaml and .cc-marketspec/entries/plugin-<id>.yaml templates from existing plugins.
 mcp:
   - name: cc-marketspec
     description: Hosted, read-only MCP tools for schema lookup and coverage checks.
@@ -32,4 +33,4 @@ tips:
     href: https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server
     label: Hosted MCP
 traps:
-  - entry.yaml never restates native facts — a skill trigger that just repeats the SKILL.md description adds nothing.
+  - .cc-marketspec/entries/plugin-<id>.yaml never restates native facts — a skill trigger that just repeats the SKILL.md description adds nothing.

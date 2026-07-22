@@ -12,8 +12,12 @@ What are you trying to do that's hard or impossible today?
 
 ## Proposed solution
 
-What you'd like to see. If it touches the data format (`catalog.yaml` /
-`entry.yaml` / `manifest.json`) or the CLI, sketch the shape.
+What you'd like to see. If it touches the data format
+(`.cc-marketspec/catalog.yaml` or
+`.cc-marketspec/entries/plugin-<id>.yaml`) or the CLI, sketch the shape and
+include the relevant command output. Include generated
+`.cc-marketspec/dist/manifest.json` only when proposing a change to its exact
+bytes.
 
 ## Alternatives considered
 
