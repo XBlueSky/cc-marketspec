@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "fonts:inline": "node scripts/gen-fonts.mjs",
-    "generate": "npm run fonts:inline && npm run build --prefix .. && node ../dist/cli.js ..",
+    "generate:manifest": "npm run build --prefix .. && node ../dist/cli.js ..",
+    "generate": "npm run fonts:inline && npm run generate:manifest",
     "dev": "npm run generate && astro dev",
     "build": "npm run generate && astro build",
+    "test": "node --test test/build.test.ts",
     "preview": "astro preview"
   },
   "dependencies": {

@@ -13,11 +13,15 @@ test('site build produces dist/index.html', () => {
 	assert.ok(existsSync(`${siteDir}/dist/index.html`), 'dist/index.html exists');
 });
 
-test('build regenerates the top-level manifest (single source of truth)', () => {
-	// After build, the top-level manifest is fresh and parseable with the expected marketplace name.
-	const manifest = JSON.parse(readFileSync(`${repoRoot}/manifest.json`, 'utf8'));
+test('build regenerates ignored namespaced manifest output', () => {
+	const path = `${repoRoot}/.cc-marketspec/dist/manifest.json`;
+	const manifest = JSON.parse(readFileSync(path, 'utf8'));
+	assert.equal(manifest.schemaVersion, '1.1');
 	assert.equal(manifest.marketplace.name, 'cc-marketspec');
 	assert.ok(Array.isArray(manifest.plugins) && manifest.plugins.length >= 1);
+	assert.equal(existsSync(`${repoRoot}/manifest.json`), false);
+	assert.equal(existsSync(`${repoRoot}/catalog.yaml`), false);
+	assert.equal(existsSync(`${repoRoot}/plugins/cc-marketspec/entry.yaml`), false);
 });
 
 test('rendered HTML shows the plugin name, tagline, and a keyword', () => {
@@ -81,7 +85,7 @@ test('v2 adds section-number, hairline, and background texture primitives', () =
 test('v2 renders real code contrasts and the comparison table', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
 	assert.match(html, /mcpServers/, 'real native .mcp.json snippet present');
-	assert.match(html, /wrote manifest\.json/, 'real CLI output present in pipeline');
+	assert.match(html, /wrote \.cc-marketspec\/dist\/manifest\.json/, 'real CLI output present in pipeline');
 	assert.match(html, /You author the left/, 'author-vs-derived table present');
 	assert.match(html, /native already encodes it/, 'derived column present');
 });
@@ -118,9 +122,33 @@ test('v5 terminal primitives present', () => {
 test('v5 hero shows the real CLI run', () => {
 	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
 	assert.match(html, /npx @xbluesky\/cc-marketspec/, 'real command present');
-	assert.match(html, /wrote manifest\.json — 1 plugins, 0 warning\(s\)\./, 'real CLI output line present');
+	assert.match(html, /wrote \.cc-marketspec\/dist\/manifest\.json — 1 plugins, 0 warning\(s\)\./, 'real CLI output line present');
 	assert.match(html, /yline/, 'line-stagger wrappers intact');
 	assert.match(html, /dogfoods its own framework/, 'real first tip intact');
+	assert.match(html, /<b[^>]*>4 commands<\/b>/, 'hero command count matches the generated manifest');
+});
+
+test('visible guidance uses namespaced authored and generated paths', () => {
+	const html = readFileSync(`${siteDir}/dist/index.html`, 'utf8');
+	assert.match(html, /\.cc-marketspec\/catalog\.yaml/);
+	assert.match(html, /\.cc-marketspec\/entries\/plugin-&lt;id&gt;\.yaml/);
+	assert.match(html, /\.cc-marketspec\/dist\/manifest\.json/);
+	assert.match(html, /schemaVersion: &quot;1\.1&quot;/);
+	assert.match(html, /cc-marketspec: wrote \.cc-marketspec\/dist\/manifest\.json — 1 plugins, 0 warning\(s\)\./);
+	assert.match(html, /Generated during build; not committed\./);
+	assert.doesNotMatch(html, /Commit or emit in CI/);
+});
+
+test('repository workflows keep generated output read-only', () => {
+	const ci = readFileSync(`${repoRoot}/.github/workflows/ci.yml`, 'utf8');
+	const site = readFileSync(`${repoRoot}/.github/workflows/site.yml`, 'utf8');
+	assert.match(ci, /portable-core:/);
+	assert.match(ci, /os: \[ubuntu-latest, windows-latest\]/);
+	assert.match(ci, /test\/migration\.test\.ts/);
+	assert.match(site, /^permissions:\n  contents: read$/m);
+	assert.doesNotMatch(site, /permissions:\s*[\s\S]*contents:\s*write/);
+	assert.doesNotMatch(site, /git (?:add|commit|push)/);
+	assert.equal(existsSync(`${repoRoot}/.github/workflows/manifest.yml`), false);
 });
 
 test('v5 mental model draws the two-stream merge', () => {
@@ -128,6 +156,8 @@ test('v5 mental model draws the two-stream merge', () => {
 	assert.match(html, /mm-stream/, 'stream paths present');
 	assert.match(html, /mcpServers/, 'real .mcp.json panel intact');
 	assert.match(html, /class="mm-merge[^"]*"[^>]*aria-hidden="true"/, 'merge SVG wrapper is decorative');
+	assert.match(html, /"0\.2\.1"/, 'current native plugin version renders');
+	assert.doesNotMatch(html, /"0\.2\.0"/, 'stale plugin version is absent');
 });
 
 test('v5 showcase remains manifest-driven after re-skin', () => {

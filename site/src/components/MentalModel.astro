@@ -2,7 +2,7 @@
 // The native-vs-presentation mental model, drawn as a two-layer diagram.
 // Content mirrors the README "native layer vs presentation layer" section.
 const native = ['marketplace.json', 'plugin.json', '.mcp.json', 'skills/*/SKILL.md', 'commands/*.md', 'agents/*.md', 'hooks/hooks.json'];
-const presentation = ['catalog.yaml', 'entry.yaml'];
+const presentation = ['.cc-marketspec/catalog.yaml', '.cc-marketspec/entries/plugin-<id>.yaml'];
 ---
 <section id="mental-model" class="section">
   <div class="wrap">
@@ -19,8 +19,8 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
         <circle class="mm-node" cx="620" cy="75" r="7" />
       </svg>
       <span class="mm-stream-label mm-label-native">native manifests</span>
-      <span class="mm-stream-label mm-label-pres">catalog.yaml + entry.yaml</span>
-      <span class="mm-stream-label mm-label-out">manifest.json</span>
+      <span class="mm-stream-label mm-label-pres">.cc-marketspec/catalog.yaml + .cc-marketspec/entries/plugin-&lt;id&gt;.yaml</span>
+      <span class="mm-stream-label mm-label-out">.cc-marketspec/dist/manifest.json</span>
     </div>
     <div class="mm-diagram reveal">
       <div class="mm-layer">
@@ -32,7 +32,7 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
         <ul class="mm-tokens">{presentation.map((f) => <li><code>{f}</code></li>)}</ul>
       </div>
       <div class="mm-out"><span class="mm-arrow" aria-hidden="true">→</span>
-        <code class="mm-manifest">manifest.json</code>
+        <code class="mm-manifest">.cc-marketspec/dist/manifest.json</code>
         <p>one render-agnostic document</p>
       </div>
     </div>
@@ -41,21 +41,21 @@ const presentation = ['catalog.yaml', 'entry.yaml'];
         <figure class="mm-code-panel reveal" style="--i:0">
           <figcaption>plugin.json & .mcp.json</figcaption>
           <pre><code><span class="c">// plugin.json</span>
-<span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span> <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span><span class="p">,</span> <span class="c">…</span> <span class="p">}</span>
+<span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.1"</span><span class="p">,</span> <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span><span class="p">,</span> <span class="c">…</span> <span class="p">}</span>
 <span class="c">// .mcp.json</span>
 <span class="p">{</span> <span class="k">"mcpServers"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"cc-marketspec"</span><span class="p">:</span> <span class="p">{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span><span class="p">,</span> <span class="c">…</span> <span class="p">}</span> <span class="p">}</span> <span class="p">}</span></code></pre>
         </figure>
         <figure class="mm-code-panel reveal" style="--i:1">
-          <figcaption>entry.yaml</figcaption>
-          <pre><code><span class="c"># entry.yaml</span>
+          <figcaption>.cc-marketspec/entries/plugin-&lt;id&gt;.yaml</figcaption>
+          <pre><code><span class="c"># .cc-marketspec/entries/plugin-&lt;id&gt;.yaml</span>
 <span class="k">group</span><span class="p">:</span> <span class="s">tools</span>
 <span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator …</span></code></pre>
         </figure>
       </div>
       <p class="mm-code-arrow" aria-hidden="true">↓ generated ↓</p>
       <figure class="mm-code-panel mm-code-full reveal" style="--i:2">
-        <figcaption>manifest.json</figcaption>
-        <pre><code><span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.0"</span><span class="p">,</span>
+        <figcaption>.cc-marketspec/dist/manifest.json</figcaption>
+        <pre><code><span class="p">{</span> <span class="k">"name"</span><span class="p">:</span> <span class="s">"cc-marketspec"</span><span class="p">,</span> <span class="k">"version"</span><span class="p">:</span> <span class="s">"0.2.1"</span><span class="p">,</span>
   <span class="k">"license"</span><span class="p">:</span> <span class="s">"MIT"</span><span class="p">,</span> <span class="k">"group"</span><span class="p">:</span> <span class="s">"tools"</span><span class="p">,</span>
   <span class="c">…</span><span class="p">,</span>
   <span class="k">"mcp"</span><span class="p">:</span> <span class="p">[{</span> <span class="k">"type"</span><span class="p">:</span> <span class="s">"http"</span><span class="p">,</span> <span class="k">"provides"</span><span class="p">:</span> <span class="p">[</span> <span class="c">…</span> <span class="p">]</span> <span class="p">}]</span> <span class="p">}</span></code></pre>

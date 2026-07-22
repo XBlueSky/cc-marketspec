@@ -1,25 +1,27 @@
-// Golden end-to-end test: run the generator against the committed example
-// marketplace and assert it reproduces the committed manifest.json exactly.
-// This keeps examples/ honest (a living fixture, not stale docs) and exercises
-// the full join + derive path on a realistic on-disk repo.
-// If you intentionally change generator output, regenerate the golden with:
-//   node dist/cli.js examples/marketplace
-// Run: node --test test/example.test.ts   (Node >=23 strips TS types)
-
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { generateManifest } from '../src/generate.ts';
 import { NodeFileSource } from '../src/fs-source.ts';
 
 const root = fileURLToPath(new URL('../examples/marketplace', import.meta.url));
 
-test('the example marketplace reproduces its committed golden manifest', () => {
+test('the namespaced example reproduces its named fixture', () => {
 	const { manifest, errors, warnings, layout } = generateManifest(new NodeFileSource(root));
-	assert.deepEqual(errors, [], 'example must generate without errors');
-	assert.equal(layout, 'legacy', 'example remains a legacy compatibility fixture until it is migrated');
-	assert.ok(warnings.some((warning) => /migrat|deprecat/i.test(warning)), 'legacy example must recommend migration');
-	const golden = JSON.parse(readFileSync(new URL('../examples/marketplace/manifest.json', import.meta.url), 'utf8'));
-	assert.deepEqual(manifest, golden, 'generator output drifted from examples/marketplace/manifest.json — regenerate it');
+	assert.equal(layout, 'namespaced');
+	assert.deepEqual(errors, []);
+	assert.deepEqual(warnings, []);
+	const expected = JSON.parse(readFileSync(new URL('./fixtures/example-manifest.json', import.meta.url), 'utf8'));
+	assert.deepEqual(manifest, expected);
+	assert.equal(existsSync(`${root}/catalog.yaml`), false);
+	assert.equal(existsSync(`${root}/manifest.json`), false);
+	assert.equal(existsSync(`${root}/plugins/hello-plugin/entry.yaml`), false);
+	assert.equal(readFileSync(`${root}/.cc-marketspec/.gitignore`, 'utf8'), '/dist/\n');
+});
+
+test('the migrated root catalog schema directive resolves from its namespaced path', () => {
+	const catalog = readFileSync(new URL('../.cc-marketspec/catalog.yaml', import.meta.url), 'utf8');
+	assert.match(catalog, /^# yaml-language-server: \$schema=\.\.\/schemas\/catalog\.schema\.json$/m);
+	assert.equal(existsSync(fileURLToPath(new URL('../schemas/catalog.schema.json', import.meta.url))), true);
 });
