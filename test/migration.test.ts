@@ -5,6 +5,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	symlinkSync,
 	writeFileSync
@@ -943,11 +944,12 @@ test('cutover recheck rejects a dangling target symlink created after planning',
 
 test('cleanup failure retains receipt and rerun safely completes', () => {
 	const root = materialize(legacy());
+	const cleanupTarget = realpathSync(join(root, 'plugins', 'sample', 'entry.yaml'));
 	let failed = false;
 	const failing: MigrationFileOps = {
 		...NODE_MIGRATION_FILE_OPS,
 		unlink: (path) => {
-			if (!failed && path.endsWith('plugins/sample/entry.yaml')) {
+			if (!failed && path === cleanupTarget) {
 				failed = true;
 				throw new Error('injected cleanup failure');
 			}
