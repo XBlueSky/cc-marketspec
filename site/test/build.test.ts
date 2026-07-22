@@ -8,7 +8,7 @@ const siteDir = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 test('site build produces dist/index.html', () => {
-	// build script must: regenerate top-level manifest, then astro build.
+	// Build regenerates ignored .cc-marketspec/dist/manifest.json, then runs Astro.
 	execFileSync('npm', ['run', 'build'], { cwd: siteDir, stdio: 'pipe' });
 	assert.ok(existsSync(`${siteDir}/dist/index.html`), 'dist/index.html exists');
 });
