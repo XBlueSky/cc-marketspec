@@ -382,20 +382,57 @@ function cleanupPlan(
 				`${SPEC_GITIGNORE_PATH}: migration-owned content must remain exactly /dist/`
 			);
 		}
+		const legacyCatalog = source.read(LEGACY_CATALOG_PATH);
+		if (legacyCatalog !== null) {
+			const rewritten = rewriteCatalogVersion(legacyCatalog);
+			if (
+				rewritten.content === undefined
+				|| rewritten.content !== source.read(CATALOG_PATH)
+			) {
+				errors.push(
+					`${LEGACY_CATALOG_PATH}: remaining source does not byte-match canonical ${CATALOG_PATH} after version rewrite`
+				);
+			}
+		}
 		for (const plugin of plugins) {
-			if (source.read(plugin.namespacedEntryPath) === null) continue;
-			if (!(plugin.namespacedEntryPath in receipt.targetDigests)) {
+			const targetBody = source.read(plugin.namespacedEntryPath);
+			const legacyBody = plugin.legacyEntryPath === null
+				? null
+				: source.read(plugin.legacyEntryPath);
+			if (
+				(targetBody !== null || legacyBody !== null)
+				&& !(plugin.namespacedEntryPath in receipt.targetDigests)
+			) {
 				errors.push(
 					`${plugin.namespacedEntryPath}: target digest missing from migration receipt`
 				);
 			}
 			if (
-				plugin.legacyEntryPath === null
-				|| !removalPaths.has(plugin.legacyEntryPath)
+				(targetBody !== null || legacyBody !== null)
+				&& (
+					plugin.legacyEntryPath === null
+					|| !removalPaths.has(plugin.legacyEntryPath)
+				)
 			) {
 				errors.push(
 					`${plugin.namespacedEntryPath}: legacy removal provenance missing from migration receipt`
 				);
+			}
+			if (legacyBody !== null) {
+				if (targetBody === null) {
+					errors.push(
+						`${plugin.namespacedEntryPath}: canonical target missing for remaining ${plugin.legacyEntryPath}`
+					);
+				} else if (legacyBody !== targetBody) {
+					errors.push(
+						`${plugin.legacyEntryPath}: remaining source does not byte-match canonical ${plugin.namespacedEntryPath}`
+					);
+				}
+				if (!isRemainingEntry(source, plugin.legacyEntryPath as string)) {
+					errors.push(
+						`${plugin.legacyEntryPath}: remaining source is not a cc-marketspec entry`
+					);
+				}
 			}
 		}
 		for (const planned of receipt.removals) {

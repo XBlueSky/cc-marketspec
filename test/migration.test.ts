@@ -449,6 +449,86 @@ test('cleanup re-authorizes the migration-owned gitignore bytes', () => {
 	assert.deepEqual(plan.removals, []);
 });
 
+test('forged removal digest cannot claim a different valid legacy catalog', () => {
+	const first = planMigration(legacy());
+	const receipt = JSON.parse(first.writes[MIGRATION_RECEIPT_PATH]) as {
+		removals: { path: string; digest: string }[];
+	};
+	const changedCatalog = 'schemaVersion: "1.0"\nlang: zh-TW\n';
+	receipt.removals.find((item) => item.path === 'catalog.yaml')!.digest = sha256(changedCatalog);
+	const plan = planMigration(
+		cutover(first, {
+			'catalog.yaml': changedCatalog,
+			[MIGRATION_RECEIPT_PATH]: JSON.stringify(receipt, null, 2) + '\n'
+		})
+	);
+
+	assert.equal(plan.kind, 'noop');
+	assert.ok(plan.errors.some((error) => /catalog\.yaml.*canonical|catalog\.yaml.*target/i.test(error)));
+	assert.deepEqual(plan.removals, []);
+});
+
+test('forged removal digest cannot claim a different valid mapped legacy entry', () => {
+	const first = planMigration(legacy());
+	const receipt = JSON.parse(first.writes[MIGRATION_RECEIPT_PATH]) as {
+		removals: { path: string; digest: string }[];
+	};
+	const changedEntry = 'tagline: Different but valid\n';
+	receipt.removals.find((item) => item.path === 'plugins/sample/entry.yaml')!.digest =
+		sha256(changedEntry);
+	const plan = planMigration(
+		cutover(first, {
+			'plugins/sample/entry.yaml': changedEntry,
+			[MIGRATION_RECEIPT_PATH]: JSON.stringify(receipt, null, 2) + '\n'
+		})
+	);
+
+	assert.equal(plan.kind, 'noop');
+	assert.ok(
+		plan.errors.some(
+			(error) => /plugins\/sample\/entry\.yaml.*canonical|plugins\/sample\/entry\.yaml.*target/i.test(error)
+		)
+	);
+	assert.deepEqual(plan.removals, []);
+});
+
+test('remaining mapped legacy entry cannot be omitted from a forged receipt and target tree', () => {
+	const sourceBeforeCutover = legacy({ 'plugins/sample/entry.yaml': '{}\n' });
+	const first = planMigration(sourceBeforeCutover);
+	const receipt = JSON.parse(first.writes[MIGRATION_RECEIPT_PATH]) as {
+		targetDigests: Record<string, string>;
+		removals: { path: string; digest: string }[];
+	};
+	delete receipt.targetDigests['.cc-marketspec/entries/plugin-sample.yaml'];
+	receipt.removals = receipt.removals.filter(
+		(item) => item.path !== 'plugins/sample/entry.yaml'
+	);
+	const plan = planMigration(
+		new MemoryFileSource({
+			'.claude-plugin/marketplace.json': sourceBeforeCutover.read(
+				'.claude-plugin/marketplace.json'
+			) as string,
+			'plugins/sample/.claude-plugin/plugin.json': sourceBeforeCutover.read(
+				'plugins/sample/.claude-plugin/plugin.json'
+			) as string,
+			'catalog.yaml': sourceBeforeCutover.read('catalog.yaml') as string,
+			'plugins/sample/entry.yaml': '{}\n',
+			'.cc-marketspec/.gitignore': first.writes['.cc-marketspec/.gitignore'],
+			'.cc-marketspec/catalog.yaml': first.writes['.cc-marketspec/catalog.yaml'],
+			'.cc-marketspec/dist/manifest.json': first.writes['.cc-marketspec/dist/manifest.json'],
+			[MIGRATION_RECEIPT_PATH]: JSON.stringify(receipt, null, 2) + '\n'
+		})
+	);
+
+	assert.equal(plan.kind, 'noop');
+	assert.ok(
+		plan.errors.some(
+			(error) => /plugins\/sample\/entry\.yaml.*receipt|plugin-sample\.yaml.*target/i.test(error)
+		)
+	);
+	assert.deepEqual(plan.removals, []);
+});
+
 test('receipt cannot omit a current namespaced entry and all of its legacy provenance', () => {
 	const first = planMigration(legacy());
 	const receipt = JSON.parse(first.writes[MIGRATION_RECEIPT_PATH]) as {
