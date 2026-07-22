@@ -1,6 +1,6 @@
 {
   "name": "@xbluesky/cc-marketspec",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Headless data standard and deterministic generator for Claude Code marketplace presentation bundles.",
   "type": "module",
   "license": "MIT",

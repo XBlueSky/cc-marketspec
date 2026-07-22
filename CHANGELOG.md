@@ -1,3 +1,35 @@
+# [0.13.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.12.0...v0.13.0) (2026-07-22)
+
+
+### Bug Fixes
+
+* close final contract review gaps ([3edf394](https://github.com/XBlueSky/cc-marketspec/commit/3edf3944beb71285e319c68106554cf07ef33035))
+* gate authored overlays on valid catalogs ([f453418](https://github.com/XBlueSky/cc-marketspec/commit/f453418a98f8657f8c591573d0adda00828978be))
+* harden atomic output publication ([4165fe6](https://github.com/XBlueSky/cc-marketspec/commit/4165fe61fe29530842348ea833fe5cdc7602e6a2))
+* harden path policy edge cases ([902f4ed](https://github.com/XBlueSky/cc-marketspec/commit/902f4ed394fc697f89166202f394597d0eacc0d3))
+* make layout traversal cycle-safe ([956a736](https://github.com/XBlueSky/cc-marketspec/commit/956a736eb4689b892e2283238691ae37bff08f77))
+* preflight namespaced init ([2c79c49](https://github.com/XBlueSky/cc-marketspec/commit/2c79c49550ce358229bae3583cc77eedb0a46e56))
+* preserve nested namespaced precedence ([0445315](https://github.com/XBlueSky/cc-marketspec/commit/04453152a9a00870c2afdc5c77ed81a4babc9a4f))
+* reauthorize migration cleanup provenance ([40f856d](https://github.com/XBlueSky/cc-marketspec/commit/40f856d3c54d9da931154fdbe6a319f9e7b31ccd))
+* reject ambiguous legacy mappings ([799a729](https://github.com/XBlueSky/cc-marketspec/commit/799a7299ccdfa20362b0a887013bb9631cc1ce07))
+* reject nested drive path syntax ([955695f](https://github.com/XBlueSky/cc-marketspec/commit/955695fb6741b60f46ea9e709d5e2d6b4429c019))
+* require canonical migration apply plans ([a4799dc](https://github.com/XBlueSky/cc-marketspec/commit/a4799dcdc12a6920ba3099e60636ba13da3e4759))
+* revalidate migration cutover before cleanup ([3ee1927](https://github.com/XBlueSky/cc-marketspec/commit/3ee1927ad152c5a41c1910be445e43d881059f7c))
+
+
+### Features
+
+* add safe manifest output paths ([7fbb7d5](https://github.com/XBlueSky/cc-marketspec/commit/7fbb7d57f7fcee19890e4357abf05f8692e34280))
+* apply safe marketplace migrations ([6420d75](https://github.com/XBlueSky/cc-marketspec/commit/6420d75ecfb0432257926b477a37bbabf0d8ace8))
+* detect namespaced and legacy layouts ([c0d10f6](https://github.com/XBlueSky/cc-marketspec/commit/c0d10f6e83e591beac109ebc621ae9d8288f9fde))
+* enforce format version compatibility ([90f4a22](https://github.com/XBlueSky/cc-marketspec/commit/90f4a224b9eb97337bb349f0e46eef675350fe1c))
+* enforce root-contained portable paths ([eb1f481](https://github.com/XBlueSky/cc-marketspec/commit/eb1f481e2e17875a49e3dbef633f1a6a06c3e7b0))
+* generate deterministic namespaced manifests ([7f96966](https://github.com/XBlueSky/cc-marketspec/commit/7f96966dd7d73a5d012bb75d16793a0cdf147021))
+* migrate repository data to namespaced layout ([8c54746](https://github.com/XBlueSky/cc-marketspec/commit/8c5474655403bf96f304a6cd8469b8dc17e6a310))
+* plan safe marketplace migrations ([91b11a5](https://github.com/XBlueSky/cc-marketspec/commit/91b11a5d5bbd04c2e79e73c5fd8606a3b398745b))
+* scaffold namespaced marketplace data ([aa9a4d6](https://github.com/XBlueSky/cc-marketspec/commit/aa9a4d6ec72e836003605435ee605c0d592518e1))
+* update marketplace workflow for namespaced data ([b823c25](https://github.com/XBlueSky/cc-marketspec/commit/b823c259cfb627e3668834e58cd69626ab4e08c9))
+
 # [0.12.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.11.0...v0.12.0) (2026-07-10)
 
 
