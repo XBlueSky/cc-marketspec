@@ -150,3 +150,32 @@ test('MCP preserves exactly five hosted tools and canonical pasted-file guidance
 		assert.match(tool.description, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
 	}
 });
+
+test('MCP public tool input schemas remain transport-compatible', () => {
+	assert.deepEqual(Object.fromEntries(TOOLS.map(({ name, inputSchema }) => [name, inputSchema])), {
+		get_schema: {
+			type: 'object',
+			properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } },
+			required: ['which']
+		},
+		list_authoring_sections: {
+			type: 'object',
+			properties: {}
+		},
+		get_authoring_guide: {
+			type: 'object',
+			properties: { section: { type: 'string' } },
+			required: ['section']
+		},
+		check_coverage: {
+			type: 'object',
+			properties: { pluginId: { type: 'string' }, files: { type: 'object' } },
+			required: ['pluginId', 'files']
+		},
+		scaffold_entry: {
+			type: 'object',
+			properties: { pluginId: { type: 'string' }, files: { type: 'object' } },
+			required: ['pluginId', 'files']
+		}
+	});
+});
