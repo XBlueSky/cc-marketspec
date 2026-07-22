@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { generateManifest } from './generate.ts';
 import { planInit } from './init.ts';
 import { NodeFileSource } from './fs-source.ts';
+import { applyMigration, planMigration } from './migration.ts';
 import { startMcpServer } from './mcp.ts';
 import { defaultOutputPath, ensureNamespacedDistIgnore, writeManifestOutput } from './output.ts';
 import { resolveWithinRoot } from './path-policy.ts';
@@ -20,6 +21,7 @@ const USAGE = `cc-marketspec — generate manifest.json for a Claude Code plugin
 Usage:
   cc-marketspec [root] [options]
   cc-marketspec init [root]
+  cc-marketspec migrate [root] [--dry-run] [--from legacy]
   cc-marketspec mcp
 
 Arguments:
@@ -27,6 +29,7 @@ Arguments:
 
 Commands:
   init [root]       Scaffold namespaced authoring data under .cc-marketspec/.
+  migrate [root]    Move validated legacy authoring data into .cc-marketspec/.
   mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
 
 Options:
@@ -143,6 +146,54 @@ export function cli(argv: string[]): number {
 	if (args[0] === 'mcp') {
 		void startMcpServer();
 		return 0; // server keeps the process alive on stdio
+	}
+	if (args[0] === 'migrate') {
+		const migrateArgs = args.slice(1);
+		const optionError = validateOptions(
+			migrateArgs,
+			new Set(['--dry-run']),
+			new Set(['--from'])
+		);
+		if (optionError) {
+			console.error('ERROR ' + optionError);
+			return 1;
+		}
+		const from = optionValue(migrateArgs, '--from');
+		if (from.error || (from.value !== undefined && from.value !== 'legacy')) {
+			console.error('ERROR --from accepts only "legacy"');
+			return 1;
+		}
+		const root = resolve(
+			positionalRoot(migrateArgs, new Set(['--from'])) ?? process.cwd()
+		);
+		const plan = planMigration(new NodeFileSource(root), {
+			from: from.value === 'legacy' ? 'legacy' : undefined
+		});
+		for (const warning of plan.warnings) console.warn('WARN ' + warning);
+		if (plan.errors.length > 0) {
+			for (const error of plan.errors) console.error('ERROR ' + error);
+			return 1;
+		}
+		if (plan.kind === 'noop') {
+			console.log('cc-marketspec: migration not needed');
+			return 0;
+		}
+		if (migrateArgs.includes('--dry-run')) {
+			for (const path of Object.keys(plan.writes).sort()) console.log('WRITE ' + path);
+			for (const item of plan.removals) console.log('REMOVE ' + item.path);
+			console.log('cc-marketspec: dry-run complete; nothing written');
+			return 0;
+		}
+		const result = applyMigration(root, plan);
+		if (result.errors.length > 0) {
+			for (const error of result.errors) console.error('ERROR ' + error);
+			return 1;
+		}
+		console.log(
+			'cc-marketspec: '
+			+ (plan.kind === 'cleanup' ? 'cleanup resumed' : 'migration complete')
+		);
+		return 0;
 	}
 
 	const flags = new Set(['--check', '--strict-coverage']);

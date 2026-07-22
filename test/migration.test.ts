@@ -1,19 +1,25 @@
 import { createHash } from 'node:crypto';
 import {
+	existsSync,
+	lstatSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	rmSync,
 	symlinkSync,
 	writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MemoryFileSource, NodeFileSource } from '../src/fs-source.ts';
 import {
 	MIGRATION_RECEIPT_PATH,
+	NODE_MIGRATION_FILE_OPS,
+	applyMigration,
 	planMigration,
+	type MigrationFileOps,
 	type MigrationPlan
 } from '../src/migration.ts';
 
@@ -61,6 +67,26 @@ function cutover(plan: MigrationPlan, extra: Record<string, string> = {}): Memor
 }
 
 const sha256 = (body: string) => createHash('sha256').update(body).digest('hex');
+
+const LEGACY_PATHS = [
+	'.claude-plugin/marketplace.json',
+	'plugins/sample/.claude-plugin/plugin.json',
+	'catalog.yaml',
+	'plugins/sample/entry.yaml',
+	'manifest.json'
+];
+
+function materialize(source: MemoryFileSource, paths = LEGACY_PATHS): string {
+	const root = mkdtempSync(join(tmpdir(), 'ccms-migrate-'));
+	for (const path of paths) {
+		const body = source.read(path);
+		if (body === null) continue;
+		const absolute = join(root, ...path.split('/'));
+		mkdirSync(dirname(absolute), { recursive: true });
+		writeFileSync(absolute, body);
+	}
+	return root;
+}
 
 test('plans a complete 1.0 to 1.1 tree without mutating the source', () => {
 	const source = legacy();
@@ -692,4 +718,318 @@ test('fresh input remains a no-op even with an unrelated root manifest', () => {
 	assert.equal(plan.sourceVersion, null);
 	assert.deepEqual(plan.writes, {});
 	assert.deepEqual(plan.removals, []);
+});
+
+test('apply cuts over a complete tree then removes digest-unchanged legacy files', () => {
+	const root = materialize(legacy());
+	try {
+		const result = applyMigration(root, planMigration(new NodeFileSource(root)));
+		assert.deepEqual(result.errors, []);
+		assert.equal(result.changed, true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/dist/manifest.json')), true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), false);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), false);
+		assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('pre-cutover rename failure preserves legacy and removes only owned staging', () => {
+	const root = materialize(legacy());
+	let staging = '';
+	const removed: string[] = [];
+	const failing: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		mkdtemp: (prefix) => (staging = NODE_MIGRATION_FILE_OPS.mkdtemp(prefix)),
+		rename: () => { throw new Error('injected rename failure'); },
+		removeTree: (path) => {
+			removed.push(path);
+			NODE_MIGRATION_FILE_OPS.removeTree(path);
+		}
+	};
+	try {
+		const result = applyMigration(root, planMigration(new NodeFileSource(root)), failing);
+		assert.match(result.errors.join('\n'), /injected rename failure/);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+		assert.deepEqual(removed, [staging]);
+		assert.equal(
+			NODE_MIGRATION_FILE_OPS.list(root).some((name) => name.startsWith('.cc-marketspec-migrate-')),
+			false
+		);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('staged read-back validation rejects corrupted writes before cutover', () => {
+	const root = materialize(legacy());
+	const corrupting: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		writeExclusive: (path, content) => NODE_MIGRATION_FILE_OPS.writeExclusive(
+			path,
+			path.endsWith('catalog.yaml')
+				? content.replace('schemaVersion: "1.1"', 'schemaVersion: "9.9"')
+				: content
+		)
+	};
+	try {
+		const result = applyMigration(root, planMigration(new NodeFileSource(root)), corrupting);
+		assert.match(result.errors.join('\n'), /staged bytes|staged validation/i);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('apply rejects caller-crafted cleanup removals even with a matching digest', () => {
+	const root = materialize(legacy({ 'README.md': 'do not delete\n' }), [...LEGACY_PATHS, 'README.md']);
+	try {
+		const planned = planMigration(new NodeFileSource(root));
+		const forged: MigrationPlan = {
+			...planned,
+			kind: 'cleanup',
+			writes: {},
+			removals: [{ path: 'README.md', digest: sha256('do not delete\n') }]
+		};
+		const result = applyMigration(root, forged);
+		assert.match(result.errors.join('\n'), /authoritative|cleanup plan|unauthorized/i);
+		assert.equal(readFileSync(join(root, 'README.md'), 'utf8'), 'do not delete\n');
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('apply rejects migrate plans inconsistent with their receipt before staging', () => {
+	const mutations: Array<(plan: MigrationPlan) => void> = [
+		(plan) => { delete plan.writes[MIGRATION_RECEIPT_PATH]; },
+		(plan) => { delete plan.writes['.cc-marketspec/catalog.yaml']; },
+		(plan) => { plan.writes['.cc-marketspec/extra.yaml'] = 'extra\n'; },
+		(plan) => {
+			const receipt = JSON.parse(plan.writes[MIGRATION_RECEIPT_PATH]);
+			delete receipt.targetDigests['.cc-marketspec/catalog.yaml'];
+			plan.writes[MIGRATION_RECEIPT_PATH] = JSON.stringify(receipt, null, 2) + '\n';
+		},
+		(plan) => {
+			const receipt = JSON.parse(plan.writes[MIGRATION_RECEIPT_PATH]);
+			receipt.removals = [];
+			plan.writes[MIGRATION_RECEIPT_PATH] = JSON.stringify(receipt, null, 2) + '\n';
+		},
+		(plan) => { plan.writes['.cc-marketspec/../outside'] = 'escape\n'; }
+	];
+	for (const mutate of mutations) {
+		const root = materialize(legacy());
+		try {
+			const forged = structuredClone(planMigration(new NodeFileSource(root)));
+			mutate(forged);
+			const result = applyMigration(root, forged);
+			assert.notDeepEqual(result.errors, []);
+			assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+			assert.equal(existsSync(join(root, 'outside')), false);
+			assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}
+});
+
+test('cutover recheck rejects a dangling target symlink created after planning', () => {
+	const root = materialize(legacy());
+	const plan = planMigration(new NodeFileSource(root));
+	try {
+		symlinkSync(
+			join(root, 'missing-target'),
+			join(root, '.cc-marketspec'),
+			process.platform === 'win32' ? 'junction' : 'dir'
+		);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+		assert.equal(lstatSync(join(root, '.cc-marketspec')).isSymbolicLink(), true);
+		const result = applyMigration(root, plan);
+		assert.match(result.errors.join('\n'), /target appeared|symbolic link|occupied/i);
+		assert.equal(lstatSync(join(root, '.cc-marketspec')).isSymbolicLink(), true);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('cleanup failure retains receipt and rerun safely completes', () => {
+	const root = materialize(legacy());
+	let failed = false;
+	const failing: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		unlink: (path) => {
+			if (!failed && path.endsWith('plugins/sample/entry.yaml')) {
+				failed = true;
+				throw new Error('injected cleanup failure');
+			}
+			NODE_MIGRATION_FILE_OPS.unlink(path);
+		}
+	};
+	try {
+		const first = applyMigration(root, planMigration(new NodeFileSource(root)), failing);
+		assert.match(first.errors.join('\n'), /cleanup failure/);
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), true);
+		assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), true);
+
+		const resumed = planMigration(new NodeFileSource(root));
+		assert.equal(resumed.kind, 'cleanup');
+		const result = applyMigration(root, resumed);
+		assert.deepEqual(result.errors, []);
+		assert.equal(result.changed, true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('cleanup that only deletes the receipt reports changed', () => {
+	const root = materialize(legacy());
+	try {
+		const initial = planMigration(new NodeFileSource(root));
+		for (const [path, body] of Object.entries(initial.writes)) {
+			const absolute = join(root, ...path.split('/'));
+			mkdirSync(dirname(absolute), { recursive: true });
+			writeFileSync(absolute, body);
+		}
+		for (const item of initial.removals) rmSync(join(root, ...item.path.split('/')));
+		const cleanup = planMigration(new NodeFileSource(root));
+		assert.equal(cleanup.kind, 'cleanup');
+		const result = applyMigration(root, cleanup);
+		assert.deepEqual(result.errors, []);
+		assert.equal(result.changed, true);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('last-safe-point target recheck runs after staging and before rename', () => {
+	const root = materialize(legacy());
+	let probes = 0;
+	let renamed = false;
+	const occupied: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		isSymbolicLink: (path) => {
+			if (path.endsWith('.cc-marketspec')) probes += 1;
+			return path.endsWith('.cc-marketspec') && probes > 1;
+		},
+		rename: () => { renamed = true; }
+	};
+	try {
+		const result = applyMigration(root, planMigration(new NodeFileSource(root)), occupied);
+		assert.match(result.errors.join('\n'), /target appeared|symbolic link|occupied/i);
+		assert.equal(probes >= 2, true);
+		assert.equal(renamed, false);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('staging cleanup failure does not mask the primary cutover error', () => {
+	const root = materialize(legacy());
+	const failing: MigrationFileOps = {
+		...NODE_MIGRATION_FILE_OPS,
+		rename: () => { throw new Error('primary rename failure'); },
+		removeTree: () => { throw new Error('secondary cleanup failure'); }
+	};
+	try {
+		const result = applyMigration(root, planMigration(new NodeFileSource(root)), failing);
+		assert.match(result.errors[0] ?? '', /primary rename failure/);
+		assert.doesNotMatch(result.errors[0] ?? '', /^.*secondary cleanup failure.*$/);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		for (const name of NODE_MIGRATION_FILE_OPS.list(root)) {
+			if (name.startsWith('.cc-marketspec-migrate-')) {
+				NODE_MIGRATION_FILE_OPS.removeTree(join(root, name));
+			}
+		}
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('a changed cleanup source is left untouched', () => {
+	const root = materialize(legacy());
+	try {
+		const plan = planMigration(new NodeFileSource(root));
+		writeFileSync(join(root, 'catalog.yaml'), 'schemaVersion: "1.0"\nlang: changed\n');
+		const result = applyMigration(root, plan);
+		assert.match(result.errors.join('\n'), /changed since planning|authoritative/i);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('migration implementation has no process execution dependency', () => {
+	const body = readFileSync(new URL('../src/migration.ts', import.meta.url), 'utf8');
+	assert.doesNotMatch(body, /node:child_process|execFile|spawn\(/);
+});
+
+test('an escaping symlinked migration target is rejected without outside writes', () => {
+	const parent = mkdtempSync(join(tmpdir(), 'ccms-migrate-link-'));
+	const root = join(parent, 'root');
+	const outside = join(parent, 'outside');
+	mkdirSync(root);
+	mkdirSync(outside);
+	const source = legacy();
+	for (const path of LEGACY_PATHS) {
+		const body = source.read(path);
+		if (body === null) continue;
+		const absolute = join(root, ...path.split('/'));
+		mkdirSync(dirname(absolute), { recursive: true });
+		writeFileSync(absolute, body);
+	}
+	symlinkSync(
+		outside,
+		join(root, '.cc-marketspec'),
+		process.platform === 'win32' ? 'junction' : 'dir'
+	);
+	try {
+		const plan = planMigration(new NodeFileSource(root));
+		assert.notDeepEqual(plan.errors, []);
+		assert.deepEqual(plan.writes, {});
+		assert.deepEqual(NODE_MIGRATION_FILE_OPS.list(outside), []);
+	} finally {
+		rmSync(parent, { recursive: true, force: true });
+	}
+});
+
+test('every injected staging write failure leaves the complete legacy tree', () => {
+	const writeCount = Object.keys(planMigration(legacy()).writes).length;
+	for (let failAt = 1; failAt <= writeCount; failAt += 1) {
+		const root = materialize(legacy());
+		let writes = 0;
+		const failing: MigrationFileOps = {
+			...NODE_MIGRATION_FILE_OPS,
+			writeExclusive: (path, content) => {
+				writes += 1;
+				if (writes === failAt) throw new Error('injected write failure');
+				NODE_MIGRATION_FILE_OPS.writeExclusive(path, content);
+			}
+		};
+		try {
+			const result = applyMigration(root, planMigration(new NodeFileSource(root)), failing);
+			assert.match(result.errors.join('\n'), /injected write failure/);
+			assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+			assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+			assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), true);
+			assert.equal(
+				NODE_MIGRATION_FILE_OPS.list(root).some(
+					(name) => name.startsWith('.cc-marketspec-migrate-')
+				),
+				false
+			);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}
 });

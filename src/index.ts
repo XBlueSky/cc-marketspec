@@ -47,8 +47,12 @@ export {
 } from './layout.ts';
 export {
 	MIGRATION_RECEIPT_PATH,
+	NODE_MIGRATION_FILE_OPS,
+	applyMigration,
 	planMigration,
+	type MigrationFileOps,
 	type MigrationOptions,
 	type MigrationPlan,
+	type MigrationResult,
 	type PlannedRemoval
 } from './migration.ts';

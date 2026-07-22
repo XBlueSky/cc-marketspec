@@ -421,3 +421,75 @@ test('--strict-coverage turns a missing trigger into exit 1', () => {
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+test('migrate --dry-run prints a plan and writes nothing', () => {
+	const root = makeMarket({
+		...VALID,
+		'catalog.yaml': 'schemaVersion: "1.0"\n',
+		'plugins/sample/entry.yaml': 'tagline: legacy\n'
+	});
+	try {
+		const before = readFileSync(join(root, 'catalog.yaml'), 'utf8');
+		const result = capture(['node', 'cli', 'migrate', '--dry-run', root]);
+		assert.equal(result.code, 0);
+		assert.match(result.out, /WRITE \.cc-marketspec\/catalog\.yaml/);
+		assert.equal(readFileSync(join(root, 'catalog.yaml'), 'utf8'), before);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('migrate --from legacy claims catalog-only input explicitly', () => {
+	const root = makeMarket({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] }),
+		'catalog.yaml': 'schemaVersion: "1.0"\n'
+	});
+	try {
+		assert.equal(capture(['node', 'cli', 'migrate', root]).code, 1);
+		assert.equal(capture(['node', 'cli', 'migrate', '--from', 'legacy', root]).code, 0);
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), true);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('migrate validates its command-specific options and never offers force', () => {
+	assert.equal(capture(['node', 'cli', 'migrate', '--from', 'flat']).code, 1);
+	assert.match(capture(['node', 'cli', 'migrate', '--from', 'flat']).out, /--from.*legacy/i);
+	assert.equal(capture(['node', 'cli', 'migrate', '--dry-run', '--dry-run']).code, 1);
+	assert.equal(capture(['node', 'cli', 'migrate', 'one', 'two']).code, 1);
+	assert.equal(capture(['node', 'cli', 'migrate', '--check']).code, 1);
+	assert.doesNotMatch(capture(['node', 'cli', '--help']).out, /--force/);
+});
+
+test('migrate on a valid current bundle is a successful no-op', () => {
+	const root = makeMarket({
+		...VALID,
+		'.cc-marketspec/catalog.yaml': 'schemaVersion: "1.1"\n'
+	});
+	try {
+		const result = capture(['node', 'cli', 'migrate', root]);
+		assert.equal(result.code, 0);
+		assert.match(result.out, /migration not needed/i);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('migrate does not print plan warnings twice after apply', () => {
+	const root = makeMarket({
+		...VALID,
+		'catalog.yaml': 'schemaVersion: "1.0"\n',
+		'plugins/sample/entry.yaml': 'tagline: legacy\n',
+		'manifest.json': '{"owner":"another-tool"}\n'
+	});
+	try {
+		const result = capture(['node', 'cli', 'migrate', root]);
+		assert.equal(result.code, 0);
+		const matches = result.out.match(/manifest\.json.*left untouched/gi) ?? [];
+		assert.equal(matches.length, 1);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});

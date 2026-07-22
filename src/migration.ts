@@ -1,8 +1,21 @@
 import { createHash } from 'node:crypto';
+import {
+	existsSync,
+	lstatSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	readdirSync,
+	renameSync,
+	rmSync,
+	unlinkSync,
+	writeFileSync
+} from 'node:fs';
+import { basename, dirname, resolve } from 'node:path';
 import { isScalar, parseDocument } from 'yaml';
 import { Catalog } from './catalog.ts';
 import { Entry } from './entry.ts';
-import { OverlayFileSource, type FileSource } from './fs-source.ts';
+import { NodeFileSource, OverlayFileSource, type FileSource } from './fs-source.ts';
 import { generateManifest } from './generate.ts';
 import {
 	CATALOG_PATH,
@@ -19,7 +32,7 @@ import {
 } from './layout.ts';
 import { loadYaml, readJSON } from './native.ts';
 import { DIST_IGNORE_CONTENT } from './output.ts';
-import { normalizeInternalPath } from './path-policy.ts';
+import { normalizeInternalPath, resolveWithinRoot } from './path-policy.ts';
 import { CURRENT_FORMAT_VERSION, LEGACY_FORMAT_VERSION } from './version.ts';
 
 export interface PlannedRemoval {
@@ -40,6 +53,45 @@ export interface MigrationPlan {
 	warnings: string[];
 	errors: string[];
 }
+
+export interface MigrationFileOps {
+	exists(path: string): boolean;
+	isSymbolicLink(path: string): boolean;
+	mkdir(path: string): void;
+	mkdtemp(prefix: string): string;
+	read(path: string): string;
+	writeExclusive(path: string, content: string): void;
+	rename(from: string, to: string): void;
+	unlink(path: string): void;
+	removeTree(path: string): void;
+	list(path: string): string[];
+}
+
+export interface MigrationResult {
+	changed: boolean;
+	errors: string[];
+	warnings: string[];
+}
+
+export const NODE_MIGRATION_FILE_OPS: MigrationFileOps = {
+	exists: existsSync,
+	isSymbolicLink: (path) => {
+		try {
+			return lstatSync(path).isSymbolicLink();
+		} catch {
+			return false;
+		}
+	},
+	mkdir: (path) => mkdirSync(path, { recursive: true }),
+	mkdtemp: mkdtempSync,
+	read: (path) => readFileSync(path, 'utf8'),
+	writeExclusive: (path, content) =>
+		writeFileSync(path, content, { encoding: 'utf8', flag: 'wx' }),
+	rename: renameSync,
+	unlink: unlinkSync,
+	removeTree: (path) => rmSync(path, { recursive: true, force: true }),
+	list: (path) => readdirSync(path).sort(compare)
+};
 
 interface MigrationReceipt {
 	receiptVersion: 1;
@@ -601,5 +653,302 @@ export function planMigration(
 		return planMigrationUnchecked(source, options);
 	} catch (error) {
 		return noop(null, [], [error instanceof Error ? error.message : String(error)]);
+	}
+}
+
+function describe(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+function sameRemovals(left: PlannedRemoval[], right: PlannedRemoval[]): boolean {
+	return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function validateMigratePlan(root: string, plan: MigrationPlan): string[] {
+	const errors: string[] = [];
+	const receiptRaw = plan.writes[MIGRATION_RECEIPT_PATH];
+	if (receiptRaw === undefined) {
+		return [MIGRATION_RECEIPT_PATH + ': migrate plan lacks its required receipt'];
+	}
+	const parsed = parseReceipt(receiptRaw);
+	if (parsed.error || !parsed.receipt) return [parsed.error ?? 'malformed migration receipt'];
+	const receipt = parsed.receipt;
+	const expectedWrites = [...Object.keys(receipt.targetDigests), MIGRATION_RECEIPT_PATH]
+		.sort(compare);
+	const actualWrites = Object.keys(plan.writes).sort(compare);
+	if (JSON.stringify(actualWrites) !== JSON.stringify(expectedWrites)) {
+		errors.push('migration plan writes do not exactly match receipt targets');
+	}
+	for (const [path, expected] of Object.entries(receipt.targetDigests)) {
+		const body = plan.writes[path];
+		if (body === undefined || digest(body) !== expected) {
+			errors.push(path + ': migration plan bytes do not match receipt digest');
+		}
+	}
+	if (!sameRemovals(plan.removals, receipt.removals)) {
+		errors.push('migration plan removals do not exactly match its receipt');
+	}
+	if (
+		plan.sourceVersion !== LEGACY_FORMAT_VERSION
+		|| plan.targetVersion !== CURRENT_FORMAT_VERSION
+	) {
+		errors.push('migration plan versions do not describe the supported 1.0 to 1.1 transition');
+	}
+	if (errors.length > 0) return uniqueSorted(errors);
+
+	const proof = planMigration(
+		new OverlayFileSource(new NodeFileSource(root), plan.writes)
+	);
+	if (
+		proof.kind !== 'cleanup'
+		|| proof.errors.length > 0
+		|| !sameRemovals(proof.removals, plan.removals)
+	) {
+		return uniqueSorted([
+			'migration plan failed authoritative ownership revalidation',
+			...proof.errors
+		]);
+	}
+	return [];
+}
+
+function validateCleanupPlan(root: string, plan: MigrationPlan): string[] {
+	const proof = planMigration(new NodeFileSource(root));
+	if (
+		proof.kind !== 'cleanup'
+		|| proof.errors.length > 0
+		|| !sameRemovals(proof.removals, plan.removals)
+	) {
+		return uniqueSorted([
+			'cleanup plan failed authoritative ownership revalidation',
+			...proof.errors
+		]);
+	}
+	if (Object.keys(plan.writes).length > 0) {
+		return ['cleanup plan must not contain writes'];
+	}
+	return [];
+}
+
+function targetOccupied(path: string, fileOps: MigrationFileOps): boolean {
+	return fileOps.exists(path) || fileOps.isSymbolicLink(path);
+}
+
+function assertStagedTree(
+	staging: string,
+	writes: Record<string, string>,
+	fileOps: MigrationFileOps
+): void {
+	const expectedChildren = new Map<string, Set<string>>();
+	expectedChildren.set('', new Set());
+	for (const targetPath of Object.keys(writes)) {
+		const relativePath = targetPath.slice((SPEC_DIR + '/').length);
+		const parts = relativePath.split('/');
+		for (let index = 0; index < parts.length; index += 1) {
+			const parent = parts.slice(0, index).join('/');
+			const children = expectedChildren.get(parent) ?? new Set<string>();
+			children.add(parts[index]);
+			expectedChildren.set(parent, children);
+			if (index < parts.length - 1 && !expectedChildren.has(parts.slice(0, index + 1).join('/'))) {
+				expectedChildren.set(parts.slice(0, index + 1).join('/'), new Set());
+			}
+		}
+	}
+	for (const [directory, children] of expectedChildren) {
+		const absolute = resolveWithinRoot(staging, directory, { allowRoot: true });
+		const actual = fileOps.list(absolute);
+		const expected = [...children].sort(compare);
+		if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+			throw new Error(
+				'staged tree differs from migration plan at '
+				+ (directory || SPEC_DIR)
+			);
+		}
+	}
+	for (const [targetPath, expected] of Object.entries(writes)) {
+		const relativePath = targetPath.slice((SPEC_DIR + '/').length);
+		const absolute = resolveWithinRoot(staging, relativePath);
+		if (fileOps.read(absolute) !== expected) {
+			throw new Error(targetPath + ': staged bytes differ from the migration plan');
+		}
+	}
+}
+
+function applyRemovals(
+	root: string,
+	removals: PlannedRemoval[],
+	fileOps: MigrationFileOps
+): { changed: number; errors: string[] } {
+	const errors: string[] = [];
+	let changed = 0;
+	for (const planned of removals) {
+		try {
+			const absolute = resolveWithinRoot(root, planned.path);
+			if (fileOps.isSymbolicLink(absolute)) {
+				errors.push(planned.path + ': changed since planning; left untouched');
+				continue;
+			}
+			if (!fileOps.exists(absolute)) continue;
+			if (digest(fileOps.read(absolute)) !== planned.digest) {
+				errors.push(planned.path + ': changed since planning; left untouched');
+				continue;
+			}
+			fileOps.unlink(absolute);
+			changed += 1;
+		} catch (error) {
+			errors.push(planned.path + ': cleanup failed: ' + describe(error));
+		}
+	}
+	return { changed, errors: uniqueSorted(errors) };
+}
+
+function finishCleanup(
+	root: string,
+	removals: PlannedRemoval[],
+	fileOps: MigrationFileOps
+): { changed: number; errors: string[] } {
+	const result = applyRemovals(root, removals, fileOps);
+	if (result.errors.length > 0) return result;
+	try {
+		const receipt = resolveWithinRoot(root, MIGRATION_RECEIPT_PATH);
+		if (fileOps.isSymbolicLink(receipt)) {
+			result.errors.push(MIGRATION_RECEIPT_PATH + ': cleanup failed: symbolic link is unsafe');
+		} else if (fileOps.exists(receipt)) {
+			fileOps.unlink(receipt);
+			result.changed += 1;
+		}
+	} catch (error) {
+		result.errors.push(MIGRATION_RECEIPT_PATH + ': cleanup failed: ' + describe(error));
+	}
+	return result;
+}
+
+function applyMigrationUnchecked(
+	root: string,
+	plan: MigrationPlan,
+	fileOps: MigrationFileOps
+): MigrationResult {
+	if (plan.errors.length > 0) {
+		return { changed: false, errors: plan.errors, warnings: plan.warnings };
+	}
+	if (plan.kind === 'noop') {
+		return { changed: false, errors: [], warnings: plan.warnings };
+	}
+	if (plan.kind === 'cleanup') {
+		const authorityErrors = validateCleanupPlan(root, plan);
+		if (authorityErrors.length > 0) {
+			return { changed: false, errors: authorityErrors, warnings: plan.warnings };
+		}
+		const cleanup = finishCleanup(root, plan.removals, fileOps);
+		return {
+			changed: cleanup.changed > 0,
+			errors: cleanup.errors,
+			warnings: plan.warnings
+		};
+	}
+
+	const authorityErrors = validateMigratePlan(root, plan);
+	if (authorityErrors.length > 0) {
+		return { changed: false, errors: authorityErrors, warnings: plan.warnings };
+	}
+	const target = resolveWithinRoot(root, SPEC_DIR);
+	if (targetOccupied(target, fileOps)) {
+		return {
+			changed: false,
+			errors: [SPEC_DIR + ': target appeared after planning; refusing overwrite'],
+			warnings: plan.warnings
+		};
+	}
+
+	const rootDirectory = dirname(resolveWithinRoot(root, '.cc-marketspec-migrate-anchor'));
+	const stagingPrefixName = '.cc-marketspec-migrate-';
+	let ownedStaging: string | undefined;
+	let cutOver = false;
+	try {
+		const returnedStaging = resolve(
+			fileOps.mkdtemp(resolve(rootDirectory, stagingPrefixName))
+		);
+		if (
+			dirname(returnedStaging) !== rootDirectory
+			|| !basename(returnedStaging).startsWith(stagingPrefixName)
+		) {
+			throw new Error('filesystem returned an unsafe migration staging directory');
+		}
+		const checkedStaging = resolveWithinRoot(root, basename(returnedStaging));
+		if (checkedStaging !== returnedStaging || fileOps.isSymbolicLink(checkedStaging)) {
+			throw new Error('filesystem returned an unsafe migration staging directory');
+		}
+		ownedStaging = checkedStaging;
+
+		for (const [targetPath, content] of Object.entries(plan.writes).sort(
+			([left], [right]) => compare(left, right)
+		)) {
+			const normalized = normalizeInternalPath(targetPath);
+			if (normalized !== targetPath || !targetPath.startsWith(SPEC_DIR + '/')) {
+				throw new Error('unexpected migration target ' + targetPath);
+			}
+			const stagedRelative = targetPath.slice((SPEC_DIR + '/').length);
+			const stagedAbsolute = resolveWithinRoot(ownedStaging, stagedRelative);
+			fileOps.mkdir(dirname(stagedAbsolute));
+			fileOps.writeExclusive(stagedAbsolute, content);
+		}
+
+		assertStagedTree(ownedStaging, plan.writes, fileOps);
+		const stagedWrites: Record<string, string> = {};
+		for (const targetPath of Object.keys(plan.writes).sort(compare)) {
+			const stagedRelative = targetPath.slice((SPEC_DIR + '/').length);
+			stagedWrites[targetPath] = fileOps.read(
+				resolveWithinRoot(ownedStaging, stagedRelative)
+			);
+		}
+		const validation = generateManifest(
+			new OverlayFileSource(new NodeFileSource(root), stagedWrites)
+		);
+		if (validation.errors.length > 0) {
+			throw new Error('staged validation failed: ' + validation.errors.join('; '));
+		}
+		const validatedManifest = JSON.stringify(validation.manifest, null, 2) + '\n';
+		if (validatedManifest !== stagedWrites[DIST_MANIFEST_PATH]) {
+			throw new Error('staged validation manifest bytes differ from the migration plan');
+		}
+
+		if (targetOccupied(target, fileOps)) {
+			throw new Error(SPEC_DIR + ': target appeared after staging; refusing overwrite');
+		}
+		resolveWithinRoot(root, SPEC_DIR);
+		fileOps.rename(ownedStaging, target);
+		if (!fileOps.exists(target) || fileOps.isSymbolicLink(target)) {
+			throw new Error(SPEC_DIR + ': cutover did not publish a safe complete target');
+		}
+		cutOver = true;
+	} catch (error) {
+		const errors = ['migration cutover failed: ' + describe(error)];
+		if (!cutOver && ownedStaging !== undefined) {
+			try {
+				fileOps.removeTree(ownedStaging);
+			} catch (cleanupError) {
+				errors.push('staging cleanup failed: ' + describe(cleanupError));
+			}
+		}
+		return { changed: false, errors, warnings: plan.warnings };
+	}
+
+	const cleanup = finishCleanup(root, plan.removals, fileOps);
+	return { changed: true, errors: cleanup.errors, warnings: plan.warnings };
+}
+
+export function applyMigration(
+	root: string,
+	plan: MigrationPlan,
+	fileOps: MigrationFileOps = NODE_MIGRATION_FILE_OPS
+): MigrationResult {
+	try {
+		return applyMigrationUnchecked(root, plan, fileOps);
+	} catch (error) {
+		return {
+			changed: false,
+			errors: ['migration apply failed: ' + describe(error)],
+			warnings: plan.warnings
+		};
 	}
 }
