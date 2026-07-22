@@ -46,6 +46,22 @@ jobs:
           test -f dist/cli.js
           test -f dist/index.d.ts
 
+  portable-core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --registry=https://registry.npmjs.org
+      - name: Portable layout, path, CLI, and migration tests
+        run: node --test test/version.test.ts test/path-policy.test.ts test/layout.test.ts test/output.test.ts test/cli.test.ts test/migration.test.ts
+
   # Deploy the hosted MCP Worker on every push to main, once validate is green.
   # Runs in parallel with `release` (npm publish) — the Worker going live does
   # not wait on the npm release, and a failed npm publish won't block the deploy.

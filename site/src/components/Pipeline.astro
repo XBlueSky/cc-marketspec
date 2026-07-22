@@ -1,9 +1,9 @@
 ---
 // How it works: three steps as a horizontal flow with rhythm (not a 3-col grid).
 const steps = [
-  { n:'01', k:'Describe', d:'A little YAML — only what native can\'t express.', code:'schemaVersion: "1.0"\ngroups:\n  - id: tools\n    label: Tools' },
-  { n:'02', k:'Generate', d:'Joins your YAML with native manifests, validates.', code:'$ npx @xbluesky/cc-marketspec\n✓ wrote manifest.json (1 plugin)' },
-  { n:'03', k:'manifest.json', d:'One render-agnostic document. Commit or emit in CI.', code:'{ "schemaVersion": "1.0",\n  "marketplace": { "name": "cc-marketspec" },\n  "plugins": [ … ] }' },
+  { n:'01', k:'Describe', d:'A little YAML — only what native can\'t express.', code:'.cc-marketspec/catalog.yaml\nschemaVersion: "1.1"\ngroups:\n  - id: tools\n    label: Tools' },
+  { n:'02', k:'Generate', d:'Joins your YAML with native manifests, validates.', code:'$ npx @xbluesky/cc-marketspec\ncc-marketspec: wrote .cc-marketspec/dist/manifest.json — 1 plugins, 0 warning(s).' },
+  { n:'03', k:'.cc-marketspec/dist/manifest.json', d:'One render-agnostic document. Consume in the build or publish with the site.', code:'{ "schemaVersion": "1.1",\n  "marketplace": { "name": "cc-marketspec" },\n  "plugins": [ … ] }' },
 ];
 ---
 <section id="how" class="section how">

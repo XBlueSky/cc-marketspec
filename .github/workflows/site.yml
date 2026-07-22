@@ -1,8 +1,13 @@
-# Build the manifest showcase site on every PR and push to main. Build failure
+# Build the manifest showcase site on every PR and push to main. The same-job
+# site build creates ignored .cc-marketspec/dist/manifest.json output before
+# Astro compilation; it never commits or publishes that generated file. Build failure
 # blocks merge — a broken site means the manifest has something the site can't
 # render. Deploy is NOT here: Cloudflare Pages' Git integration owns deploy
 # (separation of concerns, mirrors how deploy-worker is the only deploy in ci.yml).
 name: Site
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -18,11 +23,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Main lib deps (the site's build runs ../dist/cli.js to regenerate the
-      # manifest). Pin the public registry — same lockfile/private-mirror reason
+      # Main lib deps (the site's build runs ../dist/cli.js to regenerate ignored
+      # .cc-marketspec/dist/manifest.json). Pin the public registry — same lockfile/private-mirror reason
       # as ci.yml's validate job.
       - run: npm ci --registry=https://registry.npmjs.org
-      # Site deps + build (build script regenerates the manifest, then astro build).
+      # Site deps + build (same job builds ignored output, then Astro consumes it).
       - run: npm ci --registry=https://registry.npmjs.org
         working-directory: site
       - run: npm run build

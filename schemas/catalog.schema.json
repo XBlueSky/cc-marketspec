@@ -5,7 +5,7 @@
     "schemaVersion": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+$",
-      "description": "MAJOR.MINOR of the standard this catalog targets. Consumers gate on MAJOR."
+      "description": "MAJOR.MINOR format compatibility version. This is not package SemVer; runtime compatibility is enforced by version.ts."
     },
     "lang": {
       "type": "string",

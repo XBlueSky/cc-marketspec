@@ -70,13 +70,13 @@ test('TOOLS no longer includes explain_field; includes the two authoring tools',
 	assert.ok(names.includes('get_authoring_guide'));
 });
 
-test('callTool wraps a thrown handler error (malformed entry.yaml) as a structured error', () => {
+test('callTool wraps a thrown handler error (malformed namespaced entry) as a structured error', () => {
 	const res = callTool('check_coverage', {
 		pluginId: 'p',
 		files: {
 			'plugins/p/.claude-plugin/plugin.json': JSON.stringify({ name: 'p', version: '1.0.0' }),
 			// Invalid YAML — unclosed flow mapping forces yaml.load to throw.
-			'plugins/p/entry.yaml': 'tagline: "unterminated\n  skills: [a, b'
+			'.cc-marketspec/entries/plugin-p.yaml': 'tagline: "unterminated\n  skills: [a, b'
 		}
 	});
 	const payload = JSON.parse(res.content[0].text) as { error?: string };
@@ -115,4 +115,71 @@ test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => 
 		assert.deepEqual(SCHEMAS[name], onDisk);
 	}
 	assert.match(VERSION, /^\d+\.\d+\.\d+/);
+});
+
+test('checkCoverage reads the canonical namespaced entry path', () => {
+	const report = checkCoverage({
+		pluginId: 'p',
+		files: {
+			'plugins/p/.claude-plugin/plugin.json': JSON.stringify({ name: 'p', version: '1.0.0' }),
+			'plugins/p/skills/greet/SKILL.md': '---\nname: greet\ndescription: hi\n---\n',
+			'.cc-marketspec/entries/plugin-p.yaml': 'skills:\n  - name: greet\n    trigger: when greeting\n'
+		}
+	});
+	assert.equal(report.findings.some((finding) => finding.ruleId === 'skill.trigger'), false);
+});
+
+test('scaffoldEntry labels the canonical destination', () => {
+	const body = scaffoldEntry({
+		pluginId: 'con',
+		files: { 'plugins/con/.claude-plugin/plugin.json': JSON.stringify({ name: 'con' }) }
+	});
+	assert.match(body, /^# \.cc-marketspec\/entries\/plugin-con\.yaml/m);
+});
+
+test('MCP preserves exactly five hosted tools and canonical pasted-file guidance', () => {
+	assert.equal(TOOLS.length, 5);
+	assert.deepEqual(TOOLS.map((tool) => tool.name), [
+		'get_schema',
+		'list_authoring_sections',
+		'get_authoring_guide',
+		'check_coverage',
+		'scaffold_entry'
+	]);
+	for (const tool of TOOLS.filter(({ name }) => name === 'check_coverage' || name === 'scaffold_entry')) {
+		assert.match(tool.description, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+		assert.deepEqual(tool.inputSchema.properties.files, {
+			type: 'object',
+			additionalProperties: { type: 'string' }
+		});
+	}
+});
+
+test('MCP public tool input schemas remain transport-compatible', () => {
+	assert.deepEqual(Object.fromEntries(TOOLS.map(({ name, inputSchema }) => [name, inputSchema])), {
+		get_schema: {
+			type: 'object',
+			properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } },
+			required: ['which']
+		},
+		list_authoring_sections: {
+			type: 'object',
+			properties: {}
+		},
+		get_authoring_guide: {
+			type: 'object',
+			properties: { section: { type: 'string' } },
+			required: ['section']
+		},
+		check_coverage: {
+			type: 'object',
+			properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } },
+			required: ['pluginId', 'files']
+		},
+		scaffold_entry: {
+			type: 'object',
+			properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } },
+			required: ['pluginId', 'files']
+		}
+	});
 });

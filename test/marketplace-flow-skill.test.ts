@@ -41,11 +41,23 @@ test('both CI workflow assets exist and are valid YAML', () => {
   }
 });
 
-test('CI templates regenerate the manifest via the npx entrypoint', () => {
+test('CI templates install from the committed lockfile and use only the local CLI', () => {
   for (const name of ['github-manifest.yml', 'gitlab-manifest.yml']) {
     const body = readFileSync(new URL(`assets/${name}`, `file://${skillDir}`), 'utf8');
-    assert.ok(body.includes('npx @xbluesky/cc-marketspec'), `${name} must call the cc-marketspec CLI`);
+    assert.match(body, /\bnpm ci\b/, `${name} must reproduce the committed dependency graph`);
+    assert.match(body, /\bnpx --no-install cc-marketspec(?: --check)?\b/, `${name} must call the local CLI`);
+    assert.doesNotMatch(body, /npx (?!--no-install)|@latest/, `${name} must not resolve packages during CI`);
   }
+});
+
+test('CI setup installs one exact cc-marketspec devDependency and commits its lockfile', () => {
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  assert.match(skill, /npm install --save-dev --save-exact @xbluesky\/cc-marketspec@latest/);
+  assert.match(skill, /exact devDependency/i);
+  assert.match(skill, /package\.json/);
+  assert.match(skill, /package-lock\.json/);
+  assert.match(skill, /commit/i);
+  assert.match(skill, /resolve(?:s|d)?[^.\n]*(?:once|one time)|once[^.\n]*resolve/i);
 });
 
 test('starter marketplace.json asset exists and is valid JSON', () => {
@@ -83,8 +95,163 @@ test('repo README $schema example uses the scoped package path', () => {
   assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
 });
 
+test('repo README publishes the complete namespaced format 1.1 contract', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  for (const value of [
+    '.cc-marketspec/catalog.yaml',
+    '.cc-marketspec/entries/plugin-<id>.yaml',
+    '.cc-marketspec/dist/manifest.json',
+    'migrate --dry-run',
+    'migrate --from legacy',
+    '--output site/public/manifest.json',
+    'Format `1.0`',
+    'format `1.1`',
+    'npm package versions',
+  ]) assert.match(readme, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(readme, /workflow artifacts? (?:are|is) temporary/i);
+  assert.match(readme, /remote source objects?.*not fetched/is);
+  assert.match(readme, /do not .*commit.*\.cc-marketspec\/dist\/manifest\.json/i);
+  assert.doesNotMatch(readme, /generated `manifest\.json` can be committed/i);
+});
+
+test('repo README documents consumer version checks and names only existing CI workflow files', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  assert.match(readme, /checkManifestFormatVersion/);
+  assert.doesNotMatch(readme, /\.github\/workflows\/manifest\.yml/);
+  assert.match(readme, /\.github\/workflows\/ci\.yml|standalone workflow/i);
+});
+
+test('repo README states the marketplace-to-native plugin identity invariant', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  assert.match(readme, /marketplace plugin id.*must match.*`plugin\.json` name/is);
+  assert.doesNotMatch(readme, /plugin id \(= directory name\)|plugin directory name\s*==/i);
+});
+
+test('tracked dogfood presentation teaches only canonical bundle paths', () => {
+  const entry = readFileSync(new URL('../.cc-marketspec/entries/plugin-cc-marketspec.yaml', import.meta.url), 'utf8');
+  assert.match(entry, /\.cc-marketspec\/dist\/manifest\.json/);
+  assert.match(entry, /\.cc-marketspec\/catalog\.yaml/);
+  assert.match(entry, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+  assert.doesNotMatch(entry, /description: (?:Generate|Scaffold) (?:manifest\.json|catalog\.yaml)/);
+});
+
 test('SKILL.md Step 2 points to the entry-authoring reference and the MCP authoring tools', () => {
   const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
   assert.match(skill, /entry-authoring/);
   assert.match(skill, /list_authoring_sections|get_authoring_guide/);
+});
+
+test('workflow guidance uses namespaced paths and never commits generated output', () => {
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  assert.match(skill, /\.cc-marketspec\/catalog\.yaml/);
+  assert.match(skill, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+  assert.match(skill, /\.cc-marketspec\/dist\/manifest\.json/);
+  assert.match(skill, /migrate --from legacy/);
+  assert.doesNotMatch(skill, /commit (the )?manifest|git path|push.*manifest/i);
+  assert.doesNotMatch(skill, /--force/);
+
+  for (const name of ['github-manifest.yml', 'gitlab-manifest.yml']) {
+    const body = readFileSync(new URL(`assets/${name}`, `file://${SKILL_DIR}`), 'utf8');
+    assert.match(body, /--check/);
+    assert.match(body, /\.cc-marketspec\/dist\/manifest\.json/);
+    assert.doesNotMatch(body, /git add|git commit|git push|contents:\s*write/);
+  }
+});
+
+test('CI assets validate before generating source-only build artifacts', () => {
+  const github = readFileSync(new URL('assets/github-manifest.yml', `file://${SKILL_DIR}`), 'utf8');
+  assert.match(github, /permissions:\s*\n\s*contents: read/);
+  assert.match(github, /pull_request:/);
+  assert.match(github, /needs: validate/);
+
+  const gitlab = readFileSync(new URL('assets/gitlab-manifest.yml', `file://${SKILL_DIR}`), 'utf8');
+  const parsedGitlab = yaml.load(gitlab) as Record<string, { stage?: string; needs?: string[] }>;
+  assert.equal(parsedGitlab.stages, undefined, 'include must not replace a consuming pipeline stage list');
+  assert.match(gitlab, /validate-marketplace:/);
+  assert.match(gitlab, /generate-marketplace:/);
+  assert.equal(parsedGitlab['validate-marketplace']?.stage, 'test');
+  assert.equal(parsedGitlab['generate-marketplace']?.stage, 'test');
+  assert.deepEqual(parsedGitlab['generate-marketplace']?.needs, ['validate-marketplace']);
+
+  for (const body of [github, gitlab]) {
+    assert.doesNotMatch(body, /\bgit\s+(?:add|commit|push)\b/);
+    assert.doesNotMatch(body, /(?:^|\s)(?:>|>>).*\.cc-marketspec\//m);
+  }
+});
+
+test('GitLab installation guidance preserves existing stages and maps both jobs together', () => {
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  assert.match(skill, /inspect[^.]*existing[^.]*stages/i);
+  assert.match(skill, /both jobs[^.]*same[^.]*existing stage/i);
+  assert.match(skill, /custom stage/i);
+  assert.doesNotMatch(skill, /replace[^.\n]*stages/i);
+});
+
+test('plugin exposes a safe, resumable migration command', () => {
+  const path = new URL('../plugins/cc-marketspec/commands/cc-migrate.md', import.meta.url);
+  assert.equal(existsSync(path), true);
+  const body = readFileSync(path, 'utf8');
+  assert.match(body, /cc-marketspec@latest migrate/);
+  assert.match(body, /--dry-run/);
+  assert.match(body, /explicit(?:ly)? (?:confirm|confirmation)/i);
+  assert.match(body, /rerun safely resumes cleanup/i);
+  assert.doesNotMatch(body, /--force|git add|git commit|git push/i);
+});
+
+test('all plugin command docs distinguish authored inputs from ignored generated output', () => {
+  const commandDir = new URL('../plugins/cc-marketspec/commands/', import.meta.url);
+  const init = readFileSync(new URL('cc-init.md', commandDir), 'utf8');
+  const check = readFileSync(new URL('cc-check.md', commandDir), 'utf8');
+  const generate = readFileSync(new URL('cc-generate.md', commandDir), 'utf8');
+  const migrate = readFileSync(new URL('cc-migrate.md', commandDir), 'utf8');
+  const readme = readFileSync(new URL('../plugins/cc-marketspec/README.md', import.meta.url), 'utf8');
+
+  for (const body of [init, check, generate, readme]) {
+    assert.match(body, /\.cc-marketspec\/catalog\.yaml/);
+    assert.match(body, /\.cc-marketspec\/entries\/plugin-<id>\.yaml/);
+    assert.match(body, /\.cc-marketspec\/dist\/manifest\.json/);
+  }
+  assert.match(init, /authored files only/i);
+  assert.match(check, /without writing any file/i);
+  assert.match(generate, /ignored output by default/i);
+  assert.match(generate, /--output.*explicit consumer-build escape hatch/is);
+  assert.doesNotMatch([init, check, generate, migrate, readme].join('\n'), /--force|git add|git commit|git push/i);
+});
+
+test('authoring source defines canonical marketplace-owned overlay paths', () => {
+  const authoring = readFileSync(new URL('../src/authoring.md', import.meta.url), 'utf8');
+  const prose = authoring.replace(/```yaml[\s\S]*?```/g, '');
+  assert.match(authoring, /^`\.cc-marketspec\/entries\/plugin-<id>\.yaml` is a marketplace-owned presentation/m);
+  assert.match(authoring, /\.cc-marketspec\/catalog\.yaml/);
+  assert.doesNotMatch(prose, /(?<![\w/.`-])entry\.yaml/);
+  assert.doesNotMatch(prose, /(?<![\w/.`-])catalog\.yaml/);
+  assert.doesNotMatch(authoring, /(?<![\w/.`-])entry\.yaml/);
+});
+
+test('canonical entry guidance resolves the published schema from the entry directory', () => {
+  const directive = '../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json';
+  const init = readFileSync(new URL('../src/init.ts', import.meta.url), 'utf8');
+  const authoring = readFileSync(new URL('../src/authoring.md', import.meta.url), 'utf8');
+  const skill = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8');
+  for (const body of [init, authoring, skill]) assert.match(body, new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('plugin docs explain the local schema dependency without coupling it to CLI use', () => {
+  const readme = readFileSync(new URL('../plugins/cc-marketspec/README.md', import.meta.url), 'utf8');
+  const init = readFileSync(new URL('../plugins/cc-marketspec/commands/cc-init.md', import.meta.url), 'utf8');
+  for (const body of [readme, init]) {
+    assert.match(body, /\.\.\/\.\.\/node_modules\/@xbluesky\/cc-marketspec\/schemas\/entry\.schema\.json/);
+    assert.match(body, /editor (?:completion|schema completion)/i);
+    assert.match(body, /exact devDependency/i);
+    assert.match(body, /npm install --save-dev --save-exact @xbluesky\/cc-marketspec@latest/);
+    assert.match(body, /CLI[^.\n]*npx[^.\n]*(?:without|does not require)/i);
+    assert.doesNotMatch(body, /plugin install[^.\n]*node_modules/i);
+  }
+});
+
+test('security policy names the namespaced default output and legacy root compatibility', () => {
+  const security = readFileSync(new URL('../SECURITY.md', import.meta.url), 'utf8');
+  assert.match(security, /writes `.cc-marketspec\/dist\/manifest\.json` by default/i);
+  assert.match(security, /root `manifest\.json`[^.]*legacy compatibility/i);
+  assert.match(security, /custom safe output/i);
 });

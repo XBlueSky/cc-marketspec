@@ -3,7 +3,7 @@
 # yaml-language-server: $schema=../../../../schemas/entry.schema.json
 group: examples
 tagline: Say hello, the headless way
-intro: A minimal plugin used to demonstrate how entry.yaml enriches native data.
+intro: A minimal plugin showing how namespaced marketplace presentation enriches native data.
 skills:
   - name: greet
     trigger: When you want a friendly greeting in a demo.

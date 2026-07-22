@@ -2,11 +2,14 @@
 // FileSource and derive the structured facts the generator joins against and the
 // authoring MCP feeds to an LLM. All paths are relative to the FileSource root.
 
-import { join, basename } from 'node:path';
+import { posix, basename } from 'node:path';
 import yaml from 'js-yaml';
 import type { FileSource } from './fs-source.ts';
 
 type Warn = (m: string) => void;
+
+const compareName = <T extends { name: string }>(a: T, b: T) =>
+	a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 
 export function readJSON(source: FileSource, p: string): any {
 	const s = source.read(p);
@@ -50,17 +53,17 @@ export interface NativeSkill {
 }
 
 export function deriveSkills(source: FileSource, dir: string, warn?: Warn): NativeSkill[] {
-	const r = join(dir, 'skills');
+	const r = posix.join(dir, 'skills');
 	if (!source.isDir(r)) return [];
 	return source
 		.list(r)
-		.filter((d) => source.exists(join(r, d, 'SKILL.md')))
+		.filter((d) => source.exists(posix.join(r, d, 'SKILL.md')))
 		.map((d) => {
-			const fm = frontmatter(source, join(r, d, 'SKILL.md'), warn);
+			const fm = frontmatter(source, posix.join(r, d, 'SKILL.md'), warn);
 			const res = {
-				scripts: countFiles(source, join(r, d, 'scripts')),
-				references: countFiles(source, join(r, d, 'references')),
-				assets: countFiles(source, join(r, d, 'assets'))
+				scripts: countFiles(source, posix.join(r, d, 'scripts')),
+				references: countFiles(source, posix.join(r, d, 'references')),
+				assets: countFiles(source, posix.join(r, d, 'assets'))
 			};
 			return {
 				name: (fm.name as string) ?? d,
@@ -68,7 +71,8 @@ export function deriveSkills(source: FileSource, dir: string, warn?: Warn): Nati
 				autoload: fm['user-invocable'] === false,
 				resources: res.scripts || res.references || res.assets ? res : undefined
 			};
-		});
+		})
+		.sort(compareName);
 }
 
 export interface NativeCommand {
@@ -78,13 +82,13 @@ export interface NativeCommand {
 }
 
 export function deriveCommands(source: FileSource, dir: string, warn?: Warn): NativeCommand[] {
-	const r = join(dir, 'commands');
+	const r = posix.join(dir, 'commands');
 	if (!source.isDir(r)) return [];
 	return source
 		.list(r)
 		.filter((f) => f.endsWith('.md'))
 		.map((f) => {
-			const fm = frontmatter(source, join(r, f), warn);
+			const fm = frontmatter(source, posix.join(r, f), warn);
 			const desc = (fm.description as string) ?? '';
 			const args = Array.isArray(fm.arguments)
 				? (fm.arguments as Record<string, unknown>[]).map((a) => ({
@@ -94,7 +98,8 @@ export function deriveCommands(source: FileSource, dir: string, warn?: Warn): Na
 					}))
 				: undefined;
 			return { name: (fm.name as string) ?? basename(f, '.md'), summary: desc ? firstSentence(desc) : undefined, arguments: args };
-		});
+		})
+		.sort(compareName);
 }
 
 export interface NativeAgent {
@@ -104,20 +109,21 @@ export interface NativeAgent {
 }
 
 export function deriveAgents(source: FileSource, dir: string, warn?: Warn): NativeAgent[] {
-	const r = join(dir, 'agents');
+	const r = posix.join(dir, 'agents');
 	if (!source.isDir(r)) return [];
 	return source
 		.list(r)
 		.filter((f) => f.endsWith('.md'))
 		.map((f) => {
-			const fm = frontmatter(source, join(r, f), warn);
+			const fm = frontmatter(source, posix.join(r, f), warn);
 			const desc = (fm.description as string) ?? '';
 			return {
 				name: (fm.name as string) ?? basename(f, '.md'),
 				summary: desc ? firstSentence(desc) : undefined,
 				tools: Array.isArray(fm.tools) ? (fm.tools as string[]) : undefined
 			};
-		});
+		})
+		.sort(compareName);
 }
 
 export interface NativeMcp {
@@ -127,19 +133,22 @@ export interface NativeMcp {
 }
 
 export function deriveMcp(source: FileSource, dir: string): NativeMcp[] {
-	const f = join(dir, '.mcp.json');
+	const f = posix.join(dir, '.mcp.json');
 	if (!source.exists(f)) return [];
 	const servers = (readJSON(source, f).mcpServers ?? {}) as Record<
 		string,
 		{ type?: string; command?: string; url?: string; env?: Record<string, string> }
 	>;
-	return Object.entries(servers).map(([name, s]) => ({
-		name,
-		type: s.type ?? (s.url ? 'http' : 'stdio'),
-		envKeys: Object.entries(s.env ?? {})
-			.filter(([, v]) => typeof v === 'string' && v.includes('${'))
-			.map(([k]) => k)
-	}));
+	return Object.entries(servers)
+		.sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+		.map(([name, server]) => ({
+			name,
+			type: server.type ?? (server.url ? 'http' : 'stdio'),
+			envKeys: Object.entries(server.env ?? {})
+				.filter(([, value]) => typeof value === 'string' && value.includes('${'))
+				.map(([key]) => key)
+				.sort()
+		}));
 }
 
 export interface NativeHook {
@@ -148,12 +157,16 @@ export interface NativeHook {
 }
 
 export function deriveHooks(source: FileSource, dir: string): NativeHook[] {
-	const f = join(dir, 'hooks', 'hooks.json');
+	const f = posix.join(dir, 'hooks', 'hooks.json');
 	if (!source.exists(f)) return [];
 	const hooks = (readJSON(source, f).hooks ?? {}) as Record<string, { matcher?: string }[]>;
 	const out: NativeHook[] = [];
 	for (const [event, entries] of Object.entries(hooks)) for (const e of entries) out.push({ event, matcher: e.matcher });
-	return out;
+	return out.sort((left, right) => {
+		const a = `${left.event}\0${left.matcher ?? ''}`;
+		const b = `${right.event}\0${right.matcher ?? ''}`;
+		return a < b ? -1 : a > b ? 1 : 0;
+	});
 }
 
 export interface NativeFacts {
@@ -168,7 +181,7 @@ export interface NativeFacts {
 export function extractNativeFacts(source: FileSource, pluginDir: string, warn?: Warn): NativeFacts {
 	const plugin = (() => {
 		try {
-			return readJSON(source, join(pluginDir, '.claude-plugin', 'plugin.json')) as Record<string, unknown>;
+			return readJSON(source, posix.join(pluginDir, '.claude-plugin', 'plugin.json')) as Record<string, unknown>;
 		} catch {
 			return {};
 		}

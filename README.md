@@ -16,8 +16,9 @@ plugin marketplace.
 
 You describe a marketplace as data; `cc-marketspec` joins it with the native
 plugin manifests, derives what's already encoded there, validates, and emits a
-single **`manifest.json`** — a render-agnostic document any website can be built
-from. **It ships data, not design.** How the site looks is the consumer's.
+single **`.cc-marketspec/dist/manifest.json`** — a render-agnostic document any
+website can be built from. **It ships data, not design.** How the site looks is
+the consumer's.
 
 ## Mental model: native layer vs presentation layer
 
@@ -25,23 +26,32 @@ from. **It ships data, not design.** How the site looks is the consumer's.
   `.mcp.json`, `skills/*/SKILL.md` · `commands/*.md` · `agents/*.md` frontmatter,
   `hooks/hooks.json`. Identity + structure. You maintain these anyway for the
   plugins to work.
-- **Presentation (this standard):** `catalog.yaml` (marketplace-level) +
-  `entry.yaml` (per plugin). Only what native can't express.
+- **Presentation (this standard):** `.cc-marketspec/catalog.yaml`
+  (marketplace-level) + `.cc-marketspec/entries/plugin-<id>.yaml` (per plugin).
+  Only what native can't express.
 
 **Rule: presentation never restates native facts** — it references them or adds
-presentation value. The generator joins the two by plugin id (= directory name).
+presentation value. The generator joins the two by marketplace plugin id, which
+must match the `plugin.json` name.
 
-## The three files
+## Canonical bundle
 
-| File | Where | Role |
-|------|-------|------|
-| `catalog.yaml` | repo root | marketplace-level data: `schemaVersion`, `lang`, group taxonomy |
-| `entry.yaml` | each `plugins/<id>/` | per-plugin presentation overlay (all optional) |
-| `manifest.json` | generated | the consolidated consumer API — **never hand-edited** |
+```text
+.claude-plugin/marketplace.json
+.cc-marketspec/
+├── .gitignore              # /dist/
+├── catalog.yaml            # authored, schemaVersion: "1.1"
+├── entries/
+│   └── plugin-<id>.yaml    # authored marketplace presentation
+└── dist/
+    └── manifest.json       # generated, ignored
+```
 
-`entry.yaml` is **optional enrichment**: native alone yields a valid (plainer)
-manifest via fallbacks (e.g. `intro`/`tagline` → native description, skill
-`description` → native SKILL.md description). Authoring burden is minimal by design.
+Author and commit `.cc-marketspec/catalog.yaml` and the relevant
+`.cc-marketspec/entries/plugin-<id>.yaml`. The per-plugin entry is **optional
+enrichment**: native data alone yields a valid, plainer manifest via fallbacks
+(for example, `intro`/`tagline` fall back to the native description).
+Do not hand-edit or commit the default `.cc-marketspec/dist/manifest.json`.
 
 ## Install
 
@@ -54,36 +64,90 @@ npx @xbluesky/cc-marketspec
 ## Usage
 
 ```bash
-# In a marketplace repo (defaults to cwd):
-npx @xbluesky/cc-marketspec
-# -> writes ./manifest.json
+# Scaffold namespaced authored files without overwriting anything:
+npx @xbluesky/cc-marketspec init
 
-# Validate only (CI gate) — report errors/warnings, write nothing:
+# Validate only (CI gate); reports errors/warnings and writes nothing:
 npx @xbluesky/cc-marketspec --check
+
+# Generate the ignored default output:
+npx @xbluesky/cc-marketspec
+# -> writes .cc-marketspec/dist/manifest.json
+
+# Explicit consumer-build output, still generated rather than authored:
+npx @xbluesky/cc-marketspec --output site/public/manifest.json
 
 cc-marketspec --help        # full flag list (after install, the bin is `cc-marketspec`)
 cc-marketspec --version
 ```
 
-A complete, runnable example marketplace (with its generated `manifest.json`)
-lives in [`examples/marketplace/`](examples/marketplace) — it's also the golden
-fixture the test suite regenerates and diffs.
+A complete, runnable namespaced marketplace lives in
+[`examples/marketplace/`](examples/marketplace). Its generated manifest is a
+golden fixture that the test suite regenerates and compares.
+
+### Migrating legacy authored YAML
+
+Preview every write and removal before applying it:
+
+```bash
+npx @xbluesky/cc-marketspec migrate --dry-run
+npx @xbluesky/cc-marketspec migrate
+```
+
+Recognized legacy input is the format `1.0` flat layout: a root `catalog.yaml`
+plus plugin-local `entry.yaml` files that can be proven to belong to
+cc-marketspec. A generic root catalog without the normal legacy evidence is
+intentionally ambiguous; claim it explicitly only after inspection:
+
+```bash
+npx @xbluesky/cc-marketspec migrate --from legacy
+```
+
+Migration preserves YAML comments, quoting, and key order. It never overwrites
+an existing target and never invokes git. A receipt authorizes byte-checked
+cleanup, so rerunning after an interruption safely resumes instead of repeating
+or guessing destructive work.
+
+### Generated data and deployment
+
+For a site in the same repository, run the generator before the site build and
+consume `.cc-marketspec/dist/manifest.json` locally. For an external consumer,
+publish an explicit output to a stable Pages, CDN, or object-storage endpoint.
+Workflow artifacts are temporary job-transfer objects, not stable public APIs.
 
 Programmatic:
 
 ```ts
-import { generateManifest, Manifest, Entry } from '@xbluesky/cc-marketspec';
+import {
+  checkManifestFormatVersion,
+  generateManifest,
+  Manifest,
+  Entry,
+} from '@xbluesky/cc-marketspec';
 
 const { manifest, errors, warnings } = generateManifest(process.cwd());
 // Entry / Catalog / Manifest are Zod schemas; their z.infer types are exported too.
+
+const parsed = Manifest.safeParse(manifest);
+if (parsed.success) {
+  const compatibility = checkManifestFormatVersion(parsed.data.schemaVersion);
+  if (!compatibility.ok) throw new Error(compatibility.error);
+}
 ```
+
+`Manifest` and its published JSON Schema intentionally validate document shape
+and any syntactically valid `MAJOR.MINOR` value. Consumers must then call
+`checkManifestFormatVersion` before interpreting the document: it accepts legacy
+format `1.0` with a deprecation warning and current format `1.1`, while rejecting
+unsupported or future versions.
 
 ### Editor support while authoring
 
-Point your YAML language server at the published JSON Schemas:
+In `.cc-marketspec/entries/plugin-<id>.yaml`, point your YAML language server at
+the published entry schema. Entry documents remain versionless:
 
 ```yaml
-# yaml-language-server: $schema=node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
+# yaml-language-server: $schema=../../node_modules/@xbluesky/cc-marketspec/schemas/entry.schema.json
 group: build
 tagline: ...
 ```
@@ -100,21 +164,28 @@ tagline: ...
 
 ## What you author (no native source)
 
-`entry.yaml`: curated `description`/`tagline`/`intro`, agent `returns`/`not`,
-mcp `provides`/`install`/`auth`/`setup`/env descriptions, `examples`, hook `why`,
-`configuration` (`.claude/<plugin>.local.md` settings), `tips` / `traps`.
+In `.cc-marketspec/entries/plugin-<id>.yaml`: curated
+`description`/`tagline`/`intro`, agent `returns`/`not`, MCP
+`provides`/`install`/`auth`/`setup`/environment descriptions, `examples`, hook
+`why`, `configuration` (`.claude/<plugin>.local.md` settings), `tips`, and
+`traps`.
 
 ## Validation (CI strict, dev degrades)
 
 Beyond schema validation, the generator enforces referential integrity that no
 declarative schema can:
 
-- plugin directory name == `plugin.json` name == marketplace entry name
-- `entry.yaml` skill/command/agent/mcp entries must exist on disk; `entry` hooks must match a real `event`/`matcher` in `hooks.json`
-- `entry.group` must be declared in `catalog.yaml` `groups[]`
+- marketplace plugin id must match the `plugin.json` name
+- `.cc-marketspec/entries/plugin-<id>.yaml` skill/command/agent/MCP entries must
+  exist on disk; authored hooks must match a real `event`/`matcher` in
+  `hooks.json`
+- authored `group` values must be declared in
+  `.cc-marketspec/catalog.yaml` `groups[]`
 - `entry` env keys must exist in `.mcp.json` (undescribed keys → warning)
 
 Any error fails the build (all errors are reported, not just the first).
+Remote source objects are recognized but not fetched. Generate in the source
+repository or use a local `./` source so its native files can be inspected.
 
 ## Coverage gate
 
@@ -133,7 +204,8 @@ Rules are addressed by `<component>.<field>` dot-paths (e.g. `skill.trigger`,
 | `plugin.tagline` | `warn` |
 | `plugin.group` | `off` |
 
-Override per-rule (or set `"*"` as a catch-all) in `catalog.yaml`:
+Override per-rule (or set `"*"` as a catch-all) in
+`.cc-marketspec/catalog.yaml`:
 
 ```yaml
 coverage:
@@ -156,16 +228,23 @@ npx @xbluesky/cc-marketspec init
 ```
 
 Creates:
-- `catalog.yaml` — marketplace-level metadata and group taxonomy (with a
-  commented-out `coverage:` block ready to tune).
-- `plugins/<id>/entry.yaml` — per-plugin overlay stub, for each plugin found in
-  `.claude-plugin/marketplace.json` that has a `plugin.json` on disk.
+
+- `.cc-marketspec/catalog.yaml` — marketplace-level presentation metadata and
+  group taxonomy, with `schemaVersion: "1.1"` and a commented-out `coverage:`
+  block ready to tune.
+- `.cc-marketspec/entries/plugin-<id>.yaml` — per-plugin overlay stub for each
+  local plugin found in `.claude-plugin/marketplace.json` with native metadata
+  on disk.
+- `.cc-marketspec/.gitignore` — ignores `/dist/`.
+
+`init` creates authored files only; it does not generate the manifest.
 
 ## CI
 
 The `--check` flag validates without writing anything — use it on PRs.
 
-**GitHub Actions** (`.github/workflows/manifest.yml`):
+**GitHub Actions** (standalone workflow, or merge this job into the existing
+`.github/workflows/ci.yml`):
 ```yaml
 on: [pull_request, push]
 jobs:
@@ -187,8 +266,10 @@ check:manifest:
 ```
 
 Add `--strict-coverage` for a stricter release gate that fails on warnings too.
-The generated `manifest.json` can be committed to the repo or uploaded as a
-CI artifact — that choice is yours.
+Generate `.cc-marketspec/dist/manifest.json` only in a build job that needs it.
+Do not commit that default output. If a later job in the same workflow needs the
+file, a workflow artifact can transfer it temporarily; external consumers still
+need a stable deployed endpoint.
 
 ## MCP
 
@@ -201,10 +282,10 @@ Starts a stdio MCP server. Five tools:
 | Tool | What it does |
 |------|-------------|
 | `get_schema` | Returns the JSON Schema for `entry`, `catalog`, or `manifest` |
-| `list_authoring_sections` | Lists the entry.yaml authoring guide sections (id/title/when) |
+| `list_authoring_sections` | Lists the per-plugin entry authoring guide sections (id/title/when) |
 | `get_authoring_guide` | Returns the full authoring guide markdown for one section |
 | `check_coverage` | Runs the coverage gate against a plugin directory |
-| `scaffold_entry` | Generates an `entry.yaml` stub for a given plugin |
+| `scaffold_entry` | Generates a `.cc-marketspec/entries/plugin-<id>.yaml` stub |
 
 ## Hosted MCP server
 
@@ -271,19 +352,31 @@ You get:
 - **The hosted MCP tools** (`get_schema`, `list_authoring_sections`, `get_authoring_guide`,
   `check_coverage`, `scaffold_entry`) wired in automatically — no endpoint config.
 - **Slash commands** that run the generator against your current marketplace repo:
-  - `/cc-generate` — write `manifest.json`
+  - `/cc-generate` — write ignored `.cc-marketspec/dist/manifest.json`
   - `/cc-check` — validate without writing, with errors explained
-  - `/cc-init` — scaffold `catalog.yaml` / `entry.yaml` templates
+  - `/cc-init` — scaffold `.cc-marketspec/catalog.yaml` and
+    `.cc-marketspec/entries/plugin-<id>.yaml`
+  - `/cc-migrate` — preview and safely migrate recognized format `1.0` YAML
 
-This repo dogfoods the framework: its own `manifest.json` is generated by
-cc-marketspec from the marketplace data in this repo.
+This repo dogfoods the framework: its own ignored
+`.cc-marketspec/dist/manifest.json` is generated from the namespaced authored
+data in this repo.
 
-- **Showcase site** — `site/` is a reference Astro app that renders this repo's `manifest.json` into a marketplace page, live at [cc-marketspec.pages.dev](https://cc-marketspec.pages.dev). It's the worked example of the "manifest → site" path: downstream marketplaces can copy it.
+- **Showcase site** — `site/` is a reference Astro app that generates and renders
+  this repo's `.cc-marketspec/dist/manifest.json` during its build, live at
+  [cc-marketspec.pages.dev](https://cc-marketspec.pages.dev). Downstream
+  marketplaces can copy the same generated-data-to-site pattern.
 
-## Versioning
+## Format compatibility and package versions
 
-The standard is semver; the manifest carries `schemaVersion` (`MAJOR.MINOR`).
-Consumers gate on MAJOR; MINOR is additive / back-compatible.
+Format versions use exactly `MAJOR.MINOR`; they are not SemVer. Format `1.0` is
+the legacy flat layout, and format `1.1` is the current `.cc-marketspec/`
+layout. npm package versions use independent SemVer and do not imply a format
+version.
+
+The runtime, rather than the JSON Schema shape alone, enforces compatibility.
+An unsupported major, a future minor, or a layout/version mismatch is a hard
+error; cc-marketspec does not silently reinterpret those inputs.
 
 ## Not in v1 (back-compatible additions later)
 

@@ -1,9 +1,9 @@
 ---
-// Hero: the live run as one terminal. The window shows the real entry.yaml
+// Hero: the live run as one terminal. The window shows the real namespaced entry
 // excerpt (labeled as an excerpt — the full file is longer), then the real
 // command and its real output. CLI line mirrors src/cli.ts; the only display
-// liberty is shortening the absolute output path to `manifest.json`.
-// YAML text mirrors plugins/cc-marketspec/entry.yaml so the page never ships
+// output path.
+// YAML text mirrors .cc-marketspec/entries/plugin-cc-marketspec.yaml so the page never ships
 // fake data.
 ---
 <section id="hero" class="section hero-sec">
@@ -14,7 +14,7 @@
       <h1 class="hero-h1">Ship <em>data</em>,<br>not design.</h1>
       <p class="hero-lede">Describe your marketplace as a little YAML. cc-marketspec
         joins it with your native plugin manifests and emits one render-agnostic
-        <span class="codechip">manifest.json</span>.</p>
+        <span class="codechip">.cc-marketspec/dist/manifest.json</span>.</p>
       <p class="hero-contrast"><span>~8 lines of YAML</span> in, <span>a full marketplace manifest</span> out.</p>
       <div class="hero-cta">
         <a class="btn-primary" href="#quick-start">npx @xbluesky/cc-marketspec</a>
@@ -23,15 +23,15 @@
     </div>
     <div class="hero-visual reveal">
       <figure class="term herot">
-        <figcaption class="term-bar"><i></i><i></i><i></i><span>entry.yaml — excerpt · then one real run</span></figcaption>
-        <pre class="term-body"><code><span class="yline" style="--i:0"><span class="c"># presentation overlay — never restates native</span></span><span class="yline" style="--i:1"><span class="k">group</span><span class="p">:</span> <span class="s">tools</span></span><span class="yline" style="--i:2"><span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator for a Claude Code marketplace&#39;s presentation</span></span><span class="yline" style="--i:3"><span class="k">tips</span><span class="p">:</span></span><span class="yline" style="--i:4">  <span class="p">-</span> <span class="s">This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.</span></span><span class="yline" style="--i:5">  <span class="p">-</span> <span class="k">text</span><span class="p">:</span> <span class="s">Ask the hosted MCP for field help without installing anything.</span></span><span class="yline" style="--i:6">    <span class="k">href</span><span class="p">:</span> <span class="s">https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server</span></span><span class="yline hero-cmd" style="--i:7"><span class="prompt">$ </span>npx @xbluesky/cc-marketspec</span><span class="yline ok-line glow-ok" style="--i:14">cc-marketspec: wrote manifest.json — 1 plugins, 0 warning(s).</span><span class="yline" style="--i:15" aria-hidden="true"><span class="prompt">$ </span><span class="cursor"></span></span></code></pre>
+        <figcaption class="term-bar"><i></i><i></i><i></i><span>.cc-marketspec/entries/plugin-&lt;id&gt;.yaml — excerpt · then one real run</span></figcaption>
+        <pre class="term-body"><code><span class="yline" style="--i:0"><span class="c"># presentation overlay — never restates native</span></span><span class="yline" style="--i:1"><span class="k">group</span><span class="p">:</span> <span class="s">tools</span></span><span class="yline" style="--i:2"><span class="k">tagline</span><span class="p">:</span> <span class="s">Headless data standard + generator for a Claude Code marketplace&#39;s presentation</span></span><span class="yline" style="--i:3"><span class="k">tips</span><span class="p">:</span></span><span class="yline" style="--i:4">  <span class="p">-</span> <span class="s">This repo is itself a cc-marketspec marketplace — it dogfoods its own framework.</span></span><span class="yline" style="--i:5">  <span class="p">-</span> <span class="k">text</span><span class="p">:</span> <span class="s">Ask the hosted MCP for field help without installing anything.</span></span><span class="yline" style="--i:6">    <span class="k">href</span><span class="p">:</span> <span class="s">https://github.com/XBlueSky/cc-marketspec#hosted-mcp-server</span></span><span class="yline hero-cmd" style="--i:7"><span class="prompt">$ </span>npx @xbluesky/cc-marketspec</span><span class="yline ok-line glow-ok" style="--i:14">cc-marketspec: wrote .cc-marketspec/dist/manifest.json — 1 plugins, 0 warning(s).</span><span class="yline" style="--i:15" aria-hidden="true"><span class="prompt">$ </span><span class="cursor"></span></span></code></pre>
       </figure>
       <p class="arrow hero-gen" aria-hidden="true">↓ rendered from that manifest ↓</p>
       <div class="minicard hero-gen">
         <h3>cc-marketspec</h3>
         <p class="minicard-tag">Headless data standard + generator for a marketplace's presentation</p>
-        <div class="minicard-chips"><b>1 skill</b><b>3 commands</b><b>1 mcp</b></div>
-        <p class="minicard-row"><code>/cc-generate</code> Generate manifest.json from your data.</p>
+        <div class="minicard-chips"><b>1 skill</b><b>4 commands</b><b>1 mcp</b></div>
+        <p class="minicard-row"><code>/cc-generate</code> Generate .cc-marketspec/dist/manifest.json from your data.</p>
       </div>
     </div>
   </div>

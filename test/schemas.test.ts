@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Entry } from '../src/entry.ts';
 import { Catalog } from '../src/catalog.ts';
 import { Manifest } from '../src/manifest.ts';
@@ -16,28 +17,55 @@ const bad = (schema: { safeParse: (v: unknown) => { success: boolean } }, v: unk
 
 // ---- catalog ----------------------------------------------------------------
 
-test('catalog: minimal (schemaVersion only)', () => ok(Catalog, { schemaVersion: '1.0' }, 'minimal'));
+test('catalog schema validates MAJOR.MINOR shape while runtime owns compatibility', () => {
+	ok(Catalog, { schemaVersion: '1.1' }, 'current syntax');
+	ok(Catalog, { schemaVersion: '99.99' }, 'shape only; version.ts rejects unsupported compatibility');
+	bad(Catalog, { schemaVersion: '1.1.0' }, 'format versions are not SemVer');
+});
+test('catalog and manifest describe format compatibility independently of package SemVer', () => {
+	const description = 'MAJOR.MINOR format compatibility version. This is not package SemVer; runtime compatibility is enforced by version.ts.';
+	assert.equal(Catalog.shape.schemaVersion.description, description);
+	assert.equal(Manifest.shape.schemaVersion.description, description);
+});
 test('catalog: full with groups', () =>
 	ok(
 		Catalog,
-		{ schemaVersion: '1.0', lang: 'zh-TW', groups: [{ id: 'build', label: 'Build', note: '…' }] },
+		{ schemaVersion: '1.1', lang: 'zh-TW', groups: [{ id: 'build', label: 'Build', note: '…' }] },
 		'full'
 	));
-test('catalog: bad schemaVersion (needs MAJOR.MINOR)', () => bad(Catalog, { schemaVersion: '1.0.0' }, 'semver-ish rejected'));
-test('catalog: group id pattern', () => bad(Catalog, { schemaVersion: '1.0', groups: [{ id: 'Bad ID', label: 'x' }] }, 'bad id'));
+test('catalog: group id pattern', () => bad(Catalog, { schemaVersion: '1.1', groups: [{ id: 'Bad ID', label: 'x' }] }, 'bad id'));
+
+test('catalog: duplicate group ids report the first duplicate at its id path', () => {
+	assert.ok(Catalog.shape.groups, 'Catalog must remain a ZodObject with a public shape');
+	const result = Catalog.safeParse({
+		schemaVersion: '1.1',
+		groups: [
+			{ id: 'build', label: 'Build' },
+			{ id: 'debug', label: 'Debug' },
+			{ id: 'build', label: 'Build again' },
+			{ id: 'debug', label: 'Debug again' }
+		]
+	});
+	assert.equal(result.success, false);
+	if (!result.success) {
+		assert.deepEqual(result.error.issues[0]?.path, ['groups', 2, 'id']);
+		assert.match(result.error.issues[0]?.message ?? '', /duplicate group id "build"/i);
+		assert.equal(result.error.issues.length, 1, 'report only the deterministic first duplicate');
+	}
+});
 
 test('catalog: valid coverage block parses', () => {
-	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.trigger': 'error', '*': 'off' } });
+	const r = Catalog.safeParse({ schemaVersion: '1.1', coverage: { 'skill.trigger': 'error', '*': 'off' } });
 	assert.equal(r.success, true);
 });
 
 test('catalog: unknown coverage rule path rejected', () => {
-	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.bogus': 'warn' } });
+	const r = Catalog.safeParse({ schemaVersion: '1.1', coverage: { 'skill.bogus': 'warn' } });
 	assert.equal(r.success, false);
 });
 
 test('catalog: bad severity rejected', () => {
-	const r = Catalog.safeParse({ schemaVersion: '1.0', coverage: { 'skill.trigger': 'loud' } });
+	const r = Catalog.safeParse({ schemaVersion: '1.1', coverage: { 'skill.trigger': 'loud' } });
 	assert.equal(r.success, false);
 });
 
@@ -79,6 +107,12 @@ const maximalEntry = {
 
 test('entry: maximal exercises every branch', () => ok(Entry, maximalEntry, 'maximal'));
 test('entry: empty is valid (all optional)', () => ok(Entry, {}, 'empty'));
+test('entry group description names the canonical catalog path', () => {
+	assert.equal(
+		Entry.shape.group.unwrap().description,
+		'id of a .cc-marketspec/catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.'
+	);
+});
 // v1 is strict on both layers (no extension hatch yet); x-* is a future MINOR.
 test('entry: unknown x- key rejected in v1 (strict)', () => bad(Entry, { 'x-team': 'platform' }, 'no x- in v1'));
 
@@ -96,25 +130,35 @@ test('entry: env key pattern enforced', () => bad(Entry, { mcp: [{ name: 'm', en
 
 // ---- manifest (consumer API) ------------------------------------------------
 
-test('manifest: minimal', () =>
-	ok(Manifest, { schemaVersion: '1.0', marketplace: { name: 'mk' }, plugins: [] }, 'minimal'));
+test('manifest current fixture carries format 1.1', () =>
+	ok(Manifest, { schemaVersion: '1.1', marketplace: { name: 'mk' }, plugins: [] }, 'current manifest'));
+test('manifest schema remains shape-only for syntactically valid future versions', () =>
+	ok(Manifest, { schemaVersion: '2.0', marketplace: { name: 'mk' }, plugins: [] }, 'consumer checks compatibility separately'));
+test('published manifest JSON Schema also constrains version syntax, not compatibility', () => {
+	const schema = JSON.parse(readFileSync(new URL('../schemas/manifest.schema.json', import.meta.url), 'utf8')) as {
+		properties: { schemaVersion: Record<string, unknown> };
+	};
+	assert.equal(schema.properties.schemaVersion.pattern, '^\\d+\\.\\d+$');
+	assert.equal('enum' in schema.properties.schemaVersion, false);
+	assert.equal('const' in schema.properties.schemaVersion, false);
+});
 test('manifest: plugin carries derived native category', () =>
 	ok(
 		Manifest,
-		{ schemaVersion: '1.0', marketplace: { name: 'mk' }, plugins: [{ id: 'p', name: 'p', version: '1.0.0', category: 'development' }] },
+		{ schemaVersion: '1.1', marketplace: { name: 'mk' }, plugins: [{ id: 'p', name: 'p', version: '1.0.0', category: 'development' }] },
 		'native category'
 	));
 test('manifest: skill requires derived autoload', () =>
 	bad(
 		Manifest,
-		{ schemaVersion: '1.0', marketplace: { name: 'mk' }, plugins: [{ id: 'p', name: 'p', version: '1.0.0', skills: [{ name: 's' }] }] },
+		{ schemaVersion: '1.1', marketplace: { name: 'mk' }, plugins: [{ id: 'p', name: 'p', version: '1.0.0', skills: [{ name: 's' }] }] },
 		'autoload required'
 	));
 test('manifest: full plugin shape', () =>
 	ok(
 		Manifest,
 		{
-			schemaVersion: '1.0',
+			schemaVersion: '1.1',
 			marketplace: { name: 'mk', owner: { name: 'o' } },
 			groups: [{ id: 'debug', label: 'Debug' }],
 			plugins: [

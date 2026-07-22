@@ -6,6 +6,7 @@
 import type { NativeFacts } from './native.ts';
 import type { Entry } from './entry.ts';
 import { coverageTargets } from './entry.ts';
+import { entryPathForPlugin } from './layout.ts';
 
 export type Severity = 'error' | 'warn' | 'off';
 
@@ -80,10 +81,11 @@ const RULES: Rule[] = coverageTargets().map((t) => ({
 }));
 
 // agent.summary is the only rule whose id field ("summary", the native field it
-// maps to) differs from the entry.yaml key the user must author ("description").
+// maps to) differs from the .cc-marketspec/entries/plugin-<id>.yaml key the user
+// must author ("description").
 const FIELD_ALIASES: Record<string, string> = { 'agent.summary': 'description' };
 
-// Map a rule id ("<component>.<field>") to the entry.yaml key and an actionable
+// Map a rule id ("<component>.<field>") to the namespaced entry key and an actionable
 // "how to fix" clause. Array components (skill/command/agent/mcp/hook) are
 // authored under a plural array key; `plugin.*` fields live at the top level.
 function howToFix(ruleId: string): string {
@@ -107,7 +109,7 @@ export function analyzeCoverage(
 ): CoverageReport {
 	const findings: CoverageFinding[] = [];
 	const summary = { error: 0, warn: 0, off: 0 };
-	const path = entryPath ?? `plugins/${pluginId}/entry.yaml`;
+	const path = entryPath ?? entryPathForPlugin(pluginId);
 	for (const rule of RULES) {
 		const severity = resolve(rule.id, rule.defaultSeverity, config);
 		const hits = rule.scan(facts, entry);

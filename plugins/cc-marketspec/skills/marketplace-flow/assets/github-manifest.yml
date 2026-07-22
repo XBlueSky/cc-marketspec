@@ -1,45 +1,42 @@
-# Regenerate manifest.json on every push to main, then persist it.
-# The skill keeps EITHER the "git path" step OR the "artifact path" step
-# below, based on your answer to "commit manifest to git, or keep it as a
-# build artifact?" Delete the block you do not use.
-name: Manifest
+# Source-only workflow. The generated artifact is for same-pipeline transfer or
+# inspection, not a stable public endpoint. Deploy external consumer output with
+# the site to Pages, a CDN, or object storage.
+name: Marketplace data
 
 on:
   push:
     branches: [main]
+  pull_request:
 
-# Needed only for the git path (committing the regenerated manifest back).
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  regenerate:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Produce: regenerate manifest.json from catalog.yaml + entry.yaml + native data.
-      - run: npx @xbluesky/cc-marketspec
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install cc-marketspec --check
 
-      # --- git path: commit the regenerated manifest back to the repo ---
-      # If main is a protected branch, the default GITHUB_TOKEN push may be
-      # rejected — allow the github-actions bot to bypass the ruleset, or use a
-      # PAT with contents:write here instead.
-      - name: Commit manifest
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
-          git diff --staged --quiet || git commit -m "chore: regenerate manifest [skip ci]"
-          git push
-
-      # --- artifact path: upload the manifest for a downstream site job ---
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: manifest
-      #     path: manifest.json
+  generate:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install cc-marketspec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cc-marketspec-manifest
+          path: .cc-marketspec/dist/manifest.json
+          if-no-files-found: error

@@ -34,7 +34,9 @@ cc-marketspec is a headless data standard and generator. The most relevant
 security surfaces are:
 
 - The CLI / library (`@xbluesky/cc-marketspec`) that reads marketplace data and
-  writes `manifest.json`.
+  writes `.cc-marketspec/dist/manifest.json` by default. Root `manifest.json` is
+  supported only for legacy compatibility. A custom safe output can be selected
+  explicitly with `--output`.
 - The hosted MCP server (`https://cc-marketspec-mcp.xbluesky.workers.dev`), which
   is read-only and stateless — it returns schema and validation help for the
   content you pass it and stores nothing.

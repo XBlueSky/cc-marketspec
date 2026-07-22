@@ -5,7 +5,7 @@
     "group": {
       "type": "string",
       "maxLength": 64,
-      "description": "id of a catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.",
+      "description": "id of a .cc-marketspec/catalog.yaml group (authored). Native classification is surfaced separately as the manifest category.",
       "coverage": {
         "component": "plugin",
         "field": "group",
