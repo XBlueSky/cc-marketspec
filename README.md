@@ -31,7 +31,8 @@ the consumer's.
   Only what native can't express.
 
 **Rule: presentation never restates native facts** — it references them or adds
-presentation value. The generator joins the two by plugin id (= directory name).
+presentation value. The generator joins the two by marketplace plugin id, which
+must match the `plugin.json` name.
 
 ## Canonical bundle
 
@@ -157,7 +158,7 @@ In `.cc-marketspec/entries/plugin-<id>.yaml`: curated
 Beyond schema validation, the generator enforces referential integrity that no
 declarative schema can:
 
-- plugin directory name == `plugin.json` name == marketplace entry name
+- marketplace plugin id must match the `plugin.json` name
 - `.cc-marketspec/entries/plugin-<id>.yaml` skill/command/agent/MCP entries must
   exist on disk; authored hooks must match a real `event`/`matcher` in
   `hooks.json`

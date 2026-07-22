@@ -102,6 +102,12 @@ test('repo README publishes the complete namespaced format 1.1 contract', () => 
   assert.doesNotMatch(readme, /generated `manifest\.json` can be committed/i);
 });
 
+test('repo README states the marketplace-to-native plugin identity invariant', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  assert.match(readme, /marketplace plugin id.*must match.*`plugin\.json` name/is);
+  assert.doesNotMatch(readme, /plugin id \(= directory name\)|plugin directory name\s*==/i);
+});
+
 test('tracked dogfood presentation teaches only canonical bundle paths', () => {
   const entry = readFileSync(new URL('../.cc-marketspec/entries/plugin-cc-marketspec.yaml', import.meta.url), 'utf8');
   assert.match(entry, /\.cc-marketspec\/dist\/manifest\.json/);
