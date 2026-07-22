@@ -13,7 +13,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryFileSource, NodeFileSource } from '../src/fs-source.ts';
+import { MemoryFileSource, NodeFileSource, OverlayFileSource } from '../src/fs-source.ts';
+import { generateManifest } from '../src/generate.ts';
 import {
 	MIGRATION_RECEIPT_PATH,
 	NODE_MIGRATION_FILE_OPS,
@@ -736,6 +737,28 @@ test('apply cuts over a complete tree then removes digest-unchanged legacy files
 	}
 });
 
+test('apply accepts the canonical explicit catalog-only legacy plan', () => {
+	const source = new MemoryFileSource({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] }),
+		'catalog.yaml': '# ours\nschemaVersion: "1.0"\nlang: en\n'
+	});
+	const root = materialize(source, ['.claude-plugin/marketplace.json', 'catalog.yaml']);
+	try {
+		const plan = planMigration(new NodeFileSource(root), { from: 'legacy' });
+		assert.equal(plan.kind, 'migrate');
+		assert.deepEqual(plan.errors, []);
+
+		const result = applyMigration(root, plan);
+		assert.deepEqual(result.errors, []);
+		assert.equal(result.changed, true);
+		assert.equal(existsSync(join(root, '.cc-marketspec/catalog.yaml')), true);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), false);
+		assert.equal(existsSync(join(root, MIGRATION_RECEIPT_PATH)), false);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
 test('pre-cutover rename failure preserves legacy and removes only owned staging', () => {
 	const root = materialize(legacy());
 	let staging = '';
@@ -833,6 +856,68 @@ test('apply rejects migrate plans inconsistent with their receipt before staging
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	}
+});
+
+test('apply rejects a self-consistent forged entry without an on-disk legacy source', () => {
+	const source = legacy({
+		'.claude-plugin/marketplace.json': JSON.stringify({
+			name: 'mk',
+			plugins: [
+				{ name: 'sample', source: './plugins/sample' },
+				{ name: 'native', source: './plugins/native' }
+			]
+		}),
+		'plugins/native/.claude-plugin/plugin.json': JSON.stringify({
+			name: 'native',
+			version: '1.0.0'
+		})
+	});
+	const root = materialize(source, [
+		...LEGACY_PATHS,
+		'plugins/native/.claude-plugin/plugin.json'
+	]);
+	try {
+		const canonical = planMigration(new NodeFileSource(root));
+		assert.equal(canonical.kind, 'migrate');
+		assert.equal(canonical.writes['.cc-marketspec/entries/plugin-native.yaml'], undefined);
+
+		const forged = structuredClone(canonical);
+		const forgedEntryPath = '.cc-marketspec/entries/plugin-native.yaml';
+		const forgedEntry = 'group: tools\ntagline: Attacker-controlled presentation\n';
+		forged.writes[forgedEntryPath] = forgedEntry;
+		const generated = generateManifest(
+			new OverlayFileSource(new NodeFileSource(root), forged.writes)
+		);
+		assert.deepEqual(generated.errors, []);
+		forged.writes['.cc-marketspec/dist/manifest.json'] =
+			JSON.stringify(generated.manifest, null, 2) + '\n';
+
+		const receipt = JSON.parse(forged.writes[MIGRATION_RECEIPT_PATH]) as {
+			targetDigests: Record<string, string>;
+			removals: { path: string; digest: string }[];
+		};
+		receipt.targetDigests[forgedEntryPath] = sha256(forgedEntry);
+		receipt.targetDigests['.cc-marketspec/dist/manifest.json'] = sha256(
+			forged.writes['.cc-marketspec/dist/manifest.json']
+		);
+		const forgedRemoval = {
+			path: 'plugins/native/entry.yaml',
+			digest: sha256('source never existed\n')
+		};
+		receipt.removals.push(forgedRemoval);
+		receipt.removals.sort((left, right) => left.path.localeCompare(right.path));
+		forged.removals = receipt.removals;
+		forged.writes[MIGRATION_RECEIPT_PATH] = JSON.stringify(receipt, null, 2) + '\n';
+
+		const result = applyMigration(root, forged);
+		assert.match(result.errors.join('\n'), /authoritative|canonical migration plan/i);
+		assert.equal(result.changed, false);
+		assert.equal(existsSync(join(root, '.cc-marketspec')), false);
+		assert.equal(existsSync(join(root, 'catalog.yaml')), true);
+		assert.equal(existsSync(join(root, 'plugins/sample/entry.yaml')), true);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
 	}
 });
 

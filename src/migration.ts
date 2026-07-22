@@ -665,6 +665,42 @@ function sameRemovals(left: PlannedRemoval[], right: PlannedRemoval[]): boolean 
 }
 
 function validateMigratePlan(root: string, plan: MigrationPlan): string[] {
+	const canonical = planMigration(new NodeFileSource(root), { from: 'legacy' });
+	if (
+		canonical.kind !== 'migrate'
+		|| canonical.errors.length > 0
+		|| canonical.sourceVersion !== LEGACY_FORMAT_VERSION
+		|| canonical.targetVersion !== CURRENT_FORMAT_VERSION
+	) {
+		return uniqueSorted([
+			...(canonical.errors.some((error) => /migration target already exists/i.test(error))
+				? [SPEC_DIR + ': target appeared after planning; refusing overwrite']
+				: ['migration plan failed authoritative canonical planning from the current on-disk legacy sources']),
+			...canonical.errors
+		]);
+	}
+	const canonicalWritePaths = Object.keys(canonical.writes).sort(compare);
+	const actualWritePaths = Object.keys(plan.writes).sort(compare);
+	const canonicalErrors: string[] = [];
+	if (JSON.stringify(actualWritePaths) !== JSON.stringify(canonicalWritePaths)) {
+		canonicalErrors.push(
+			'migration plan writes do not exactly match the authoritative canonical migration plan'
+		);
+	}
+	for (const path of canonicalWritePaths) {
+		if (plan.writes[path] !== canonical.writes[path]) {
+			canonicalErrors.push(
+				path + ': migration plan bytes do not match the authoritative canonical migration plan'
+			);
+		}
+	}
+	if (!sameRemovals(plan.removals, canonical.removals)) {
+		canonicalErrors.push(
+			'migration plan removals do not exactly match the authoritative canonical migration plan'
+		);
+	}
+	if (canonicalErrors.length > 0) return uniqueSorted(canonicalErrors);
+
 	const errors: string[] = [];
 	const receiptRaw = plan.writes[MIGRATION_RECEIPT_PATH];
 	if (receiptRaw === undefined) {
