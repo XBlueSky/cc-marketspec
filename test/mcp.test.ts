@@ -85,6 +85,19 @@ test('callTool wraps a thrown handler error (malformed namespaced entry) as a st
 });
 
 
+test('callTool get_schema with a missing, misnamed, or invalid `which` returns a structured error', () => {
+	// A wrong argument name (e.g. kind) must not surface as an invalid MCP result
+	// (text: undefined) — hosted clients only see an opaque -32602 protocol error.
+	for (const args of [{ kind: 'entry' }, {}, { which: 'bogus' }] as Record<string, unknown>[]) {
+		const res = callTool('get_schema', args);
+		assert.equal(typeof res.content[0].text, 'string', `text must be a string for args ${JSON.stringify(args)}`);
+		const payload = JSON.parse(res.content[0].text) as { error?: string; available?: string[] };
+		assert.equal(typeof payload.error, 'string', 'has an actionable error message');
+		assert.match(payload.error as string, /which/, 'names the expected argument');
+		assert.deepEqual(payload.available, ['entry', 'catalog', 'manifest'], 'lists valid values');
+	}
+});
+
 test('createMcpServer builds a server without needing a transport', () => {
 	const server = createMcpServer();
 	assert.ok(server);
