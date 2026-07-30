@@ -1,3 +1,27 @@
+# [1.0.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.13.1...v1.0.0) (2026-07-30)
+
+
+* feat(cli)!: replace the mcp subcommand with a pointer to @xbluesky/cc-marketspec-mcp ([06a4deb](https://github.com/XBlueSky/cc-marketspec/commit/06a4debd01a4ecdaee034f4af79a1ee0d243f350))
+* feat(mcp)!: split the MCP server into @xbluesky/cc-marketspec-mcp ([96a9b82](https://github.com/XBlueSky/cc-marketspec/commit/96a9b822bab5269e5cae9545a81f0fd25ed0f6cd))
+
+
+### Bug Fixes
+
+* **mcp:** return a structured error for a missing or invalid get_schema argument ([4fb61a4](https://github.com/XBlueSky/cc-marketspec/commit/4fb61a425fef30db3e1606a04baa4ebca41af281))
+
+
+### Features
+
+* **core:** export AUTHORING, SCHEMAS, and VERSION from the public API ([f261a80](https://github.com/XBlueSky/cc-marketspec/commit/f261a8018b49eecebf8a09e35e8f03aea3beabfe))
+
+
+### BREAKING CHANGES
+
+* the stdio MCP server ships as @xbluesky/cc-marketspec-mcp;
+`npx @xbluesky/cc-marketspec-mcp` replaces `npx @xbluesky/cc-marketspec mcp`.
+* `cc-marketspec mcp` no longer starts a stdio server; run
+`npx @xbluesky/cc-marketspec-mcp` instead.
+
 ## [0.13.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.13.0...v0.13.1) (2026-07-30)
 
 
