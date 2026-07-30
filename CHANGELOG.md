@@ -1,3 +1,10 @@
+## [0.13.1](https://github.com/XBlueSky/cc-marketspec/compare/v0.13.0...v0.13.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **mcp:** return a structured error for a missing or invalid get_schema argument ([dbabc13](https://github.com/XBlueSky/cc-marketspec/commit/dbabc13f89156d7654c7dac5e386015c11988f20))
+
 # [0.13.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.12.0...v0.13.0) (2026-07-22)
 
 
