@@ -57,3 +57,7 @@ export {
 	type MigrationResult,
 	type PlannedRemoval
 } from './migration.ts';
+// Generated data needed by the companion MCP package (@xbluesky/cc-marketspec-mcp),
+// which consumes the core exclusively through this public index.
+export { AUTHORING } from './authoring.generated.ts';
+export { SCHEMAS, VERSION } from './schemas.generated.ts';
