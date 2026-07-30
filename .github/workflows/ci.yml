@@ -39,12 +39,17 @@ jobs:
           npm run build:schemas
           git diff --exit-code -- schemas/ src/schemas.generated.ts || { echo "generated schemas are stale — run 'npm run build:schemas' and commit"; exit 1; }
       - name: Build
-        run: npm run build
+        run: |
+          npm run build
+          npm run build -w packages/mcp
       - name: Verify build outputs
         run: |
           test -f dist/index.js
           test -f dist/cli.js
           test -f dist/index.d.ts
+          test -f packages/mcp/dist/index.js
+          test -f packages/mcp/dist/cli.js
+          test -f packages/mcp/dist/index.d.ts
 
   portable-core:
     strategy:
@@ -78,15 +83,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # wrangler-action brings its own wrangler; npm ci installs our deps so the
-      # action's esbuild can resolve worker/index.ts's @modelcontextprotocol/sdk
-      # import. wrangler is no longer a devDep. Pin the public registry — see validate.
+      # wrangler-action brings its own wrangler; npm ci installs the workspace so
+      # the action's esbuild can resolve packages/mcp/worker/index.ts's
+      # @modelcontextprotocol/sdk import (hoisted to the root node_modules).
+      # wrangler is no longer a devDep. Pin the public registry — see validate.
       - run: npm ci --registry=https://registry.npmjs.org
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/mcp
 
   release:
     needs: validate

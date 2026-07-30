@@ -12,7 +12,6 @@ import { generateManifest } from './generate.ts';
 import { planInit } from './init.ts';
 import { NodeFileSource } from './fs-source.ts';
 import { applyMigration, planMigration } from './migration.ts';
-import { startMcpServer } from './mcp.ts';
 import { defaultOutputPath, ensureNamespacedDistIgnore, writeManifestOutput } from './output.ts';
 import { resolveWithinRoot } from './path-policy.ts';
 
@@ -22,7 +21,6 @@ Usage:
   cc-marketspec [root] [options]
   cc-marketspec init [root]
   cc-marketspec migrate [root] [--dry-run] [--from legacy]
-  cc-marketspec mcp
 
 Arguments:
   root              Marketplace repo root (defaults to the current directory).
@@ -30,7 +28,6 @@ Arguments:
 Commands:
   init [root]       Scaffold namespaced authoring data under .cc-marketspec/.
   migrate [root]    Move validated legacy authoring data into .cc-marketspec/.
-  mcp               Start a stdio MCP server exposing schema/coverage/scaffold tools.
 
 Options:
   --check           Validate only; report errors/warnings but do not write output.
@@ -144,8 +141,10 @@ export function cli(argv: string[]): number {
 		return 0;
 	}
 	if (args[0] === 'mcp') {
-		void startMcpServer();
-		return 0; // server keeps the process alive on stdio
+		// The stdio MCP server lives in the companion package so that core installs
+		// stay free of the MCP SDK's HTTP/OAuth dependency stack.
+		console.error('ERROR the mcp subcommand moved to @xbluesky/cc-marketspec-mcp — run: npx @xbluesky/cc-marketspec-mcp');
+		return 1;
 	}
 	if (args[0] === 'migrate') {
 		const migrateArgs = args.slice(1);

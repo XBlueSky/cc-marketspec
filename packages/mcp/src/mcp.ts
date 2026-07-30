@@ -5,12 +5,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import yaml from 'js-yaml';
-import { MemoryFileSource } from './fs-source.ts';
-import { extractNativeFacts } from './native.ts';
-import { analyzeCoverage, type CoverageReport } from './coverage.ts';
-import { entryPathForPlugin } from './layout.ts';
-import { AUTHORING } from './authoring.generated.ts';
-import { SCHEMAS, VERSION } from './schemas.generated.ts';
+import { MemoryFileSource, extractNativeFacts, analyzeCoverage, entryPathForPlugin, AUTHORING, SCHEMAS, VERSION, type CoverageReport } from './core.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];

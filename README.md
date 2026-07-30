@@ -274,10 +274,12 @@ need a stable deployed endpoint.
 ## MCP
 
 ```bash
-npx @xbluesky/cc-marketspec mcp
+npx @xbluesky/cc-marketspec-mcp
 ```
 
-Starts a stdio MCP server. Five tools:
+Starts a stdio MCP server (shipped as the companion package
+`@xbluesky/cc-marketspec-mcp`, so core installs stay free of the MCP SDK's
+HTTP/OAuth dependency stack). Five tools:
 
 | Tool | What it does |
 |------|-------------|
@@ -292,8 +294,9 @@ Starts a stdio MCP server. Five tools:
 The same five MCP tools (`get_schema`, `list_authoring_sections`, `get_authoring_guide`,
 `check_coverage`, `scaffold_entry`) are available over HTTP so contributors can query the schema
 and be guided without installing anything. The handler is a platform-neutral
-web-standard `fetch(Request) → Response` (`handleHttpRequest`, exported from the
-package); Cloudflare Workers is the reference deployment but not a requirement.
+web-standard `fetch(Request) → Response` (`handleHttpRequest`, exported from
+`@xbluesky/cc-marketspec-mcp`); Cloudflare Workers is the reference deployment
+but not a requirement.
 
 ### Use it (contributors)
 
@@ -309,9 +312,9 @@ No credentials — the endpoint is intentionally open and read-only.
 
 ```bash
 npm install
-npm run worker:dev          # local: serves the handler (npx wrangler dev)
-npx wrangler login          # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
-npm run deploy              # publishes the Worker; prints the public URL
+npm run dev -w packages/mcp     # local: serves the handler (npx wrangler dev)
+npx wrangler login              # one-time Cloudflare auth (or set CLOUDFLARE_API_TOKEN)
+npm run deploy -w packages/mcp  # publishes the Worker; prints the public URL
 ```
 
 Wrangler is **not** a dependency — `worker:dev` / `deploy` invoke it via `npx`, so

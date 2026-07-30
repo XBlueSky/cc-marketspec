@@ -8,15 +8,16 @@
     [
       "@semantic-release/exec",
       {
-        "//": "After npm bumps package.json, regenerate the build-inlined schemas so VERSION tracks the new release — otherwise src/schemas.generated.ts stays stale and the schema-drift gate fails on the next PR.",
-        "prepareCmd": "npm run build:schemas"
+        "//": "prepare: regenerate the build-inlined schemas so VERSION tracks the new release (otherwise src/schemas.generated.ts stays stale and the schema-drift gate fails on the next PR), then lockstep-bump the mcp workspace — one train, one version. publish: build and publish the mcp package after @semantic-release/npm publishes the core.",
+        "prepareCmd": "npm run build:schemas && npm version ${nextRelease.version} -w packages/mcp --no-git-tag-version && npm install --package-lock-only --no-audit --no-fund --registry=https://registry.npmjs.org",
+        "publishCmd": "npm run build -w packages/mcp && npm publish -w packages/mcp --provenance --access public"
       }
     ],
     "@semantic-release/github",
     [
       "@semantic-release/git",
       {
-        "assets": ["package.json", "package-lock.json", "CHANGELOG.md", "src/schemas.generated.ts", "schemas/*.schema.json"],
+        "assets": ["package.json", "package-lock.json", "packages/mcp/package.json", "CHANGELOG.md", "src/schemas.generated.ts", "schemas/*.schema.json"],
         "message": "chore(release): bump version to ${nextRelease.version}\n\n[skip ci]"
       }
     ]

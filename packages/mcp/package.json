@@ -1,0 +1,54 @@
+{
+  "name": "@xbluesky/cc-marketspec-mcp",
+  "version": "0.13.0",
+  "description": "MCP server (stdio + portable HTTP handler + Cloudflare Worker) for cc-marketspec authoring tools.",
+  "type": "module",
+  "license": "MIT",
+  "author": "XBlueSky",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XBlueSky/cc-marketspec.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/XBlueSky/cc-marketspec#readme",
+  "bugs": {
+    "url": "https://github.com/XBlueSky/cc-marketspec/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "marketplace",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "cc-marketspec-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts --format esm --dts --clean",
+    "test": "node --test test/*.test.ts",
+    "dev": "npx --yes wrangler@4 dev",
+    "deploy": "npx --yes wrangler@4 deploy"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "js-yaml": "^4.1.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}

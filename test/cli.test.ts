@@ -493,3 +493,9 @@ test('migrate does not print plan warnings twice after apply', () => {
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+test('mcp subcommand points at the split package and exits 1', () => {
+	const { code, out } = capture(['node', 'cli', 'mcp']);
+	assert.equal(code, 1);
+	assert.match(out, /npx @xbluesky\/cc-marketspec-mcp/);
+});
