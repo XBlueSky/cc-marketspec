@@ -70,8 +70,16 @@ export function callTool(name: string, args: Record<string, unknown>): { content
 	const text = (v: unknown) => ({ content: [{ type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] });
 	try {
 		switch (name) {
-			case 'get_schema':
-				return text(getSchema(args.which as keyof typeof SCHEMAS));
+			case 'get_schema': {
+				// A misnamed or invalid argument must yield an actionable error, not an
+				// invalid result: SCHEMAS[undefined] does not throw, and JSON.stringify(undefined)
+				// is undefined — hosted clients would only see an opaque -32602.
+				const which = args.which;
+				if (typeof which !== 'string' || !(SCHEMA_KEYS as readonly string[]).includes(which)) {
+					return text({ error: `unknown schema ${JSON.stringify(which)} — pass which: one of ${SCHEMA_KEYS.join(', ')}`, available: [...SCHEMA_KEYS] });
+				}
+				return text(getSchema(which as keyof typeof SCHEMAS));
+			}
 			case 'list_authoring_sections':
 				return text(listAuthoringSections());
 			case 'get_authoring_guide':
