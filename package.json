@@ -46,19 +46,19 @@
   "engines": {
     "node": ">=20"
   },
+  "workspaces": [
+    "packages/mcp"
+  ],
   "scripts": {
     "build": "tsup src/index.ts src/cli.ts --format esm --dts --clean",
     "build:schemas": "node src/build.ts",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc --noEmit -p packages/mcp",
     "lint": "eslint .",
-    "test": "node --test test/*.test.ts",
-    "worker:dev": "npx --yes wrangler@4 dev",
-    "deploy": "npx --yes wrangler@4 deploy",
+    "test": "node --test test/*.test.ts packages/mcp/test/*.test.ts",
     "release": "semantic-release",
     "prepublishOnly": "npm run build:schemas && npm run build && npm test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
     "js-yaml": "^4.1.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

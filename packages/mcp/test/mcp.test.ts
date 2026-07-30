@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getSchema, checkCoverage, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer, listResources, readResource } from '../src/mcp.ts';
-import { SCHEMAS, VERSION } from '../src/schemas.generated.ts';
+import { SCHEMAS, VERSION } from '../src/core.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
 	const s = getSchema('entry') as { $schema?: string; properties?: object };
@@ -123,7 +123,7 @@ test('readResource throws on unknown URI', () => {
 
 test('inlined SCHEMAS match the committed JSON and getSchema is fs-free', () => {
 	for (const name of ['entry', 'catalog', 'manifest'] as const) {
-		const onDisk = JSON.parse(readFileSync(fileURLToPath(new URL(`../schemas/${name}.schema.json`, import.meta.url)), 'utf8'));
+		const onDisk = JSON.parse(readFileSync(fileURLToPath(new URL(`../../../schemas/${name}.schema.json`, import.meta.url)), 'utf8'));
 		assert.deepEqual(getSchema(name), onDisk);
 		assert.deepEqual(SCHEMAS[name], onDisk);
 	}

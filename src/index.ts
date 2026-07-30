@@ -10,7 +10,6 @@ export { extractNativeFacts, type NativeFacts } from './native.ts';
 export { analyzeCoverage, type CoverageReport, type CoverageFinding, type CoverageConfig, type Severity } from './coverage.ts';
 export { coverageTargets } from './entry.ts';
 export { planInit, type InitAction, type InitPlan } from './init.ts';
-export { handleHttpRequest } from './http.ts';
 export {
 	CURRENT_FORMAT_VERSION,
 	LEGACY_FORMAT_VERSION,

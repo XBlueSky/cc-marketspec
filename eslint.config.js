@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default tseslint.config(
-	{ ignores: ['dist/**', 'node_modules/**', 'schemas/**', 'coverage/**', 'src/schemas.generated.ts', 'site/.astro/**'] },
+	{ ignores: ['dist/**', 'packages/*/dist/**', 'node_modules/**', 'schemas/**', 'coverage/**', 'src/schemas.generated.ts', 'site/.astro/**', '.worktrees/**'] },
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 	{
