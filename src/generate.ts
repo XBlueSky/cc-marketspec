@@ -15,7 +15,7 @@ import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
 import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
 import { analyzeCoverage, resolve as resolveCoverage, type CoverageConfig } from './coverage.ts';
-import { PluginJson } from './plugin-json.ts';
+import { PluginJson, type PluginDependency } from './plugin-json.ts';
 import {
 	CATALOG_PATH,
 	entryPathForLayout,
@@ -287,7 +287,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			homepage: pj.homepage,
 			repository: typeof pj.repository === 'string' ? pj.repository : pj.repository?.url,
 			keywords: pj.keywords,
-			dependencies: pj.dependencies,
+			dependencies: pj.dependencies?.map((dep: PluginDependency) => (typeof dep === 'string' ? dep : dep.name)),
 			category: marketEntry.category as string | undefined,
 			group: entry?.group,
 			tagline: entry?.tagline,
