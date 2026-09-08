@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/XBlueSky/cc-marketspec/compare/v1.0.0...v1.0.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **check:** accept object-form plugin dependencies ({name, version?, marketplace?}) ([4d5e081](https://github.com/XBlueSky/cc-marketspec/commit/4d5e081ae477416b565de4d440b2cd055cb2d3bc))
+
 # [1.0.0](https://github.com/XBlueSky/cc-marketspec/compare/v0.13.1...v1.0.0) (2026-07-30)
 
 
