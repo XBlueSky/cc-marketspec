@@ -8,6 +8,18 @@
 
 import { z } from 'zod';
 
+/** One `dependencies` entry: a bare plugin id, or (Claude Code >= 2.1.110)
+ *  an object `{name, version?, marketplace?}`. The generator normalizes both
+ *  forms to the id string in the manifest. */
+export const PluginDependency = z.union(
+	[
+		z.string(),
+		z.looseObject({ name: z.string(), version: z.string().optional(), marketplace: z.string().optional() }),
+	],
+	{ error: 'dependencies entries must be a string or an object {name, version?, marketplace?}' },
+);
+export type PluginDependency = z.infer<typeof PluginDependency>;
+
 export const PluginJson = z.looseObject({
 	name: z.string().optional(),
 	version: z.string().optional(),
@@ -29,5 +41,5 @@ export const PluginJson = z.looseObject({
 		})
 		.optional(),
 	keywords: z.array(z.string()).optional(),
-	dependencies: z.array(z.string()).optional(),
+	dependencies: z.array(PluginDependency).optional(),
 });

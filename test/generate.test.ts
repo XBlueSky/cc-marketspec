@@ -158,6 +158,19 @@ test('keywords as a string (wrong shape) is an error', () => {
 	assert.ok(errors.some((e) => e.includes('sample/plugin.json:')), `expected shape error, got: ${errors.join(' | ')}`);
 });
 
+test('object-form dependencies are normalized to id strings in the manifest', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({
+			name: 'sample',
+			version: '1.0.0',
+			dependencies: [{ name: 'toolkit', version: '^2.16.0' }, 'bare-id']
+		})
+	});
+	assert.equal(errors.filter((e) => e.includes('plugin.json:')).length, 0, errors.join(' | '));
+	assert.deepEqual((manifest as { plugins: { dependencies?: unknown }[] }).plugins[0].dependencies, ['toolkit', 'bare-id']);
+});
+
 test('missing optional fields do NOT produce shape errors (only shape, not presence)', () => {
 	const { errors } = run({
 		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),

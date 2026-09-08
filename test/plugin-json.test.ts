@@ -52,3 +52,24 @@ test('author as number fails with actionable union message', () => {
 	const msg = r.error?.issues[0]?.message ?? '';
 	assert.ok(msg.includes('must be a string or an object'), `expected union hint in: ${msg}`);
 });
+
+// Claude Code >= 2.1.110 accepts object-form dependency entries
+// ({name, version?, marketplace?}) alongside bare id strings.
+test('dependencies as array of {name, version?, marketplace?} objects is valid', () => {
+	const r = PluginJson.safeParse({
+		dependencies: [{ name: 'toolkit', version: '^2.16.0' }, { name: 'other', marketplace: 'mk' }, 'bare-id']
+	});
+	assert.equal(r.success, true, JSON.stringify(r.error?.issues));
+});
+
+test('dependencies object entry without name fails', () => {
+	const r = PluginJson.safeParse({ dependencies: [{ version: '^1.0.0' }] });
+	assert.equal(r.success, false);
+});
+
+test('dependencies entry as number fails with actionable union message', () => {
+	const r = PluginJson.safeParse({ dependencies: [42] });
+	assert.equal(r.success, false);
+	const msg = r.error?.issues[0]?.message ?? '';
+	assert.ok(msg.includes('must be a string or an object'), `expected union hint in: ${msg}`);
+});
