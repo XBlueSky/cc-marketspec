@@ -13,7 +13,7 @@ import { parseAuthoring } from '../src/authoring.ts';
 const md = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'authoring.md'), 'utf8');
 const sections = parseAuthoring(md);
 
-const EXPECTED_IDS = ['overview', 'tagline-intro', 'tips-traps', 'group-ccVersion', 'skills', 'commands', 'agents', 'mcp', 'hooks', 'configuration'];
+const EXPECTED_IDS = ['overview', 'tagline-intro', 'tips-traps', 'group-ccVersion', 'skills', 'commands', 'agents', 'mcp', 'hooks', 'mods', 'configuration'];
 
 test('parseAuthoring returns all expected sections in order', () => {
 	assert.deepEqual(sections.map((s) => s.id), EXPECTED_IDS);

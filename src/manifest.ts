@@ -95,15 +95,31 @@ const mHook = z
 	.object({ event: hookEvent, matcher: z.string().optional(), why: z.string().optional() })
 	.strict();
 
+const mMod = z
+	.object({
+		module: z.string().describe('Derived: hooks module named under `modules` in a hooks file, relative to the plugin root.'),
+		description: z.string().optional()
+	})
+	.strict();
+
 const mConfiguration = z
 	.object({
 		key: z.string(),
-		type: z.enum(['string', 'boolean', 'number', 'array']),
+		type: z.enum(['string', 'boolean', 'number', 'array', 'directory', 'file']),
+		title: z.string().optional(),
 		default: z.unknown().optional(),
-		description: z.string(),
-		required: z.boolean().optional()
+		description: z.string().optional(),
+		required: z.boolean().optional(),
+		options: z.array(z.string()).optional(),
+		multiple: z.boolean().optional(),
+		sensitive: z.boolean().optional(),
+		min: z.number().optional(),
+		max: z.number().optional(),
+		userConfig: z.boolean().describe('Derived: true when the key is a plugin.json userConfig field.').optional()
 	})
 	.strict();
+
+const named = z.object({ name: z.string(), description: z.string().optional() }).strict();
 
 const mPlugin = z
 	.object({
@@ -111,14 +127,17 @@ const mPlugin = z
 			.string()
 			.describe('Directory name = canonical id (== plugin.json name == marketplace.json entry name).'),
 		name: z.string(),
+		displayName: z.string().describe('Native plugin.json displayName.').optional(),
 		version: z.string(),
 		description: z.string().describe('Native plugin description.').optional(),
+		icon: z.string().describe('Native plugin.json icon path, relative to the plugin root.').optional(),
+		defaultEnabled: z.boolean().describe('Native plugin.json defaultEnabled.').optional(),
 		author: person.optional(),
 		license: z.string().optional(),
 		homepage: z.string().optional(),
 		repository: z.string().optional(),
 		keywords: z.array(z.string()).optional(),
-		dependencies: z.array(z.string()).describe('Native plugin dependencies (ids).').optional(),
+		dependencies: z.array(z.string()).describe('Native plugin dependencies (`name` or `name@marketplace`).').optional(),
 		category: z.string().describe('Native classification, derived from marketplace.json entry.').optional(),
 		group: z.string().optional(),
 		tagline: z.string().optional(),
@@ -129,7 +148,30 @@ const mPlugin = z
 		agents: z.array(mAgent).optional(),
 		mcp: z.array(mMcp).optional(),
 		hooks: z.array(mHook).optional(),
-		configuration: z.array(mConfiguration).optional(),
+		mods: z.array(mMod).describe('Function-hook modules ("mods").').optional(),
+		lsp: z
+			.array(z.object({ name: z.string(), languages: z.array(z.string()) }).strict())
+			.describe('Derived from .lsp.json / plugin.json lspServers.')
+			.optional(),
+		outputStyles: z.array(named).describe('Derived from output-styles/ / plugin.json outputStyles.').optional(),
+		workflows: z.array(named).describe('Derived from workflows/ / plugin.json workflows.').optional(),
+		themes: z
+			.array(z.object({ name: z.string(), base: z.string().optional() }).strict())
+			.describe('Derived from themes/ / plugin.json experimental.themes.')
+			.optional(),
+		monitors: z
+			.array(z.object({ name: z.string(), description: z.string().optional(), when: z.string().optional() }).strict())
+			.describe('Derived from monitors/monitors.json / plugin.json experimental.monitors.')
+			.optional(),
+		bin: z.array(z.string()).describe('Derived: executables in bin/.').optional(),
+		channels: z
+			.array(z.object({ server: z.string(), displayName: z.string().optional() }).strict())
+			.describe('Derived from plugin.json channels.')
+			.optional(),
+		configuration: z
+			.array(mConfiguration)
+			.describe('plugin.json userConfig fields (derived) followed by authored-only settings.')
+			.optional(),
 		tips: z.array(note).optional(),
 		traps: z.array(note).optional()
 	})

@@ -247,14 +247,14 @@ test('an entry with source but no name is reported, not silently dropped', () =>
 
 // ---- layout, version, and deterministic output ------------------------------
 
-test('native-only generation uses current 1.1 without authoring files', () => {
+test('native-only generation uses current 1.2 without authoring files', () => {
 	const { manifest, errors, layout } = run({
 		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
 		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
 	});
 	assert.deepEqual(errors, []);
 	assert.equal(layout, 'fresh');
-	assert.equal((manifest as { schemaVersion: string }).schemaVersion, '1.1');
+	assert.equal((manifest as { schemaVersion: string }).schemaVersion, '1.2');
 });
 
 test('namespaced layout ignores unrelated generic root files', () => {
@@ -348,7 +348,7 @@ test('malformed catalog YAML is a canonical error and keeps native plugins', () 
 	assert.equal(result!.layout, 'namespaced');
 	assert.ok(result!.errors.some((error) => /^\.cc-marketspec\/catalog\.yaml:.*parse/i.test(error)), result!.errors.join(' | '));
 	const generated = result!.manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
-	assert.equal(generated.schemaVersion, '1.1');
+	assert.equal(generated.schemaVersion, '1.2');
 	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
 	assert.equal(generated.plugins[0].tagline, undefined);
 });
@@ -378,7 +378,7 @@ test('an entry without its required catalog is not applied to the native manifes
 	assert.equal(layout, 'namespaced');
 	assert.ok(errors.some((error) => /^\.cc-marketspec\/catalog\.yaml:.*required/i.test(error)), errors.join(' | '));
 	const generated = manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
-	assert.equal(generated.schemaVersion, '1.1');
+	assert.equal(generated.schemaVersion, '1.2');
 	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
 	assert.equal(generated.plugins[0].tagline, undefined);
 });
@@ -392,7 +392,7 @@ test('an entry under a future catalog is not relabeled or applied as current dat
 	});
 	assert.ok(errors.some((error) => /schemaVersion 2\.0/i.test(error)), errors.join(' | '));
 	const generated = manifest as { schemaVersion: string; plugins: { id: string; tagline?: string }[] };
-	assert.equal(generated.schemaVersion, '1.1');
+	assert.equal(generated.schemaVersion, '1.2');
 	assert.deepEqual(generated.plugins.map(({ id }) => id), ['sample']);
 	assert.equal(generated.plugins[0].tagline, undefined);
 });
@@ -444,9 +444,9 @@ test('sorts and deduplicates repeated diagnostics while reporting missing local 
 		)
 	});
 	assert.deepEqual(errors, [
-		'alpha: local source is missing .claude-plugin/plugin.json at plugins/alpha',
+		'alpha: local source folder plugins/alpha does not exist',
 		'duplicate plugin id "alpha"',
-		'zeta: local source is missing .claude-plugin/plugin.json at plugins/zeta'
+		'zeta: local source folder plugins/zeta does not exist'
 	]);
 	assert.deepEqual(warnings, [
 		'alpha: implicit plugins/alpha source is deprecated; add source: "./plugins/alpha"',
@@ -454,4 +454,232 @@ test('sorts and deduplicates repeated diagnostics while reporting missing local 
 	]);
 	assert.equal(new Set(errors).size, errors.length);
 	assert.equal(new Set(warnings).size, warnings.length);
+});
+
+// ---- current Claude Code plugin schema (mods, userConfig, new components) ---
+
+type P = Record<string, any>;
+const first = (manifest: unknown) => (manifest as { plugins: P[] }).plugins[0];
+
+test('a hook event newer than the known list still generates', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		'plugins/sample/hooks/hooks.json': '{"hooks":{"PostCompact":[{"hooks":[]}]}}'
+	});
+	assert.deepEqual(errors, []);
+	assert.deepEqual(first(manifest).hooks, [{ event: 'PostCompact' }]);
+});
+
+test('mods are derived from hooks.json modules and take an authored description', () => {
+	const files = {
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		'plugins/sample/hooks/hooks.json': '{"modules":["./register.tsx"]}',
+		'plugins/sample/hooks/register.tsx': 'export const register = () => {};',
+		'.cc-marketspec/catalog.yaml': catalog(),
+		[entryPath('sample')]: 'mods:\n  - module: ./hooks/register.tsx\n    description: Shows a live status line.\n'
+	};
+	const { manifest, errors, warnings } = run(files);
+	assert.deepEqual(errors, []);
+	assert.deepEqual(first(manifest).mods, [{ module: 'hooks/register.tsx', description: 'Shows a live status line.' }]);
+	assert.equal(warnings.some((w) => w.includes('mod.description')), false);
+
+	const bare = run({ ...files, [entryPath('sample')]: 'tagline: x\n' });
+	assert.ok(bare.warnings.some((w) => w.includes('mod.description') && w.includes('hooks/register.tsx')), bare.warnings.join(' | '));
+});
+
+test('an authored mod that no hooks file names is a referential error', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		'.cc-marketspec/catalog.yaml': catalog(),
+		[entryPath('sample')]: 'mods:\n  - module: hooks/ghost.ts\n'
+	});
+	assert.ok(errors.some((e) => e.includes('mod "hooks/ghost.ts"')), errors.join(' | '));
+});
+
+test('userConfig becomes configuration; authored text overrides, sensitive defaults are dropped', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({
+			name: 'sample',
+			version: '1.0.0',
+			userConfig: {
+				mode: { type: 'string', title: 'Mode', description: 'native', options: ['a', 'b'], default: 'a' },
+				token: { type: 'string', title: 'Token', description: 'API token', sensitive: true, default: 'x' }
+			}
+		}),
+		'.cc-marketspec/catalog.yaml': catalog(),
+		[entryPath('sample')]: [
+			'configuration:',
+			'  - key: mode',
+			'    description: Which engine to run.',
+			'  - key: LOCAL_FLAG',
+			'    type: boolean',
+			'    description: Set in .claude/sample.local.md.'
+		].join('\n')
+	});
+	assert.deepEqual(errors, []);
+	assert.deepEqual(first(manifest).configuration, [
+		{ key: 'mode', type: 'string', title: 'Mode', description: 'Which engine to run.', default: 'a', options: ['a', 'b'], userConfig: true },
+		{ key: 'token', type: 'string', title: 'Token', description: 'API token', sensitive: true, userConfig: true },
+		{ key: 'LOCAL_FLAG', type: 'boolean', description: 'Set in .claude/sample.local.md.' }
+	]);
+});
+
+test('an authored-only configuration key without a type is an error', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' }),
+		'.cc-marketspec/catalog.yaml': catalog(),
+		[entryPath('sample')]: 'configuration:\n  - key: X\n    description: d\n'
+	});
+	assert.ok(errors.some((e) => e.includes('configuration "X" needs a type')), errors.join(' | '));
+});
+
+test('plugin.json custom component paths replace (commands/agents) or add to (skills) the defaults', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({
+			name: 'sample',
+			version: '1.0.0',
+			commands: './cmds',
+			agents: ['./roles/reviewer.md'],
+			skills: './extra',
+			hooks: './config/hooks.json',
+			mcpServers: { inline: { url: 'https://example.com/mcp' } }
+		}),
+		'plugins/sample/commands/ignored.md': '---\ndescription: replaced\n---\n',
+		'plugins/sample/cmds/ship.md': '---\ndescription: Ships it. Fast.\n---\n',
+		'plugins/sample/roles/reviewer.md': '---\nname: reviewer\ndescription: Reviews.\n---\n',
+		'plugins/sample/skills/base/SKILL.md': '---\nname: base\n---\n',
+		'plugins/sample/extra/more/SKILL.md': '---\nname: more\n---\n',
+		'plugins/sample/config/hooks.json': '{"hooks":{"Stop":[{}]},"modules":["../mods/main.ts"]}'
+	});
+	assert.deepEqual(errors, []);
+	const p = first(manifest);
+	assert.deepEqual(p.commands.map((c: P) => c.name), ['ship']);
+	assert.deepEqual(p.agents.map((a: P) => a.name), ['reviewer']);
+	assert.deepEqual(p.skills.map((s: P) => s.name), ['base', 'more']);
+	assert.deepEqual(p.hooks, [{ event: 'Stop' }]);
+	assert.deepEqual(p.mods, [{ module: 'mods/main.ts' }]);
+	assert.deepEqual(p.mcp, [{ name: 'inline', type: 'http' }]);
+});
+
+test('new component types and metadata fields are derived', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({
+			name: 'sample',
+			version: '1.0.0',
+			displayName: 'Sample',
+			defaultEnabled: false,
+			icon: './logo.png',
+			dependencies: [{ name: 'toolkit', marketplace: 'other' }, 'x@y'],
+			channels: [{ server: 'chat', displayName: 'Chat' }]
+		}),
+		'plugins/sample/.lsp.json': '{"ts":{"command":"tsls","extensionToLanguage":{".ts":"typescript",".tsx":"typescriptreact"}}}',
+		'plugins/sample/output-styles/terse.md': '---\nname: terse\ndescription: Short answers.\n---\n',
+		'plugins/sample/workflows/review.js': 'export const meta = {};',
+		'plugins/sample/themes/night.json': '{"name":"Night","base":"dark","overrides":{}}',
+		'plugins/sample/monitors/monitors.json': '[{"name":"ci","command":"x","description":"Watches CI."}]',
+		'plugins/sample/bin/sample-cli': '#!/bin/sh'
+	});
+	assert.deepEqual(errors, []);
+	const p = first(manifest);
+	assert.equal(p.displayName, 'Sample');
+	assert.equal(p.defaultEnabled, false);
+	assert.equal(p.icon, './logo.png');
+	assert.deepEqual(p.dependencies, ['toolkit@other', 'x@y']);
+	assert.deepEqual(p.lsp, [{ name: 'ts', languages: ['typescript', 'typescriptreact'] }]);
+	assert.deepEqual(p.outputStyles, [{ name: 'terse', description: 'Short answers.' }]);
+	assert.deepEqual(p.workflows, [{ name: 'review' }]);
+	assert.deepEqual(p.themes, [{ name: 'Night', base: 'dark' }]);
+	assert.deepEqual(p.monitors, [{ name: 'ci', description: 'Watches CI.' }]);
+	assert.deepEqual(p.bin, ['sample-cli']);
+	assert.deepEqual(p.channels, [{ server: 'chat', displayName: 'Chat' }]);
+});
+
+test('bare plugin source names resolve under metadata.pluginRoot', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', metadata: { pluginRoot: './plugins' }, plugins: [{ name: 'sample', source: 'sample' }] }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
+	});
+	assert.deepEqual(errors, []);
+	assert.equal(first(manifest).id, 'sample');
+});
+
+test('a bare source name without metadata.pluginRoot is still rejected', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: 'sample' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
+	});
+	assert.ok(errors.some((e) => e.includes('metadata.pluginRoot')), errors.join(' | '));
+});
+
+// ---- marketplace entry + plugin.json (strict mode) -------------------------
+
+test('without plugin.json the marketplace entry is the manifest', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({
+			name: 'sample',
+			source: './plugins/sample',
+			version: '2.0.0',
+			description: 'From the entry.',
+			author: { name: 'Org' },
+			commands: ['./tools/run.md'],
+			hooks: { Stop: [{ hooks: [] }] }
+		}),
+		'plugins/sample/tools/run.md': '---\ndescription: Runs.\n---\n'
+	});
+	assert.deepEqual(errors, []);
+	const p = first(manifest);
+	assert.equal(p.name, 'sample');
+	assert.equal(p.version, '2.0.0');
+	assert.equal(p.description, 'From the entry.');
+	assert.deepEqual(p.commands.map((c: P) => c.name), ['run']);
+	assert.deepEqual(p.hooks, [{ event: 'Stop' }]);
+});
+
+test('strict (default): entry components append to plugin.json, entry hooks replace per event, display fields win', () => {
+	const { manifest, errors } = run({
+		'.claude-plugin/marketplace.json': market({
+			name: 'sample',
+			source: './plugins/sample',
+			description: 'Entry copy.',
+			commands: './extra/cmd.md',
+			hooks: { Stop: [{ matcher: 'entry' }] }
+		}),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0', description: 'Plugin copy.' }),
+		'plugins/sample/commands/base.md': '---\ndescription: Base.\n---\n',
+		'plugins/sample/extra/cmd.md': '---\ndescription: Extra.\n---\n',
+		'plugins/sample/hooks/hooks.json': '{"hooks":{"Stop":[{"matcher":"plugin"}],"SessionStart":[{}]}}'
+	});
+	assert.deepEqual(errors, []);
+	const p = first(manifest);
+	assert.equal(p.description, 'Entry copy.');
+	assert.deepEqual(p.commands.map((c: P) => c.name), ['base', 'cmd']);
+	assert.deepEqual(p.hooks, [{ event: 'SessionStart' }, { event: 'Stop', matcher: 'entry' }]);
+});
+
+test('strict: false with plugin.json and entry components is the load-time conflict', () => {
+	const { errors } = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: './plugins/sample', strict: false, skills: './more' }),
+		'plugins/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
+	});
+	assert.ok(errors.some((e) => e.includes('strict: false') && e.includes('skills')), errors.join(' | '));
+});
+
+test('"." is the marketplace root and a bare name with / still needs ./', () => {
+	const root = run({
+		'.claude-plugin/marketplace.json': market({ name: 'sample', source: '.' }),
+		'.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
+	});
+	assert.deepEqual(root.errors, []);
+	const nested = run({
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', metadata: { pluginRoot: './plugins' }, plugins: [{ name: 'sample', source: 'team/sample' }] }),
+		'plugins/team/sample/.claude-plugin/plugin.json': plugin({ name: 'sample', version: '1.0.0' })
+	});
+	assert.ok(nested.errors.some((e) => e.includes('must start with ./')), nested.errors.join(' | '));
 });

@@ -95,7 +95,7 @@ test('repo README $schema example uses the scoped package path', () => {
   assert.ok(!/node_modules\/cc-marketspec\//.test(readme), 'must use scoped @xbluesky path, not bare cc-marketspec');
 });
 
-test('repo README publishes the complete namespaced format 1.1 contract', () => {
+test('repo README publishes the complete namespaced format 1.2 contract', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   for (const value of [
     '.cc-marketspec/catalog.yaml',
@@ -106,6 +106,7 @@ test('repo README publishes the complete namespaced format 1.1 contract', () => 
     '--output site/public/manifest.json',
     'Format `1.0`',
     'format `1.1`',
+    'format `1.2`',
     'npm package versions',
   ]) assert.match(readme, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.match(readme, /workflow artifacts? (?:are|is) temporary/i);

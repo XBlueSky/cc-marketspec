@@ -123,7 +123,9 @@ test('entry: skill without name rejected', () => bad(Entry, { skills: [{ descrip
 test('entry: unknown top-level prop rejected', () => bad(Entry, { bogus: 1 }, 'additionalProperties'));
 test('entry: bad mcp auth enum rejected', () => bad(Entry, { mcp: [{ name: 'm', auth: 'basic' }] }, 'auth enum'));
 test('entry: bad configuration type enum rejected', () => bad(Entry, { configuration: [{ key: 'k', type: 'date', description: 'd' }] }, 'config type'));
-test('entry: bad hook event enum rejected', () => bad(Entry, { hooks: [{ event: 'OnBoot' }] }, 'hook event'));
+test('entry: malformed hook event name rejected', () => bad(Entry, { hooks: [{ event: 'on boot' }] }, 'hook event'));
+test('entry: hook events newer than the known list are accepted', () =>
+	ok(Entry, { hooks: [{ event: 'PostCompact' }, { event: 'SomeFutureEvent' }] }, 'open-ended hook events'));
 test('entry: >5 examples rejected', () => bad(Entry, { skills: [{ name: 'a', examples: ['1', '2', '3', '4', '5', '6'] }] }, 'examples cap'));
 test('entry: bad ccVersion rejected', () => bad(Entry, { ccVersion: '2.1' }, 'ccVersion semver'));
 test('entry: env key pattern enforced', () => bad(Entry, { mcp: [{ name: 'm', env: [{ key: '1bad', value: 'v' }] }] }, 'env key'));

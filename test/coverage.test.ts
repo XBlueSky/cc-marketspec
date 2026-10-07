@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzeCoverage } from '../src/coverage.ts';
 import { coverageTargets } from '../src/entry.ts';
-import type { NativeFacts } from '../src/native.ts';
+import type { CoverageFacts } from '../src/coverage.ts';
 
-const facts = (over: Partial<NativeFacts> = {}): NativeFacts => ({
+const facts = (over: Partial<CoverageFacts> = {}): CoverageFacts => ({
 	plugin: { name: 'p', description: 'native desc' },
 	skills: [], commands: [], agents: [], mcp: [], hooks: [],
 	...over

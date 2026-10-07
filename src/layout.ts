@@ -56,7 +56,14 @@ export function entryPathForPlugin(id: string): string {
 	return posix.join(ENTRIES_DIR, `plugin-${id}.yaml`);
 }
 
-export function resolveMarketplacePlugins(raw: unknown): PluginResolution {
+/** marketplace.json `metadata.pluginRoot`: base folder for bare plugin source names. */
+export function pluginRootOf(market: unknown): string | undefined {
+	const metadata = market && typeof market === 'object' ? (market as Record<string, unknown>).metadata : undefined;
+	const root = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>).pluginRoot : undefined;
+	return typeof root === 'string' ? root : undefined;
+}
+
+export function resolveMarketplacePlugins(raw: unknown, opts: { pluginRoot?: string } = {}): PluginResolution {
 	const errors: string[] = [];
 	const warnings: string[] = [];
 	const plugins: ResolvedPlugin[] = [];
@@ -81,12 +88,16 @@ export function resolveMarketplacePlugins(raw: unknown): PluginResolution {
 			sourceKind = 'local';
 			warnings.push(`${id}: implicit plugins/${id} source is deprecated; add source: "./plugins/${id}"`);
 		} else if (typeof entry.source === 'string') {
-			if (!entry.source.startsWith('./')) {
-				errors.push(`${id}: local source must start with ./`);
+			const rootDot = entry.source === '.';
+			const bare = !rootDot && !entry.source.startsWith('./');
+			if (bare && (opts.pluginRoot === undefined || entry.source.includes('/'))) {
+				errors.push(`${id}: local source must start with ./ (a bare name without / resolves only under metadata.pluginRoot)`);
 				continue;
 			}
 			try {
-				dir = normalizeInternalPath(entry.source.slice(2), { allowRoot: true });
+				dir = bare
+					? normalizeInternalPath(posix.join(normalizeInternalPath(opts.pluginRoot!, { allowRoot: true }), entry.source))
+					: normalizeInternalPath(rootDot ? '' : entry.source.slice(2), { allowRoot: true });
 			} catch (error) {
 				errors.push(`${id}: ${error instanceof Error ? error.message : String(error)}`);
 				continue;

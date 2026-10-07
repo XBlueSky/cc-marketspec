@@ -90,14 +90,14 @@ function materialize(source: MemoryFileSource, paths = LEGACY_PATHS): string {
 	return root;
 }
 
-test('plans a complete 1.0 to 1.1 tree without mutating the source', () => {
+test('plans a complete 1.0 to 1.2 tree without mutating the source', () => {
 	const source = legacy();
 	const beforeCatalog = source.read('catalog.yaml');
 	const plan = planMigration(source);
 	assert.equal(plan.kind, 'migrate');
 	assert.deepEqual(plan.errors, []);
 	assert.equal(plan.sourceVersion, '1.0');
-	assert.equal(plan.targetVersion, '1.1');
+	assert.equal(plan.targetVersion, '1.2');
 	assert.equal(plan.writes['.cc-marketspec/.gitignore'], '/dist/\n');
 	assert.ok(plan.writes['.cc-marketspec/catalog.yaml']);
 	assert.ok(plan.writes['.cc-marketspec/entries/plugin-sample.yaml']);
@@ -113,7 +113,7 @@ test('catalog rewrite preserves comments, quoting, key order, and entry bytes', 
 	const plan = planMigration(source);
 	const catalog = plan.writes['.cc-marketspec/catalog.yaml'];
 	assert.match(catalog, /^# catalog comment/m);
-	assert.match(catalog, /schemaVersion: "1\.1" # keep quote/);
+	assert.match(catalog, /schemaVersion: "1\.2" # keep quote/);
 	assert.ok(catalog.indexOf('schemaVersion') < catalog.indexOf('lang:'));
 	assert.ok(catalog.indexOf('lang:') < catalog.indexOf('groups:'));
 	assert.match(plan.writes['.cc-marketspec/entries/plugin-sample.yaml'], /^# entry comment/m);
@@ -795,7 +795,7 @@ test('staged read-back validation rejects corrupted writes before cutover', () =
 		writeExclusive: (path, content) => NODE_MIGRATION_FILE_OPS.writeExclusive(
 			path,
 			path.endsWith('catalog.yaml')
-				? content.replace('schemaVersion: "1.1"', 'schemaVersion: "9.9"')
+				? content.replace('schemaVersion: "1.2"', 'schemaVersion: "9.9"')
 				: content
 		)
 	};

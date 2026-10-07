@@ -22,9 +22,11 @@ the consumer's.
 
 ## Mental model: native layer vs presentation layer
 
-- **Native (Claude Code defines):** `marketplace.json`, `plugin.json`,
-  `.mcp.json`, `skills/*/SKILL.md` · `commands/*.md` · `agents/*.md` frontmatter,
-  `hooks/hooks.json`. Identity + structure. You maintain these anyway for the
+- **Native (Claude Code defines):** `marketplace.json`, `plugin.json` (including
+  its custom component paths and `userConfig`), `.mcp.json`, `.lsp.json`,
+  `skills/*/SKILL.md` · `commands/*.md` · `agents/*.md` frontmatter,
+  `hooks/hooks.json` (settings hooks and function-hook `modules`, i.e. mods),
+  `output-styles/`, `workflows/`, `themes/`, `monitors/`, `bin/`. Identity + structure. You maintain these anyway for the
   plugins to work.
 - **Presentation (this standard):** `.cc-marketspec/catalog.yaml`
   (marketplace-level) + `.cc-marketspec/entries/plugin-<id>.yaml` (per plugin).
@@ -40,7 +42,7 @@ must match the `plugin.json` name.
 .claude-plugin/marketplace.json
 .cc-marketspec/
 ├── .gitignore              # /dist/
-├── catalog.yaml            # authored, schemaVersion: "1.1"
+├── catalog.yaml            # authored, schemaVersion: "1.2"
 ├── entries/
 │   └── plugin-<id>.yaml    # authored marketplace presentation
 └── dist/
@@ -138,7 +140,7 @@ if (parsed.success) {
 `Manifest` and its published JSON Schema intentionally validate document shape
 and any syntactically valid `MAJOR.MINOR` value. Consumers must then call
 `checkManifestFormatVersion` before interpreting the document: it accepts legacy
-format `1.0` with a deprecation warning and current format `1.1`, while rejecting
+format `1.0` with a deprecation warning, format `1.1`, and current format `1.2`, while rejecting
 unsupported or future versions.
 
 ### Editor support while authoring
@@ -158,8 +160,13 @@ tagline: ...
 - command **argument table** ← native `arguments` / `argument-hint`; `summary` ← first sentence of description
 - agent **tools** ← frontmatter `tools`; `summary` ← description
 - mcp **transport** + env-var keys ← `.mcp.json`
-- hook **event/matcher** ← `hooks.json`
-- plugin identity (name/version/author/license/keywords/deps) ← `plugin.json` / `marketplace.json`
+- hook **event/matcher** ← `hooks.json` (any event name, so newer Claude Code events never break a build)
+- **mods** (function-hook modules) ← `modules` in `hooks.json` and any `plugin.json` `hooks` file
+- **configuration** ← `plugin.json` `userConfig` (type/title/options/sensitive…; a sensitive default is never published)
+- lsp servers + languages ← `.lsp.json`; output styles, workflows, themes, monitors, `bin/` executables, channels ← their folders / `plugin.json`
+- component locations honour `plugin.json` custom paths (`commands`/`agents`/`outputStyles`/`workflows` replace the default folder, `skills` adds to it, `hooks`/`mcpServers`/`lspServers` merge)
+- plugin identity (name/displayName/version/author/license/keywords/icon/defaultEnabled/deps) ← `plugin.json` / `marketplace.json`
+- bare marketplace `source` names resolve under `metadata.pluginRoot`
 - plugin **category** (native classification) ← `marketplace.json` entry `category` (distinct from authored `group`)
 
 ## What you author (no native source)
@@ -167,7 +174,8 @@ tagline: ...
 In `.cc-marketspec/entries/plugin-<id>.yaml`: curated
 `description`/`tagline`/`intro`, agent `returns`/`not`, MCP
 `provides`/`install`/`auth`/`setup`/environment descriptions, `examples`, hook
-`why`, `configuration` (`.claude/<plugin>.local.md` settings), `tips`, and
+`why`, mod `description`, `configuration` (overrides for `userConfig` text, plus
+`.claude/<plugin>.local.md` settings, which need a `type`), `tips`, and
 `traps`.
 
 ## Validation (CI strict, dev degrades)
@@ -176,9 +184,14 @@ Beyond schema validation, the generator enforces referential integrity that no
 declarative schema can:
 
 - marketplace plugin id must match the `plugin.json` name
+- a marketplace entry combines with `plugin.json` as Claude Code does: without
+  `plugin.json` the entry is the manifest; with it, entry component fields are
+  appended (entry `hooks` replace per event) and entry display fields win; under
+  `strict: false` an entry that also declares components is the load-time
+  conflict and fails the build
 - `.cc-marketspec/entries/plugin-<id>.yaml` skill/command/agent/MCP entries must
   exist on disk; authored hooks must match a real `event`/`matcher` in
-  `hooks.json`
+  `hooks.json`; authored mods must be named under a hooks file's `modules`
 - authored `group` values must be declared in
   `.cc-marketspec/catalog.yaml` `groups[]`
 - `entry` env keys must exist in `.mcp.json` (undescribed keys → warning)
@@ -201,6 +214,7 @@ Rules are addressed by `<component>.<field>` dot-paths (e.g. `skill.trigger`,
 | `agent.summary` | `warn` |
 | `mcp.env` | `warn` |
 | `mcp.provides` | `off` |
+| `mod.description` | `warn` |
 | `plugin.tagline` | `warn` |
 | `plugin.group` | `off` |
 
@@ -230,7 +244,7 @@ npx @xbluesky/cc-marketspec init
 Creates:
 
 - `.cc-marketspec/catalog.yaml` — marketplace-level presentation metadata and
-  group taxonomy, with `schemaVersion: "1.1"` and a commented-out `coverage:`
+  group taxonomy, with `schemaVersion: "1.2"` and a commented-out `coverage:`
   block ready to tune.
 - `.cc-marketspec/entries/plugin-<id>.yaml` — per-plugin overlay stub for each
   local plugin found in `.claude-plugin/marketplace.json` with native metadata
@@ -373,8 +387,11 @@ data in this repo.
 ## Format compatibility and package versions
 
 Format versions use exactly `MAJOR.MINOR`; they are not SemVer. Format `1.0` is
-the legacy flat layout, and format `1.1` is the current `.cc-marketspec/`
-layout. npm package versions use independent SemVer and do not imply a format
+the legacy flat layout, and format `1.1` introduced the `.cc-marketspec/`
+layout. Format `1.2` (current) is additive: the manifest gains mods,
+`userConfig`-derived configuration, and the newer native component types. A
+`1.1` catalog keeps working unchanged and produces a `1.2` manifest; bump it to
+`1.2` whenever convenient. npm package versions use independent SemVer and do not imply a format
 version.
 
 The runtime, rather than the JSON Schema shape alone, enforces compatibility.
@@ -385,4 +402,3 @@ error; cc-marketspec does not silently reinterpret those inputs.
 
 - An `x-*` extension hatch (kept strict in v1 so the Zod validator and the
   emitted JSON Schema stay identical).
-- `lsp` / `output-styles` component types (pure-derive; additive MINOR).

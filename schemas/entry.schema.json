@@ -294,20 +294,8 @@
         "properties": {
           "event": {
             "type": "string",
-            "enum": [
-              "PreToolUse",
-              "PostToolUse",
-              "PostToolUseFailure",
-              "PermissionRequest",
-              "UserPromptSubmit",
-              "Notification",
-              "Stop",
-              "SubagentStart",
-              "SubagentStop",
-              "SessionStart",
-              "SessionEnd",
-              "PreCompact"
-            ]
+            "pattern": "^[A-Z][A-Za-z0-9]*$",
+            "description": "Hook event name, e.g. ConfigChange, CwdChanged, DirectoryAdded, Elicitation."
           },
           "matcher": {
             "type": "string",
@@ -322,6 +310,30 @@
         },
         "required": [
           "event"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "mods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "module": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Hooks module path relative to the plugin root (e.g. hooks/register.tsx); must be named under `modules` in a hooks file."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "What the mod adds (a pane, a status line, a tool-call guard). A module is opaque to static analysis, so this is the only description.",
+            "coverage": "warn"
+          }
+        },
+        "required": [
+          "module"
         ],
         "additionalProperties": false
       }
@@ -341,8 +353,11 @@
               "string",
               "boolean",
               "number",
-              "array"
-            ]
+              "array",
+              "directory",
+              "file"
+            ],
+            "description": "Required unless the key is a plugin.json userConfig field (its type is derived)."
           },
           "default": {},
           "description": {
@@ -356,7 +371,6 @@
         },
         "required": [
           "key",
-          "type",
           "description"
         ],
         "additionalProperties": false
