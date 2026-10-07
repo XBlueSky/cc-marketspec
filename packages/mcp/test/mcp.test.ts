@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getSchema, checkCoverage, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer, listResources, readResource } from '../src/mcp.ts';
+import { getSchema, checkCoverage, pluginDirFor, scaffoldEntry, listAuthoringSections, getAuthoringGuide, callTool, TOOLS, createMcpServer, listResources, readResource } from '../src/mcp.ts';
 import { SCHEMAS, VERSION } from '../src/core.ts';
 
 test('getSchema returns the entry JSON schema object', () => {
@@ -195,4 +195,25 @@ test('MCP public tool input schemas remain transport-compatible', () => {
 			required: ['pluginId', 'files']
 		}
 	});
+});
+
+test('pluginDirFor follows marketplace.json sources, pluginRoot, and root plugins', () => {
+	const market = (plugins: unknown[], extra = {}) => JSON.stringify({ name: 'mk', plugins, ...extra });
+	assert.equal(pluginDirFor({ '.claude-plugin/marketplace.json': market([{ name: 'p', source: './tools/p' }]) }, 'p'), 'tools/p');
+	assert.equal(pluginDirFor({ '.claude-plugin/marketplace.json': market([{ name: 'p', source: 'p' }], { metadata: { pluginRoot: './pkgs' } }) }, 'p'), 'pkgs/p');
+	assert.equal(pluginDirFor({ '.claude-plugin/plugin.json': '{"name":"p"}' }, 'p'), '');
+	assert.equal(pluginDirFor({}, 'p'), 'plugins/p');
+});
+
+test('checkCoverage and scaffoldEntry see a root-level plugin and its mods', () => {
+	const files = {
+		'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [{ name: 'p', source: './' }] }),
+		'.claude-plugin/plugin.json': '{"name":"p","description":"d"}',
+		'skills/s/SKILL.md': '---\nname: s\n---\n',
+		'hooks/hooks.json': '{"modules":["./register.ts"]}'
+	};
+	const report = checkCoverage({ files, pluginId: 'p' });
+	assert.ok(report.findings.some((f) => f.ruleId === 'skill.trigger' && f.component === 's'));
+	assert.ok(report.findings.some((f) => f.ruleId === 'mod.description' && f.component === 'hooks/register.ts'));
+	assert.match(scaffoldEntry({ files, pluginId: 'p' }), /# mod hooks\/register\.ts/);
 });

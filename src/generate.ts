@@ -13,13 +13,15 @@ import { Manifest } from './manifest.ts';
 import { Entry, coverageTargets } from './entry.ts';
 import { Catalog } from './catalog.ts';
 import { type FileSource, NodeFileSource } from './fs-source.ts';
-import { readJSON, loadYaml, deriveSkills, deriveCommands, deriveAgents, deriveMcp, deriveHooks } from './native.ts';
+import { readJSON, loadYaml, extractNativeFacts } from './native.ts';
 import { analyzeCoverage, resolve as resolveCoverage, type CoverageConfig } from './coverage.ts';
 import { PluginJson, type PluginDependency } from './plugin-json.ts';
+import { effectiveManifest } from './effective-manifest.ts';
 import {
 	CATALOG_PATH,
 	entryPathForLayout,
 	inspectLayout,
+	pluginRootOf,
 	resolveMarketplacePlugins,
 	type LayoutKind,
 	type ResolvedPlugin
@@ -81,7 +83,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		}
 	}
 
-	const resolution = resolveMarketplacePlugins(market.plugins);
+	const resolution = resolveMarketplacePlugins(market.plugins, { pluginRoot: pluginRootOf(market) });
 	errors.push(...resolution.errors);
 	warns.push(...resolution.warnings);
 	const inspected = inspectLayout(source, resolution.plugins);
@@ -167,21 +169,29 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			return parsed.data;
 		})();
 
-		const pj = readJSON(source, posix.join(dir, '.claude-plugin', 'plugin.json'));
+		const pjPath = posix.join(dir, '.claude-plugin', 'plugin.json');
+		const ownJson = source.exists(pjPath) ? readJSON(source, pjPath) : null;
+		const label = ownJson === null ? 'marketplace entry' : 'plugin.json';
+		const combined = effectiveManifest(source, dir, ownJson, marketEntry);
+		errors.push(...combined.errors);
+		const pj = combined.manifest as Record<string, any>;
 		const pjParse = PluginJson.safeParse(pj);
 		if (!pjParse.success) {
-			for (const issue of pjParse.error.issues) err(`${id}/plugin.json: ${issue.path.join('.')} ${issue.message}`);
+			for (const issue of pjParse.error.issues) err(`${id}/${label}: ${issue.path.join('.')} ${issue.message}`);
 		}
 		if (typeof pj.author === 'string') {
-			err(`${id}/plugin.json: author must be an object {name, url?, email?}, not a string — Claude Code rejects string authors at install`);
+			err(`${id}/${label}: author must be an object {name, url?, email?}, not a string — Claude Code rejects string authors at install`);
 		}
-		if (pj.name !== id) err(`${id}: plugin.json name "${pj.name}" != marketplace entry name "${id}" — both must be the canonical install id`);
+		if (ownJson !== null && ownJson.name !== id) {
+			err(`${id}: plugin.json name "${ownJson.name}" != marketplace entry name "${id}" — both must be the canonical install id`);
+		}
 
 		if (entry?.group && !pluginGroupIds.has(entry.group)) {
 			err(`${presentationPath}: group "${entry.group}" not declared in ${inspected.catalogPath ?? CATALOG_PATH} groups[]`);
 		}
 
-		const nSkills = deriveSkills(source, dir, warn);
+		const facts = extractNativeFacts(source, dir, warn, pj);
+		const nSkills = facts.skills;
 		const eSkills = new Map((entry?.skills ?? []).map((skill) => [skill.name, skill]));
 		for (const skill of eSkills.keys()) {
 			if (!nSkills.find((native) => native.name === skill)) err(`${presentationPath}: skill "${skill}" not found on disk`);
@@ -200,7 +210,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			});
 		});
 
-		const nCmds = deriveCommands(source, dir, warn);
+		const nCmds = facts.commands;
 		const eCmds = new Map((entry?.commands ?? []).map((command) => [command.name, command]));
 		for (const command of eCmds.keys()) {
 			if (!nCmds.find((native) => native.name === command)) err(`${presentationPath}: command "${command}" not found on disk`);
@@ -216,7 +226,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			});
 		});
 
-		const nAgents = deriveAgents(source, dir, warn);
+		const nAgents = facts.agents;
 		const eAgents = new Map((entry?.agents ?? []).map((agent) => [agent.name, agent]));
 		for (const agent of eAgents.keys()) {
 			if (!nAgents.find((native) => native.name === agent)) err(`${presentationPath}: agent "${agent}" not found on disk`);
@@ -234,7 +244,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			});
 		});
 
-		const nMcp = deriveMcp(source, dir);
+		const nMcp = facts.mcp;
 		const eMcp = new Map((entry?.mcp ?? []).map((server) => [server.name, server]));
 		for (const server of eMcp.keys()) {
 			if (!nMcp.find((native) => native.name === server)) err(`${presentationPath}: mcp "${server}" not in .mcp.json`);
@@ -258,7 +268,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			});
 		});
 
-		const nHooks = deriveHooks(source, dir);
+		const nHooks = facts.hooks;
 		const eHooks = entry?.hooks ?? [];
 		const hookMatches = (authored: { event: string; matcher?: string }, native: { event: string; matcher?: string }) =>
 			authored.event === native.event && (authored.matcher === undefined || authored.matcher === native.matcher);
@@ -269,7 +279,36 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		}
 		const hooks = nHooks.map((native) => prune({ ...native, why: eHooks.find((authored) => hookMatches(authored, native))?.why }));
 
-		const facts = { plugin: pj, skills: nSkills, commands: nCmds, agents: nAgents, mcp: nMcp, hooks: nHooks };
+		const eMods = new Map((entry?.mods ?? []).map((mod) => [mod.module.replace(/^(?:\.\/)+/, ''), mod]));
+		for (const module of eMods.keys()) {
+			if (!facts.mods.find((native) => native.module === module)) err(`${presentationPath}: mod "${module}" not named under modules in a hooks file`);
+		}
+		const mods = facts.mods.map((native) => prune({ module: native.module, description: eMods.get(native.module)?.description }));
+
+		// userConfig fields first (declaration order), authored text overriding the
+		// native description; then authored-only settings (e.g. .local.md keys).
+		const eConfig = new Map((entry?.configuration ?? []).map((config) => [config.key, config]));
+		const configuration = [
+			...facts.userConfig.map((native) => {
+				const authored = eConfig.get(native.key);
+				if (authored?.type && authored.type !== native.type) {
+					err(`${presentationPath}: configuration "${native.key}" type "${authored.type}" != plugin.json userConfig type "${native.type}"`);
+				}
+				return prune({
+					...native,
+					description: authored?.description ?? native.description,
+					default: native.sensitive ? undefined : authored?.default ?? native.default,
+					required: native.required ?? authored?.required,
+					userConfig: true
+				});
+			}),
+			...[...eConfig.values()]
+				.filter((authored) => !facts.userConfig.some((native) => native.key === authored.key))
+				.map((authored) => {
+					if (!authored.type) err(`${presentationPath}: configuration "${authored.key}" needs a type (it is not a plugin.json userConfig field)`);
+					return prune({ ...authored });
+				})
+		];
 		const cov = analyzeCoverage(facts, entry, pluginCoverageCfg, id, entryPath ?? plugin.namespacedEntryPath);
 		for (const finding of cov.findings) (finding.severity === 'error' ? err : warn)(finding.message);
 
@@ -279,15 +318,19 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 
 		return prune({
 			id,
-			name: pj.name ?? id,
+			name: (ownJson?.name as string | undefined) ?? id,
+			displayName: pj.displayName,
 			version: pj.version ?? '0.0.0',
 			description: pj.description,
+			icon: pj.icon,
+			defaultEnabled: pj.defaultEnabled,
 			author,
 			license: pj.license,
 			homepage: pj.homepage,
 			repository: typeof pj.repository === 'string' ? pj.repository : pj.repository?.url,
 			keywords: pj.keywords,
-			dependencies: pj.dependencies?.map((dep: PluginDependency) => (typeof dep === 'string' ? dep : dep.name)),
+			dependencies: pj.dependencies?.map((dep: PluginDependency) =>
+				typeof dep === 'string' ? dep : dep.marketplace ? `${dep.name}@${dep.marketplace}` : dep.name),
 			category: marketEntry.category as string | undefined,
 			group: entry?.group,
 			tagline: entry?.tagline,
@@ -298,7 +341,15 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 			agents,
 			mcp,
 			hooks,
-			configuration: entry?.configuration,
+			mods,
+			lsp: facts.lsp,
+			outputStyles: facts.outputStyles.map((style) => prune({ ...style })),
+			workflows: facts.workflows.map((workflow) => prune({ ...workflow })),
+			themes: facts.themes.map((theme) => prune({ ...theme })),
+			monitors: facts.monitors.map((monitor) => prune({ ...monitor })),
+			bin: facts.bin,
+			channels: facts.channels.map((channel) => prune({ ...channel })),
+			configuration,
 			tips: (entry?.tips ?? []).map((tip) => (typeof tip === 'string' ? { text: tip } : tip)),
 			traps: (entry?.traps ?? []).map((trap) => (typeof trap === 'string' ? { text: trap } : trap))
 		});
@@ -307,9 +358,10 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 	const plugins = resolution.plugins
 		.map((plugin) => {
 			try {
-				if (plugin.sourceKind === 'local' && plugin.dir !== null
-					&& !source.exists(posix.join(plugin.dir, '.claude-plugin', 'plugin.json'))) {
-					err(`${plugin.id}: local source is missing .claude-plugin/plugin.json at ${plugin.dir || '.'}`);
+				// Without plugin.json the marketplace entry is the manifest, but the
+				// source folder itself must exist.
+				if (plugin.sourceKind === 'local' && plugin.dir !== null && !source.isDir(plugin.dir)) {
+					err(`${plugin.id}: local source folder ${plugin.dir || '.'} does not exist`);
 					return null;
 				}
 				return buildPlugin(plugin, groupIds, coverageCfg);
@@ -321,7 +373,7 @@ export function generateManifest(input: FileSource | string, opts: { strictCover
 		.filter((plugin): plugin is NonNullable<typeof plugin> => plugin !== null);
 
 	const manifest = {
-		schemaVersion: catalog?.schemaVersion ?? CURRENT_FORMAT_VERSION,
+		schemaVersion: layout === 'legacy' && catalog ? catalog.schemaVersion : CURRENT_FORMAT_VERSION,
 		marketplace: prune({ name: market.name, description: market.description, lang: catalog?.lang, owner: market.owner }),
 		groups: catalog?.groups,
 		plugins

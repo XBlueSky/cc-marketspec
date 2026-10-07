@@ -172,17 +172,43 @@ hooks:
     why: Blocks writes that would desync the generated manifest from source.
 ```
 
-<!-- section: configuration | when: documenting plugin-local settings (.claude/<plugin>.local.md) -->
+<!-- section: mods | when: describing a function-hook module (a mod: pane, status line, tool-call guard) -->
+## mods
+
+Per-mod overlay. A mod is a function-hook module named under `modules` in
+`hooks/hooks.json` (or a `plugin.json` `hooks` file). `module` is its path
+relative to the plugin root (e.g. `hooks/register.tsx`) and must match a
+derived mod (the generator checks). The only authored field:
+
+- `description` — what the mod adds to Claude Code (a pane, a band above the
+  prompt, a status line entry, a tool-call guard). A module is code, so there is
+  no static description to fall back on; coverage rule `mod.description` warns
+  when it is missing.
+
+```yaml
+mods:
+  - module: hooks/register.tsx
+    description: Opens a live pane listing the marketplace's coverage gaps.
+```
+
+<!-- section: configuration | when: documenting plugin settings (userConfig or .claude/<plugin>.local.md) -->
 ## configuration
 
-Document the plugin's local settings (the `.claude/<plugin>.local.md` file
-users create). Each entry describes a setting: its key, what it does, and the
-default. No native source — this is pure documentation of your plugin's config
-surface.
+Fields declared in `plugin.json` `userConfig` are derived automatically (type,
+title, description, options, sensitive, …; a sensitive field's default is never
+published). Author an entry with the same `key` only to override its
+`description` or `default`.
+
+Settings with no native source (e.g. keys in a `.claude/<plugin>.local.md`
+file users create) are documented here too; those entries need a `type`
+(`string`, `boolean`, `number`, `array`, `directory`, `file`).
 
 ```yaml
 configuration:
-  - key: strict_coverage
+  - key: mode            # a userConfig field: only the text is overridden
+    description: Which engine runs the check.
+  - key: strict_coverage # a .local.md setting: type is required
+    type: boolean
     description: Fail the build on coverage warnings, not just errors.
     default: "false"
 ```

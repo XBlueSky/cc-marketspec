@@ -4,6 +4,11 @@
 // dot paths; the checkable field set is reflected from the entry schema (Task 2).
 
 import type { NativeFacts } from './native.ts';
+
+/** The native facts coverage reads; `mods` is optional so callers built against
+ *  the pre-mods fact shape keep working. */
+export type CoverageFacts = Pick<NativeFacts, 'plugin' | 'skills' | 'commands' | 'agents' | 'mcp' | 'hooks'> &
+	Partial<Pick<NativeFacts, 'mods'>>;
 import type { Entry } from './entry.ts';
 import { coverageTargets } from './entry.ts';
 import { entryPathForPlugin } from './layout.ts';
@@ -31,12 +36,12 @@ interface Rule {
 	id: string; // "<component>.<field>"
 	defaultSeverity: Severity;
 	// returns the list of unsatisfied component instances (by display name)
-	scan(facts: NativeFacts, entry: Entry | null): string[];
+	scan(facts: CoverageFacts, entry: Entry | null): string[];
 }
 
 // Per-rule scan functions keyed by "<component>.<field>".
 // Each returns the list of unsatisfied component instances (by display name).
-const SCANNERS: Record<string, (facts: NativeFacts, entry: Entry | null) => string[]> = {
+const SCANNERS: Record<string, (facts: CoverageFacts, entry: Entry | null) => string[]> = {
 	'skill.trigger': (f, e) => {
 		const a = new Map((e?.skills ?? []).map((s) => [s.name, s]));
 		return f.skills.filter((s) => !a.get(s.name)?.trigger).map((s) => s.name);
@@ -67,6 +72,10 @@ const SCANNERS: Record<string, (facts: NativeFacts, entry: Entry | null) => stri
 		const a = new Map((e?.mcp ?? []).map((m) => [m.name, m]));
 		return f.mcp.filter((m) => !(a.get(m.name)?.provides?.length)).map((m) => m.name);
 	},
+	'mod.description': (f, e) => {
+		const a = new Set((e?.mods ?? []).filter((m) => m.description).map((m) => m.module.replace(/^(?:\.\/)+/, '')));
+		return (f.mods ?? []).filter((m) => !a.has(m.module)).map((m) => m.module);
+	},
 	'plugin.tagline': (f, e) => (!e?.tagline && !f.plugin.description ? ['plugin'] : []),
 	'plugin.group': (_f, e) => (!e?.group ? ['plugin'] : [])
 };
@@ -87,7 +96,7 @@ const FIELD_ALIASES: Record<string, string> = { 'agent.summary': 'description' }
 
 // Map a rule id ("<component>.<field>") to the namespaced entry key and an actionable
 // "how to fix" clause. Array components (skill/command/agent/mcp/hook) are
-// authored under a plural array key; `plugin.*` fields live at the top level.
+// authored under a plural array key (mods keyed by `module`); `plugin.*` fields live at the top level.
 function howToFix(ruleId: string): string {
 	const [component, field] = ruleId.split('.');
 	if (component === 'plugin') return `add "${field}:" at the top level`;
@@ -101,7 +110,7 @@ export function resolve(ruleId: string, def: Severity, config: CoverageConfig): 
 }
 
 export function analyzeCoverage(
-	facts: NativeFacts,
+	facts: CoverageFacts,
 	entry: Entry | null,
 	config: CoverageConfig,
 	pluginId: string,

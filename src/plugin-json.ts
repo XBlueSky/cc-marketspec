@@ -8,9 +8,9 @@
 
 import { z } from 'zod';
 
-/** One `dependencies` entry: a bare plugin id, or (Claude Code >= 2.1.110)
- *  an object `{name, version?, marketplace?}`. The generator normalizes both
- *  forms to the id string in the manifest. */
+/** One `dependencies` entry: a plugin id (`name` or `name@marketplace`), or
+ *  (Claude Code >= 2.1.110) an object `{name, version?, marketplace?}`. The
+ *  generator normalizes both forms to `name` / `name@marketplace` in the manifest. */
 export const PluginDependency = z.union(
 	[
 		z.string(),
@@ -42,4 +42,22 @@ export const PluginJson = z.looseObject({
 		.optional(),
 	keywords: z.array(z.string()).optional(),
 	dependencies: z.array(PluginDependency).optional(),
+	displayName: z.string().optional(),
+	defaultEnabled: z.boolean().optional(),
+	icon: z.string().optional(),
+	types: z.string().optional(),
+	userConfig: z
+		.record(
+			z.string(),
+			z.looseObject({
+				type: z.enum(['string', 'number', 'boolean', 'directory', 'file'], {
+					error: 'userConfig type must be one of string, number, boolean, directory, file'
+				}),
+				title: z.string().optional(),
+				description: z.string().optional(),
+				options: z.array(z.string()).optional()
+			})
+		)
+		.optional(),
+	channels: z.array(z.looseObject({ server: z.string(), displayName: z.string().optional() })).optional(),
 });

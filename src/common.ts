@@ -22,18 +22,20 @@ export const slug = z
 
 export const envKey = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/);
 
-/** Claude Code hook events. */
-export const hookEvent = z.enum([
-	'PreToolUse',
-	'PostToolUse',
-	'PostToolUseFailure',
-	'PermissionRequest',
-	'UserPromptSubmit',
-	'Notification',
-	'Stop',
-	'SubagentStart',
-	'SubagentStop',
-	'SessionStart',
-	'SessionEnd',
-	'PreCompact'
-]);
+/** Claude Code settings-hook events known to this release (documentation only). */
+export const KNOWN_HOOK_EVENTS = [
+	'ConfigChange', 'CwdChanged', 'DirectoryAdded', 'Elicitation', 'ElicitationResult', 'FileChanged',
+	'InstructionsLoaded', 'MessageDisplay', 'Notification', 'PermissionDenied', 'PermissionRequest',
+	'PostCompact', 'PostModelSwitch', 'PostToolBatch', 'PostToolUse', 'PostToolUseFailure', 'PreCompact',
+	'PreModelSwitch', 'PreToolUse', 'SessionEnd', 'SessionStart', 'Setup', 'Stop', 'StopFailure',
+	'SubagentStart', 'SubagentStop', 'TaskCompleted', 'TaskCreated', 'TeammateIdle', 'UserPromptExpansion',
+	'UserPromptSubmit', 'WorktreeCreate', 'WorktreeRemove'
+] as const;
+
+/** A Claude Code hook event name. Open-ended (PascalCase) so a plugin using an event
+ *  newer than this release still generates; authored hooks must match hooks.json
+ *  anyway, which is the real check. */
+export const hookEvent = z
+	.string()
+	.regex(/^[A-Z][A-Za-z0-9]*$/)
+	.describe(`Hook event name, e.g. ${KNOWN_HOOK_EVENTS.slice(0, 4).join(', ')}.`);

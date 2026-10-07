@@ -58,9 +58,15 @@ export const AUTHORING: AuthoringSection[] = [
     "body": "Per-hook overlay. `event` / `matcher` must match a real entry in `hooks.json`\n(the generator checks). The only authored field:\n\n- `why` — why this hook exists / what it protects. No native source; the hook\n  config says what fires, not why it matters.\n\n```yaml\nhooks:\n  - event: PreToolUse\n    matcher: Write|Edit\n    why: Blocks writes that would desync the generated manifest from source.\n```"
   },
   {
+    "id": "mods",
+    "title": "mods",
+    "when": "describing a function-hook module (a mod: pane, status line, tool-call guard)",
+    "body": "Per-mod overlay. A mod is a function-hook module named under `modules` in\n`hooks/hooks.json` (or a `plugin.json` `hooks` file). `module` is its path\nrelative to the plugin root (e.g. `hooks/register.tsx`) and must match a\nderived mod (the generator checks). The only authored field:\n\n- `description` — what the mod adds to Claude Code (a pane, a band above the\n  prompt, a status line entry, a tool-call guard). A module is code, so there is\n  no static description to fall back on; coverage rule `mod.description` warns\n  when it is missing.\n\n```yaml\nmods:\n  - module: hooks/register.tsx\n    description: Opens a live pane listing the marketplace's coverage gaps.\n```"
+  },
+  {
     "id": "configuration",
     "title": "configuration",
-    "when": "documenting plugin-local settings (.claude/<plugin>.local.md)",
-    "body": "Document the plugin's local settings (the `.claude/<plugin>.local.md` file\nusers create). Each entry describes a setting: its key, what it does, and the\ndefault. No native source — this is pure documentation of your plugin's config\nsurface.\n\n```yaml\nconfiguration:\n  - key: strict_coverage\n    description: Fail the build on coverage warnings, not just errors.\n    default: \"false\"\n```"
+    "when": "documenting plugin settings (userConfig or .claude/<plugin>.local.md)",
+    "body": "Fields declared in `plugin.json` `userConfig` are derived automatically (type,\ntitle, description, options, sensitive, …; a sensitive field's default is never\npublished). Author an entry with the same `key` only to override its\n`description` or `default`.\n\nSettings with no native source (e.g. keys in a `.claude/<plugin>.local.md`\nfile users create) are documented here too; those entries need a `type`\n(`string`, `boolean`, `number`, `array`, `directory`, `file`).\n\n```yaml\nconfiguration:\n  - key: mode            # a userConfig field: only the text is overridden\n    description: Which engine runs the check.\n  - key: strict_coverage # a .local.md setting: type is required\n    type: boolean\n    description: Fail the build on coverage warnings, not just errors.\n    default: \"false\"\n```"
   }
 ];

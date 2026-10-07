@@ -7,11 +7,12 @@ export { Manifest } from './manifest.ts';
 export { generateManifest, type GenerateResult } from './generate.ts';
 export { type FileSource, NodeFileSource, MemoryFileSource } from './fs-source.ts';
 export { extractNativeFacts, type NativeFacts } from './native.ts';
-export { analyzeCoverage, type CoverageReport, type CoverageFinding, type CoverageConfig, type Severity } from './coverage.ts';
+export { analyzeCoverage, type CoverageReport, type CoverageFacts, type CoverageFinding, type CoverageConfig, type Severity } from './coverage.ts';
 export { coverageTargets } from './entry.ts';
 export { planInit, type InitAction, type InitPlan } from './init.ts';
 export {
 	CURRENT_FORMAT_VERSION,
+	NAMESPACED_BASE_FORMAT_VERSION,
 	LEGACY_FORMAT_VERSION,
 	checkFormatVersion,
 	checkManifestFormatVersion,
@@ -39,6 +40,7 @@ export {
 	inspectLayout,
 	inspectLegacyCandidates,
 	resolveMarketplacePlugins,
+	pluginRootOf,
 	type LayoutInspection,
 	type LayoutKind,
 	type LegacyInspection,

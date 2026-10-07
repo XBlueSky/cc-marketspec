@@ -5,7 +5,7 @@ import type { Severity } from './coverage.ts';
 // Per-plugin presentation overlay (.cc-marketspec/entries/plugin-<id>.yaml).
 // EVERY field is optional: the generator derives missing values from the native plugin (plugin.json,
 // skills/*/SKILL.md, commands/*.md, agents/*.md frontmatter, .mcp.json,
-// hooks/hooks.json) and falls back as documented. Authored entries are keyed by
+// hooks/hooks.json and its `modules`, plugin.json userConfig) and falls back as documented. Authored entries are keyed by
 // name and validated against the on-disk component (referential integrity, done
 // in generator code — JSON Schema/Zod can't cross-reference files).
 
@@ -93,10 +93,29 @@ const hook = z
 	})
 	.strict();
 
+const mod = z
+	.object({
+		module: z
+			.string()
+			.min(1)
+			.describe('Hooks module path relative to the plugin root (e.g. hooks/register.tsx); must be named under `modules` in a hooks file.'),
+		description: z
+			.string()
+			.min(1)
+			.max(280)
+			.describe('What the mod adds (a pane, a status line, a tool-call guard). A module is opaque to static analysis, so this is the only description.')
+			.meta({ coverage: 'warn' })
+			.optional()
+	})
+	.strict();
+
 const configuration = z
 	.object({
 		key: envKey,
-		type: z.enum(['string', 'boolean', 'number', 'array']),
+		type: z
+			.enum(['string', 'boolean', 'number', 'array', 'directory', 'file'])
+			.describe('Required unless the key is a plugin.json userConfig field (its type is derived).')
+			.optional(),
 		default: z.unknown().optional(),
 		description: z.string().min(1).max(600),
 		required: z.boolean().optional()
@@ -134,6 +153,7 @@ export const Entry = z
 		agents: z.array(agent).optional(),
 		mcp: z.array(mcp).optional(),
 		hooks: z.array(hook).optional(),
+		mods: z.array(mod).optional(),
 		configuration: z.array(configuration).optional(),
 		tips: z.array(note).describe('Positive power-moves.').optional(),
 		traps: z.array(note).describe('Negative gotchas / pitfalls.').optional()
@@ -171,7 +191,7 @@ export function coverageTargets(): { component: string; field: string; defaultSe
 		const topMeta = inner?.meta?.()?.coverage;
 		if (topMeta) push('plugin', key, topMeta);
 
-		// array-of-object component fields: skills/commands/agents/mcp/hooks
+		// array-of-object component fields: skills/commands/agents/mcp/hooks/mods
 		if (inner?.type === 'array') {
 			const el = inner.element;
 			const elShape = el?.shape;

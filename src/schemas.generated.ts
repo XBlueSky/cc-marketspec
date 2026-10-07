@@ -299,20 +299,8 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
           "properties": {
             "event": {
               "type": "string",
-              "enum": [
-                "PreToolUse",
-                "PostToolUse",
-                "PostToolUseFailure",
-                "PermissionRequest",
-                "UserPromptSubmit",
-                "Notification",
-                "Stop",
-                "SubagentStart",
-                "SubagentStop",
-                "SessionStart",
-                "SessionEnd",
-                "PreCompact"
-              ]
+              "pattern": "^[A-Z][A-Za-z0-9]*$",
+              "description": "Hook event name, e.g. ConfigChange, CwdChanged, DirectoryAdded, Elicitation."
             },
             "matcher": {
               "type": "string",
@@ -327,6 +315,30 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
           },
           "required": [
             "event"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "mods": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "module": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Hooks module path relative to the plugin root (e.g. hooks/register.tsx); must be named under `modules` in a hooks file."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 280,
+              "description": "What the mod adds (a pane, a status line, a tool-call guard). A module is opaque to static analysis, so this is the only description.",
+              "coverage": "warn"
+            }
+          },
+          "required": [
+            "module"
           ],
           "additionalProperties": false
         }
@@ -346,8 +358,11 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
                 "string",
                 "boolean",
                 "number",
-                "array"
-              ]
+                "array",
+                "directory",
+                "file"
+              ],
+              "description": "Required unless the key is a plugin.json userConfig field (its type is derived)."
             },
             "default": {},
             "description": {
@@ -361,7 +376,6 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
           },
           "required": [
             "key",
-            "type",
             "description"
           ],
           "additionalProperties": false
@@ -586,12 +600,24 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
             "name": {
               "type": "string"
             },
+            "displayName": {
+              "type": "string",
+              "description": "Native plugin.json displayName."
+            },
             "version": {
               "type": "string"
             },
             "description": {
               "type": "string",
               "description": "Native plugin description."
+            },
+            "icon": {
+              "type": "string",
+              "description": "Native plugin.json icon path, relative to the plugin root."
+            },
+            "defaultEnabled": {
+              "type": "boolean",
+              "description": "Native plugin.json defaultEnabled."
             },
             "author": {
               "type": "object",
@@ -631,7 +657,7 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
               "items": {
                 "type": "string"
               },
-              "description": "Native plugin dependencies (ids)."
+              "description": "Native plugin dependencies (`name` or `name@marketplace`)."
             },
             "category": {
               "type": "string",
@@ -920,20 +946,8 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
                 "properties": {
                   "event": {
                     "type": "string",
-                    "enum": [
-                      "PreToolUse",
-                      "PostToolUse",
-                      "PostToolUseFailure",
-                      "PermissionRequest",
-                      "UserPromptSubmit",
-                      "Notification",
-                      "Stop",
-                      "SubagentStart",
-                      "SubagentStop",
-                      "SessionStart",
-                      "SessionEnd",
-                      "PreCompact"
-                    ]
+                    "pattern": "^[A-Z][A-Za-z0-9]*$",
+                    "description": "Hook event name, e.g. ConfigChange, CwdChanged, DirectoryAdded, Elicitation."
                   },
                   "matcher": {
                     "type": "string"
@@ -947,6 +961,154 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
                 ],
                 "additionalProperties": false
               }
+            },
+            "mods": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "module": {
+                    "type": "string",
+                    "description": "Derived: hooks module named under `modules` in a hooks file, relative to the plugin root."
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "module"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Function-hook modules (\"mods\")."
+            },
+            "lsp": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "languages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "languages"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from .lsp.json / plugin.json lspServers."
+            },
+            "outputStyles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from output-styles/ / plugin.json outputStyles."
+            },
+            "workflows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from workflows/ / plugin.json workflows."
+            },
+            "themes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "base": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from themes/ / plugin.json experimental.themes."
+            },
+            "monitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "when": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from monitors/monitors.json / plugin.json experimental.monitors."
+            },
+            "bin": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Derived: executables in bin/."
+            },
+            "channels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "server"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Derived from plugin.json channels."
             },
             "configuration": {
               "type": "array",
@@ -962,8 +1124,13 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
                       "string",
                       "boolean",
                       "number",
-                      "array"
+                      "array",
+                      "directory",
+                      "file"
                     ]
+                  },
+                  "title": {
+                    "type": "string"
                   },
                   "default": {},
                   "description": {
@@ -971,15 +1138,37 @@ export const SCHEMAS: Record<'entry' | 'catalog' | 'manifest', Record<string, un
                   },
                   "required": {
                     "type": "boolean"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "multiple": {
+                    "type": "boolean"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "userConfig": {
+                    "type": "boolean",
+                    "description": "Derived: true when the key is a plugin.json userConfig field."
                   }
                 },
                 "required": [
                   "key",
-                  "type",
-                  "description"
+                  "type"
                 ],
                 "additionalProperties": false
-              }
+              },
+              "description": "plugin.json userConfig fields (derived) followed by authored-only settings."
             },
             "tips": {
               "type": "array",

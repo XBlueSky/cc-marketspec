@@ -27,13 +27,14 @@ import {
 	inspectLayout,
 	inspectLegacyCandidates,
 	resolveMarketplacePlugins,
+	pluginRootOf,
 	type LegacyInspection,
 	type ResolvedPlugin
 } from './layout.ts';
 import { loadYaml, readJSON } from './native.ts';
 import { DIST_IGNORE_CONTENT } from './output.ts';
 import { normalizeInternalPath, resolveWithinRoot } from './path-policy.ts';
-import { CURRENT_FORMAT_VERSION, LEGACY_FORMAT_VERSION } from './version.ts';
+import { CURRENT_FORMAT_VERSION, LEGACY_FORMAT_VERSION, NAMESPACED_BASE_FORMAT_VERSION } from './version.ts';
 
 export interface PlannedRemoval {
 	path: string;
@@ -46,8 +47,8 @@ export interface MigrationOptions {
 
 export interface MigrationPlan {
 	kind: 'migrate' | 'cleanup' | 'noop';
-	sourceVersion: '1.0' | '1.1' | null;
-	targetVersion: '1.1';
+	sourceVersion: typeof LEGACY_FORMAT_VERSION | typeof NAMESPACED_BASE_FORMAT_VERSION | typeof CURRENT_FORMAT_VERSION | null;
+	targetVersion: typeof CURRENT_FORMAT_VERSION;
 	writes: Record<string, string>;
 	removals: PlannedRemoval[];
 	warnings: string[];
@@ -96,7 +97,7 @@ export const NODE_MIGRATION_FILE_OPS: MigrationFileOps = {
 interface MigrationReceipt {
 	receiptVersion: 1;
 	sourceVersion: '1.0';
-	targetVersion: '1.1';
+	targetVersion: typeof NAMESPACED_BASE_FORMAT_VERSION | typeof CURRENT_FORMAT_VERSION;
 	targetDigests: Record<string, string>;
 	removals: PlannedRemoval[];
 }
@@ -173,7 +174,7 @@ function readMarketplace(source: FileSource): {
 				warnings: []
 			};
 		}
-		return resolveMarketplacePlugins(marketplace.plugins);
+		return resolveMarketplacePlugins(marketplace.plugins, { pluginRoot: pluginRootOf(marketplace) });
 	} catch (error) {
 		return {
 			plugins: [],
@@ -332,7 +333,8 @@ function parseReceipt(raw: string): { receipt?: MigrationReceipt; error?: string
 			])
 			|| value.receiptVersion !== 1
 			|| value.sourceVersion !== LEGACY_FORMAT_VERSION
-			|| value.targetVersion !== CURRENT_FORMAT_VERSION
+			// a receipt left by a 1.1-era migration can still resume its cleanup
+			|| (value.targetVersion !== CURRENT_FORMAT_VERSION && value.targetVersion !== NAMESPACED_BASE_FORMAT_VERSION)
 		) {
 			return { error: `${MIGRATION_RECEIPT_PATH}: malformed migration receipt` };
 		}
@@ -728,7 +730,7 @@ function validateMigratePlan(root: string, plan: MigrationPlan): string[] {
 		plan.sourceVersion !== LEGACY_FORMAT_VERSION
 		|| plan.targetVersion !== CURRENT_FORMAT_VERSION
 	) {
-		errors.push('migration plan versions do not describe the supported 1.0 to 1.1 transition');
+		errors.push(`migration plan versions do not describe the supported ${LEGACY_FORMAT_VERSION} to ${CURRENT_FORMAT_VERSION} transition`);
 	}
 	if (errors.length > 0) return uniqueSorted(errors);
 

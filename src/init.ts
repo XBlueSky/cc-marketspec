@@ -8,7 +8,8 @@ import {
 	SPEC_GITIGNORE_PATH,
 	entryPathForPlugin,
 	inspectLayout,
-	resolveMarketplacePlugins
+	resolveMarketplacePlugins,
+	pluginRootOf
 } from './layout.ts';
 import { loadYaml, readJSON } from './native.ts';
 import { checkFormatVersion, CURRENT_FORMAT_VERSION } from './version.ts';
@@ -170,7 +171,7 @@ export function planInit(source: FileSource): InitPlan {
 		]);
 	}
 
-	const resolution = resolveMarketplacePlugins(market.plugins);
+	const resolution = resolveMarketplacePlugins(market.plugins, { pluginRoot: pluginRootOf(market) });
 	let layout;
 	try {
 		layout = inspectLayout(source, resolution.plugins);

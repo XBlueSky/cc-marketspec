@@ -8,9 +8,14 @@ import {
 } from '../src/version.ts';
 import { checkManifestFormatVersion as publicCheckManifestFormatVersion } from '../src/index.ts';
 
-test('declares legacy 1.0 and current 1.1 independently of package SemVer', () => {
+test('declares legacy 1.0 and current 1.2 independently of package SemVer', () => {
 	assert.equal(LEGACY_FORMAT_VERSION, '1.0');
-	assert.equal(CURRENT_FORMAT_VERSION, '1.1');
+	assert.equal(CURRENT_FORMAT_VERSION, '1.2');
+});
+
+test('namespaced layout accepts both the 1.1 base and the current 1.2 catalog', () => {
+	assert.deepEqual(checkFormatVersion('1.2', 'namespaced'), { ok: true, version: '1.2' });
+	assert.deepEqual(checkManifestFormatVersion('1.2'), { ok: true, version: '1.2' });
 });
 
 test('accepts the version matching its authored layout', () => {
@@ -24,7 +29,8 @@ test('accepts the version matching its authored layout', () => {
 });
 
 for (const [value, layout, message] of [
-	['1.0', 'namespaced', 'requires schemaVersion 1.1'],
+	['1.0', 'namespaced', 'requires schemaVersion 1.1 or 1.2'],
+	['1.3', 'namespaced', 'future format minor 3'],
 	['1.1', 'legacy', 'requires schemaVersion 1.0'],
 	['0.9', 'legacy', 'unsupported format major 0'],
 	['1.99', 'namespaced', 'future format minor 99'],

@@ -4,7 +4,7 @@ import { planInit, type InitPlan } from '../src/index.ts';
 import { MemoryFileSource } from '../src/fs-source.ts';
 import type { FileSource } from '../src/fs-source.ts';
 
-test('fresh init creates only namespaced authored files at version 1.1', () => {
+test('fresh init creates only namespaced authored files at version 1.2', () => {
 	const source = new MemoryFileSource({
 		'.claude-plugin/marketplace.json': JSON.stringify({
 			name: 'mk',
@@ -19,7 +19,7 @@ test('fresh init creates only namespaced authored files at version 1.1', () => {
 	const plan: InitPlan = planInit(source);
 	assert.deepEqual(plan.errors, []);
 	assert.equal(plan.writes['.cc-marketspec/.gitignore'], '/dist/\n');
-	assert.match(plan.writes['.cc-marketspec/catalog.yaml'], /schemaVersion: "1\.1"/);
+	assert.match(plan.writes['.cc-marketspec/catalog.yaml'], /schemaVersion: "1\.2"/);
 	assert.ok(plan.writes['.cc-marketspec/entries/plugin-root.yaml']);
 	assert.ok(plan.writes['.cc-marketspec/entries/plugin-con.yaml']);
 	assert.equal('catalog.yaml' in plan.writes, false);
@@ -224,8 +224,8 @@ test('existing namespaced catalog must parse and validate before scaffolding', (
 	}
 });
 
-test('existing namespaced catalog must use current schemaVersion 1.1', () => {
-	for (const version of ['1.0', '1.2']) {
+test('existing namespaced catalog must use a supported schemaVersion (1.1 or 1.2)', () => {
+	for (const version of ["1.0", "1.3"]) {
 		const plan = planInit(new MemoryFileSource({
 			'.claude-plugin/marketplace.json': JSON.stringify({ name: 'mk', plugins: [] }),
 			'.cc-marketspec/catalog.yaml': `schemaVersion: "${version}"\n`
