@@ -5,7 +5,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import yaml from 'js-yaml';
-import { MemoryFileSource, extractNativeFacts, analyzeCoverage, entryPathForPlugin, AUTHORING, SCHEMAS, VERSION, type CoverageReport } from './core.ts';
+import { MemoryFileSource, extractNativeFacts, analyzeCoverage, entryPathForPlugin, resolveMarketplacePlugins, pluginRootOf, AUTHORING, SCHEMAS, VERSION, type CoverageReport } from './core.ts';
 
 export function getSchema(which: keyof typeof SCHEMAS): object {
 	return SCHEMAS[which];
@@ -34,9 +34,33 @@ export function getAuthoringGuide(section: string): { section: string; title?: s
 	return { section, title: found.title, body: found.body };
 }
 
+// Where the plugin's native files live in the pasted map: its marketplace.json
+// source when that file is pasted (root-level, custom path, metadata.pluginRoot),
+// else a root plugin.json naming it, else the conventional plugins/<id>.
+export function pluginDirFor(files: Record<string, string>, pluginId: string): string {
+	const market = files['.claude-plugin/marketplace.json'];
+	if (market) {
+		try {
+			const parsed = JSON.parse(market) as Record<string, unknown>;
+			const found = resolveMarketplacePlugins(parsed.plugins, { pluginRoot: pluginRootOf(parsed) }).plugins
+				.find((plugin) => plugin.id === pluginId);
+			if (found?.dir != null) return found.dir;
+		} catch {
+			// fall through to the conventions below
+		}
+	}
+	try {
+		const root = JSON.parse(files['.claude-plugin/plugin.json'] ?? '{}') as { name?: unknown };
+		if (root.name === pluginId) return '';
+	} catch {
+		// not a root plugin
+	}
+	return `plugins/${pluginId}`;
+}
+
 export function checkCoverage(args: { files: Record<string, string>; pluginId: string }): CoverageReport & { needsMoreWork: boolean } {
 	const source = new MemoryFileSource(args.files);
-	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
+	const facts = extractNativeFacts(source, pluginDirFor(args.files, args.pluginId));
 	// The canonical namespaced entry, if pasted, is parsed separately and passed
 	// as the presentation overlay.
 	const path = entryPathForPlugin(args.pluginId);
@@ -48,11 +72,12 @@ export function checkCoverage(args: { files: Record<string, string>; pluginId: s
 
 export function scaffoldEntry(args: { files: Record<string, string>; pluginId: string }): string {
 	const source = new MemoryFileSource(args.files);
-	const facts = extractNativeFacts(source, `plugins/${args.pluginId}`);
+	const facts = extractNativeFacts(source, pluginDirFor(args.files, args.pluginId));
 	const lines = [`# ${entryPathForPlugin(args.pluginId)} skeleton (generated)`];
 	if (!facts.plugin.description) lines.push('# tagline: add a concise card summary');
 	for (const s of facts.skills) lines.push(`# skill ${s.name}: add trigger/examples`);
 	for (const m of facts.mcp) for (const k of m.envKeys) lines.push(`# mcp ${m.name} env ${k}: add a human description`);
+	for (const m of facts.mods) lines.push(`# mod ${m.module}: add a description of what it adds`);
 	return lines.join('\n') + '\n';
 }
 
@@ -95,8 +120,8 @@ export const TOOLS = [
 	{ name: 'get_schema', description: 'Return entry/catalog/manifest JSON schema', inputSchema: { type: 'object', properties: { which: { type: 'string', enum: ['entry', 'catalog', 'manifest'] } }, required: ['which'] } },
 	{ name: 'list_authoring_sections', description: 'List .cc-marketspec/entries/plugin-<id>.yaml authoring guide sections (id/title/when). Call this first, then get_authoring_guide for the section you need.', inputSchema: { type: 'object', properties: {} } },
 	{ name: 'get_authoring_guide', description: 'Return the full authoring guide markdown for one section id (from list_authoring_sections).', inputSchema: { type: 'object', properties: { section: { type: 'string' } }, required: ['section'] } },
-	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin from pasted native files and .cc-marketspec/entries/plugin-<id>.yaml. Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } },
-	{ name: 'scaffold_entry', description: 'Produce a .cc-marketspec/entries/plugin-<id>.yaml skeleton from pasted native files.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } }
+	{ name: 'check_coverage', description: 'Report missing presentation metadata for a plugin from pasted native files and .cc-marketspec/entries/plugin-<id>.yaml (files: repo-relative path → content; include .claude-plugin/marketplace.json when the plugin is not at plugins/<id>). Re-run after filling fields until needsMoreWork is false.', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } },
+	{ name: 'scaffold_entry', description: 'Produce a .cc-marketspec/entries/plugin-<id>.yaml skeleton from pasted native files (repo-relative path → content; include .claude-plugin/marketplace.json when the plugin is not at plugins/<id>).', inputSchema: { type: 'object', properties: { pluginId: { type: 'string' }, files: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['pluginId', 'files'] } }
 ];
 
 /** Build the MCP server with the shared tool table. Transport-agnostic — the
