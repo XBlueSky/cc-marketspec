@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/XBlueSky/cc-marketspec/compare/v1.0.1...v1.1.0) (2026-10-11)
+
+
+### Bug Fixes
+
+* **mcp:** resolve the plugin folder from pasted marketplace.json ([fef6792](https://github.com/XBlueSky/cc-marketspec/commit/fef6792d660f8d5f6f22ba8fac5cb468ad79a70e))
+
+
+### Features
+
+* follow the current Claude Code plugin schema and derive mods ([025cb7c](https://github.com/XBlueSky/cc-marketspec/commit/025cb7c764bef856c32fca0f0fd44c06268478cf))
+
 ## [1.0.1](https://github.com/XBlueSky/cc-marketspec/compare/v1.0.0...v1.0.1) (2026-09-08)
 
 
